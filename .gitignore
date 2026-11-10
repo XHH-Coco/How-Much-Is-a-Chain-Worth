@@ -1,10 +1,14 @@
 # ---- data: keep pointers, not payloads -------------------------------
-data/raw/
-data/interim/
-data/processed/
-data/external/
-!data/README.md
-!data/manifests/
+# '*' rather than 'dir/': the directory itself must survive a clone so the
+# skeleton is visible on a fresh checkout; only its contents are ignored.
+data/raw/*
+data/interim/*
+data/processed/*
+data/external/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
 
 # ---- weights and caches (polyBERT alone is 7.3 GB) -------------------
 *.pt
