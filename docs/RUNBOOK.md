@@ -1,4 +1,4 @@
-# Runbook — eight working days
+# Runbook 鈥?eight working days
 
 Four people, 105 person-hours with agent assistance, 95 remaining at submission.
 Roles follow the proposal: **A** data & compliance (28%), **B** modelling (32%),
@@ -11,10 +11,10 @@ deliberately measurable, because "mostly working" is how a schedule dies.
 
 | Phase | Dates | Milestone (do not proceed without) | Owner |
 |---|---|---|---|
-| **P0** | D0–D2 | **one baseline number on one task, using the official split** | A |
-| **P1** | D2–D4 | five arms run end to end on one task; split-identity test green | B |
-| **P2** | D4–D6 | Λ with CI exists for ≥ 4 tasks; scaling sweep launched | B + C |
-| **P3** | D6–D7 | five figures; three conclusions; Q&A bank rehearsed twice | C + D |
+| **P0** | D0鈥揇2 | **one baseline number on one task, using the official split** | A |
+| **P1** | D2鈥揇4 | five arms run end to end on one task; split-identity test green | B |
+| **P2** | D4鈥揇6 | 螞 with CI exists for 鈮?4 tasks; scaling sweep launched | B + C |
+| **P3** | D6鈥揇7 | five figures; three conclusions; Q&A bank rehearsed twice | C + D |
 
 ## D0 checklist (half a day, four people)
 
@@ -25,12 +25,12 @@ deliberately measurable, because "mostly working" is how a schedule dies.
 | 3 | Transcribe Table S27 (39 rows, ~30 min) **or** recompute tiers from the four published criteria and record the method | A | `MANIFEST.lock.json` has `frozen: true` |
 | 4 | Install the three environments from `environment/*.yml`; `verify_env.py --strict` exits 0 | B | no version mismatch in either direction |
 | 5 | `python -m unittest discover -s tests -t .` green; `scripts/check_repo.py` green | C | CI green on `main` |
-| 6 | Reserve both GPUs for D2–D6 nights | D | calendar entry |
+| 6 | Reserve both GPUs for D2鈥揇6 nights | D | calendar entry |
 | 7 | Tag `d0-freeze` and push | D | tag visible on the remote |
 
 ## Reserve both GPUs
 
-The 19–36 GPU-h envelope is small, but it assumes the card is free when the sweep
+The 19鈥?6 GPU-h envelope is small, but it assumes the card is free when the sweep
 wants it. The risk is availability at night, not capability. Book both cards at D0.
 
 ## If something breaks
@@ -39,7 +39,7 @@ wants it. The risk is availability at night, not capability. Book both cards at 
 |---|---|
 | `verify_env.py` reports a version that is too high | someone ran `pip install -U`; reinstall from `requirements-*.txt`, do not accept the new number |
 | a split file changed | `test_splits_identity` should have caught it; restore from git, never re-derive |
-| Λ is huge (> 1) on one task | check the denominator: `R2_unit` close to 1 makes Λ explode. Report ΔR2 instead |
+| 螞 is huge (> 1) on one task | check the denominator: `R2_unit` close to 1 makes 螞 explode. Report 螖R2 instead |
 | a GNN run OOMs on a 4070 | batch size down before sequence length; 12 GB is enough for every task in the main table |
 | an OpenPoly property drops below 120 labels after harmonisation | run H4 on Tg + dielectric only, and say so on the slide |
 

@@ -14,7 +14,7 @@ claim in the talk to the thing that supports it.
 | PolyBench26 levels 300/1000/3000/10000 | official `scaling_splits` | `configs/experiments/scaling.json`; homopolymer has only 300/1000 |
 | Fixed 70/30 with version-controlled indices | PolyBench main text | `splits/README.md`; enforced by `config.validate_task` |
 | PolyBench does not use k-fold for evaluation | same | ADR-003; a test asserts the split kind |
-| 13–28 GPU-h core, 19–36 envelope | proposal §7.4, arithmetic from run counts | recompute from `configs/experiments/*.json` |
+| 13鈥?8 GPU-h core, 19鈥?6 envelope | proposal 搂7.4, arithmetic from run counts | recompute from `configs/experiments/*.json` |
 
 ## The three numbers that were wrong once
 
@@ -23,7 +23,7 @@ Recorded here because a proposal that only lists its successes is not auditable.
 | Number | Was | Actually |
 |---|---|---|
 | OpenPoly scale | "3,985 polymer entries" | **741 structures**, 3,985 *annotations* |
-| OpenPoly scarcest property | "use the properties with dozens of labels" | at n = 30 a 5-fold split leaves 6 test points; R² is undefined |
-| PolyBench protocol | "6 tasks × 5 folds × 3 seeds" | one fixed 70/30 split; k-fold does not exist for evaluation |
+| OpenPoly scarcest property | "use the properties with dozens of labels" | at n = 30 a 5-fold split leaves 6 test points; R虏 is undefined |
+| PolyBench protocol | "6 tasks 脳 5 folds 脳 3 seeds" | one fixed 70/30 split; k-fold does not exist for evaluation |
 
-All three corrections are in ADR-003 and §2.3 of the proposal.
+All three corrections are in ADR-003 and 搂2.3 of the proposal.

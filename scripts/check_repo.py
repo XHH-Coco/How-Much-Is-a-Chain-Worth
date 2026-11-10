@@ -97,6 +97,17 @@ def main():
            if f.is_file() and ".git" not in f.parts and f.stat().st_size > 1_000_000]
     check(not big, "no file over 1 MB", f"large files tracked: {big}")
 
+    # 7. the structure section in README.md still describes this repository
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("gen_tree", ROOT / "scripts/gen_tree.py")
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    problems = gen.check()
+    check(not problems,
+          "README tree matches the working tree",
+          "README tree is stale -- run `python scripts/gen_tree.py`"
+          + (": " + "; ".join(problems[:2]) if problems else ""))
+
     # report
     for line in OKS:
         print("  ok   " + line)

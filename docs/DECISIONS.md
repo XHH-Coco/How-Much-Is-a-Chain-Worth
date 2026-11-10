@@ -6,7 +6,7 @@ supersedes the old one.
 
 ---
 
-## ADR-001 — Configs are JSON, not YAML
+## ADR-001 鈥?Configs are JSON, not YAML
 
 **2026-11-11.** Status: accepted.
 
@@ -21,7 +21,7 @@ Consequence: no hydra/omegaconf. Config composition is a plain dict merge in
 
 ---
 
-## ADR-002 — Task directories use slugs, not dataset names
+## ADR-002 鈥?Task directories use slugs, not dataset names
 
 **2026-11-11.** Status: accepted.
 
@@ -35,30 +35,30 @@ mapping is also in `data/manifests/polybench_tasks.csv`.
 
 ---
 
-## ADR-003 — PolyBench is a single 70/30 split, never k-fold
+## ADR-003 鈥?PolyBench is a single 70/30 split, never k-fold
 
 **2026-11-11.** Status: accepted. Supersedes an earlier draft.
 
-The proposal's first version claimed "6 tasks × 5 folds × 3 seeds". The official
+The proposal's first version claimed "6 tasks 脳 5 folds 脳 3 seeds". The official
 protocol is one fixed 70/30 split with version-controlled indices; Murcko-grouped CV
 is used for hyperparameter search only. So there is no k-fold number to report on a
 PolyBench task, and claiming one would have been a fabricated cell in the main table.
 
-Consequences, all applied consistently: main table 6 → 8 tasks; GNN main sweep
-90 → 48 runs; classical fits 120 → 96; total GNN runs 315 → 273. Person-hours did
+Consequences, all applied consistently: main table 6 鈫?8 tasks; GNN main sweep
+90 鈫?48 runs; classical fits 120 鈫?96; total GNN runs 315 鈫?273. Person-hours did
 not change, because those hours are dominated by pipeline construction, not by run
 count.
 
 ---
 
-## ADR-004 — Python 3.10, and every pin is a ceiling, not a floor
+## ADR-004 鈥?Python 3.10, and every pin is a ceiling, not a floor
 
 **2026-11-11.** Status: accepted.
 
 Python 3.10 reached upstream EOL on 2026-10-31. We stay on it anyway, for one reason:
 it is the generation the PolyBench / PolyBench26 baselines were evaluated on, and
 comparability is the product. Every pin in `environment/pins.json` is the **last**
-generation that still ships a cp310 wheel — `rdkit` 2026.3 has already dropped 3.10,
+generation that still ships a cp310 wheel 鈥?`rdkit` 2026.3 has already dropped 3.10,
 PyTorch 2.15 has already dropped 3.10.
 
 This inverts the usual failure mode: `pip install -U rdkit` does not fail loudly, it
@@ -68,11 +68,11 @@ too low.
 
 ---
 
-## ADR-005 — Run records are committed; checkpoints are not
+## ADR-005 鈥?Run records are committed; checkpoints are not
 
 **2026-11-11.** Status: accepted.
 
-`results/raw_runs/*.json` is one small record per run (1–5 KB): config hash, split
+`results/raw_runs/*.json` is one small record per run (1鈥? KB): config hash, split
 hash, seed, metrics, bootstrap interval, environment fingerprint. A full sweep is a
 couple of megabytes and it is the only physical evidence linking a figure to a run.
 Model checkpoints are hundreds of megabytes and fully reconstructible from
@@ -83,7 +83,7 @@ It would silently drop exactly the files this repository exists to preserve.
 
 ---
 
-## ADR-006 — Three environments, and torch always comes from pip
+## ADR-006 鈥?Three environments, and torch always comes from pip
 
 **2026-11-11.** Status: accepted.
 
@@ -97,7 +97,7 @@ the split was meant to remove.
 
 ---
 
-## ADR-007 — `raw_runs` records are write-once
+## ADR-007 鈥?`raw_runs` records are write-once
 
 **2026-11-11.** Status: accepted.
 

@@ -1,6 +1,6 @@
 # Results
 
-`raw_runs/` is **committed on purpose**. One JSON per run, typically 1–5 KB, and it
+`raw_runs/` is **committed on purpose**. One JSON per run, typically 1鈥? KB, and it
 is the only physical evidence that a number in a figure came from a run that
 happened. A few hundred runs is a couple of megabytes. Model checkpoints are not
 committed: they are hundreds of megabytes and fully reconstructible from

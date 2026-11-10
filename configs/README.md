@@ -12,5 +12,5 @@ boolean in a file whose whole purpose is to be unambiguous. See ADR-001.
 | Directory | File count | What it fixes |
 |---|---|---|
 | `tasks/` | 11 | the 8 main-table tasks plus the 3 OpenPoly scan properties |
-| `arms/` | 5 | A1–A5: environment, features, models, GPU requirement |
+| `arms/` | 5 | A1鈥揂5: environment, features, models, GPU requirement |
 | `experiments/` | 4 | main table, scaling, architecture transfer, OpenPoly scan |

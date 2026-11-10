@@ -1,4 +1,4 @@
-# Appendix A — the 39 tasks as released
+# Appendix A 鈥?the 39 tasks as released
 
 Names and record counts read from the platform's `/api/data-counts` endpoint on
 2026-11-11; they sum to **42,169**, reproducing the published total. The `Tier`
@@ -48,7 +48,7 @@ family**. Anything else is `pending S27` and is **not eligible** for the main ta
 | 39 | Dynamic mechanical properties loss modulus | 193 | 3 |  |
 
 Totals: **39 tasks, 42,169 records.** Named tiers: 8 in Tier 1, 8 in Tier 2, 7 in
-Tier 3; **16 tasks remain `pending S27`** — enough headroom that no design decision
+Tier 3; **16 tasks remain `pending S27`** 鈥?enough headroom that no design decision
 depends on the missing table.
 
 ## The honest note for a reviewer
