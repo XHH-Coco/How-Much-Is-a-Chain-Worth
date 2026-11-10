@@ -1,0 +1,4 @@
+property,n,levels,note
+Tg,443,30;60;120;240;all,highest label count; anchors the scan
+Dielectric Constant Total,295,30;60;120;240;all,three dielectric columns share n=295
+Tm,168,30;60;120;240;all,lowest n of the three; noisiest transition

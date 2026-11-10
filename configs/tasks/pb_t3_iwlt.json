@@ -1,0 +1,26 @@
+{
+  "task_id": "pb_t3_iwlt",
+  "dataset_name": "Isothermal weight loss time",
+  "benchmark": "polybench",
+  "n": 228,
+  "tier": 3,
+  "family": "degradation",
+  "label_source": "experimental",
+  "target_unit": "h",
+  "split": {
+    "kind": "fixed_70_30",
+    "path": "splits/polybench/pb_t3_iwlt/split_v1.json"
+  },
+  "metrics": [
+    "r2",
+    "mae",
+    "rmse"
+  ],
+  "arms": [
+    "a1_floor",
+    "a2_conventional",
+    "a3_graph",
+    "a5_chain"
+  ],
+  "note": "Time- and temperature-dependent by construction."
+}

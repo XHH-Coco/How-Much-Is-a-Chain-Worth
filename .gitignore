@@ -1,0 +1,58 @@
+# ---- data: keep pointers, not payloads -------------------------------
+data/raw/
+data/interim/
+data/processed/
+data/external/
+!data/README.md
+!data/manifests/
+
+# ---- weights and caches (polyBERT alone is 7.3 GB) -------------------
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.h5
+*.pkl
+*.joblib
+.cache/
+hf_cache/
+*.onnx
+
+# ---- run artefacts ----------------------------------------------------
+logs/
+wandb/
+mlruns/
+lightning_logs/
+outputs/
+*.log
+*.tmp
+runs/
+
+# ---- environments -----------------------------------------------------
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+
+# ---- OS / IDE ---------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---- NEVER ignore these (protocol artefacts and evidence) -------------
+# splits/*.json      <- official 70/30 and 5-fold indices
+# data/manifests/*   <- task lists, sha256, counts
+# results/raw_runs/  <- one JSON per run, the traceable evidence
+# results/aggregate/ <- computed Lambda / kappa tables
+# Note: do not add blanket '*.csv' or '*.json' rules. They would
+# silently drop exactly the files this repository exists to preserve.

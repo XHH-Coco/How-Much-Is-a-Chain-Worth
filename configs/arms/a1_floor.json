@@ -1,0 +1,11 @@
+{
+  "arm_id": "a1_floor",
+  "label": "Floor",
+  "env": "DSC6020_Project_Core",
+  "gpu": false,
+  "models": [
+    "dummy_mean",
+    "knn"
+  ],
+  "purpose": "How hard is the task at all; the baseline everyone forgets."
+}

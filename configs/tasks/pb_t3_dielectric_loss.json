@@ -1,0 +1,26 @@
+{
+  "task_id": "pb_t3_dielectric_loss",
+  "dataset_name": "Dielectric loss factor",
+  "benchmark": "polybench",
+  "n": 279,
+  "tier": 3,
+  "family": "dielectric_loss",
+  "label_source": "experimental",
+  "target_unit": "dimensionless",
+  "split": {
+    "kind": "fixed_70_30",
+    "path": "splits/polybench/pb_t3_dielectric_loss/split_v1.json"
+  },
+  "metrics": [
+    "r2",
+    "mae",
+    "rmse"
+  ],
+  "arms": [
+    "a1_floor",
+    "a2_conventional",
+    "a3_graph",
+    "a5_chain"
+  ],
+  "note": "Dielectric constant is Tier 1, dielectric loss is Tier 3: one physical family split across tiers."
+}

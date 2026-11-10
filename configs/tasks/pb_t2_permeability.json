@@ -1,0 +1,26 @@
+{
+  "task_id": "pb_t2_permeability",
+  "dataset_name": "Gas permeability coefficient",
+  "benchmark": "polybench",
+  "n": 711,
+  "tier": 2,
+  "family": "transport",
+  "label_source": "experimental",
+  "target_unit": "barrer",
+  "split": {
+    "kind": "fixed_70_30",
+    "path": "splits/polybench/pb_t2_permeability/split_v1.json"
+  },
+  "metrics": [
+    "r2",
+    "mae",
+    "rmse"
+  ],
+  "arms": [
+    "a1_floor",
+    "a2_conventional",
+    "a3_graph",
+    "a5_chain"
+  ],
+  "note": "Free-volume governed; strongest prior for a large Lambda."
+}

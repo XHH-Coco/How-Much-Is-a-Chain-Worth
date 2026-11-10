@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+title: "How Much Is a Chain Worth? Chain-Information Recovery in Polymer Property Prediction"
+message: "Course project (DSC6020). Cite the benchmarks as well; see DATA_LICENSES.md."
+version: 0.1.0
+date-released: "2026-11-11"
+authors:
+  - family-names: "XHH"
+    given-names: "Team"
+license: MIT

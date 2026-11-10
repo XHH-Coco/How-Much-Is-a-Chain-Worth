@@ -1,0 +1,26 @@
+{
+  "experiment_id": "arch_transfer",
+  "architectures": [
+    "homopolymer",
+    "alternating",
+    "random",
+    "block"
+  ],
+  "tasks": [
+    "pb26_polymetrix_tg",
+    "pb26_homopolymer_density"
+  ],
+  "arms": [
+    "a2_conventional",
+    "a3_graph"
+  ],
+  "folds": 5,
+  "seeds": 3,
+  "expected_fits": 60,
+  "produces": [
+    "H1_architecture_subclause"
+  ],
+  "outputs": [
+    "results/aggregate/arch_transfer.csv"
+  ]
+}

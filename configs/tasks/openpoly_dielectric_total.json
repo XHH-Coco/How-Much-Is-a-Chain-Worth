@@ -1,0 +1,24 @@
+{
+  "task_id": "openpoly_dielectric_total",
+  "dataset_name": "Dielectric Constant Total",
+  "benchmark": "openpoly",
+  "n": 295,
+  "tier": null,
+  "family": "dielectric",
+  "label_source": "experimental",
+  "target_unit": "dimensionless",
+  "split": {
+    "kind": "nested",
+    "path": "splits/openpoly/openpoly_dielectric_total/split_v1.json"
+  },
+  "metrics": [
+    "r2",
+    "mae",
+    "rmse"
+  ],
+  "arms": [
+    "a2_conventional",
+    "a3_graph"
+  ],
+  "note": "Size scan. Shares n=295 with the other dielectric columns."
+}

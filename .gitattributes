@@ -1,0 +1,22 @@
+* text=auto eol=lf
+
+# Shell scripts must be LF even on Windows, or bash sees a trailing CR as part
+# of the command name and every recipe fails with ": command not found".
+*.sh   text eol=lf
+*.py   text eol=lf
+Makefile text eol=lf
+
+*.md   text eol=lf
+*.json text eol=lf
+*.csv  text eol=lf
+*.yml  text eol=lf
+*.cff  text eol=lf
+*.toml text eol=lf
+*.txt  text eol=lf
+
+# Binary artefacts never get line-ending conversion.
+*.pdf  binary
+*.png  binary
+*.pt   binary
+*.pth  binary
+*.ckpt binary

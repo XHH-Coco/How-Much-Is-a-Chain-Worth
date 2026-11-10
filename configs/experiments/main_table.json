@@ -1,0 +1,34 @@
+{
+  "experiment_id": "main_table",
+  "tasks": [
+    "pb_t1_tg",
+    "pb_t1_tm",
+    "pb_t2_modulus",
+    "pb_t2_permeability",
+    "pb_t3_dielectric_loss",
+    "pb_t3_iwlt",
+    "pb26_polymetrix_tg",
+    "pb26_homopolymer_density"
+  ],
+  "arms": [
+    "a1_floor",
+    "a2_conventional",
+    "a3_graph",
+    "a5_chain"
+  ],
+  "protocol": {
+    "polybench": "official single split x 3 model seeds",
+    "polybench26": "official 5 folds x 3 seeds"
+  },
+  "expected_fits": {
+    "classical": 96,
+    "gnn": 48
+  },
+  "gpu_hours": [
+    3,
+    5
+  ],
+  "outputs": [
+    "results/aggregate/main_table.csv"
+  ]
+}

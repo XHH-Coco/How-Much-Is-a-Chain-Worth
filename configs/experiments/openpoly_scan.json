@@ -1,0 +1,28 @@
+{
+  "experiment_id": "openpoly_scan",
+  "tasks": [
+    "openpoly_tg",
+    "openpoly_dielectric_total",
+    "openpoly_tm"
+  ],
+  "levels": [
+    30,
+    60,
+    120,
+    240,
+    "all"
+  ],
+  "folds": 5,
+  "seeds": 3,
+  "expected_fits": {
+    "gnn": 225,
+    "classical": 225
+  },
+  "produces": [
+    "H4"
+  ],
+  "caveat": "n <= 443 only. n >= 300 is already covered by PolyBench26 official scaling; no novelty claimed there.",
+  "outputs": [
+    "results/aggregate/openpoly_scan.csv"
+  ]
+}
