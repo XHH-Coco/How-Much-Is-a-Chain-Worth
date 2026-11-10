@@ -1,3 +1,0 @@
-# sha256 of every downloaded artifact. Placeholder until D0.
-# Format: <sha256>  <relative path under data/raw/>
-# Fill with: python scripts/01_build_manifests.py --hash
