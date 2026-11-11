@@ -126,7 +126,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（52 个跟踪文件）
+### 4.1 当前结构（53 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -160,7 +160,7 @@ How-Much-Is-a-Chain-Worth/
 │   ├── interim/         中间产物，可重建
 │   ├── processed/       喂模型前的最终表
 │   ├── external/        基准之外的补充数据
-│   └── manifests/       清单、条数、sha256（入库）
+│   └── manifests/       清单、条数、sha256（入库）+ SOURCES.md（入口与许可）
 │
 ├── splits/              ← P2 填：划分索引，只读（入库）
 │   ├── polybench/
@@ -215,7 +215,7 @@ How-Much-Is-a-Chain-Worth/
 | `data/interim/` | 中间产物，文件名带中间步骤：`*_harmonised.parquet` | 唯一副本 |
 | `data/processed/` | 一个任务一张最终表 `<task_id>.parquet`；特征放 `features/<task_id>.npz` | 原始文件 |
 | `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
-| `data/manifests/` | 清单与校验：`*_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
+| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`*_download_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引 `<task_id>_<fold>.json`，**只读** | 生成脚本的临时输出 |
 | `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录） | 业务逻辑、硬编码路径 |
 | `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |

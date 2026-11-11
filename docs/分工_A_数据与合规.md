@@ -83,14 +83,16 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 >
 > 【注意】 **PyYAML 已补**：Core 原来漏了它（P3 读 `configs/**/*.yaml` 会当场失败），现在三个环境统一 `PyYAML==6.0.3`，已写进 `lock/core.pip.txt`。你若发现 `import yaml` 报错，说明装的是旧锁。
 
-### A-2 · 四基准下载 + 完整性核对（3.0 pH｜关键）
+### A-2 · 三基准下载 + 完整性核对（3.0 pH｜关键）
+
+> **口径**：Proposal §2.1 数的是**承重资源**，不是数据集个数——四个资源里承重的只有 PolyBench 与 PolyBench26，OpenPoly 仅边界，第四个（MoleculeNet / PCQM4Mv2）**不承重**。所以只下**三个**，第四个只在 `SOURCES.md` 登记、不下载、不建 manifest。若将来有人要用它，先改 `SOURCES.md` §3 + 记 `docs/DECISIONS.md`，再动手。
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | PolyBench 官方平台（39 个 CSV，稳定 ID = 数据集名；CC BY 4.0，DOI `10.6084/m9.figshare.30917717`）、PolyBench26、OpenPoly |
-| **怎么做** | 写成 `scripts/00_download.py`：逐个下载 → 算 sha256 → 数行数 → 写 manifest。**不要手工点下载**，手工下载没法追 |
-| **产出** | `data/raw/**`（**不入库**）+ `data/manifests/{polybench,polybench26,openpoly}_manifest.csv`（**要入库**，列：`task_id, n_rows, sha256, source_url, downloaded_at`） |
-| **验收标准** | ① PolyBench manifest 恰好 39 行；② `n_rows` 合计 **42,169**；③ 与 Proposal **附录 A** 的 39 行逐行对齐（名字、条数都要对上）；④ 每个文件 sha256 可在 manifest 查到；⑤ `data/raw/` 不在 git 里（README 硬规则 1） |
+| **拿什么** | [`data/manifests/SOURCES.md`](../data/manifests/SOURCES.md)——**入口与许可的唯一权威，`source_url` 只能取自这里**。三个基准：PolyBench 平台（39 个 CSV，稳定 ID = 数据集名；CC BY 4.0，DOI `10.6084/m9.figshare.30917717`）、PolyBench26（`rlearsch/PolymerBenchmark2026`）、OpenPoly（`WangGroupFDU/Openpoly_benchmark`） |
+| **怎么做** | 写成 `scripts/00_download.py`：逐个下载 → 算 sha256 → 数行数 → 写 manifest。**不要手工点下载**，手工下载没法追。`version` 列对 git 仓库记 commit 短 sha，对 figshare 记存档版本号 |
+| **产出** | `data/raw/**`（**不入库**）+ `data/manifests/{polybench,polybench26,openpoly}_download_manifest.csv`（**要入库**，列：`task_id, n_rows, sha256, source_url, version, downloaded_at`） |
+| **验收标准** | ① PolyBench 那份恰好 39 行；② `n_rows` 合计 **42,169**；③ 与 Proposal **附录 A** 的 39 行逐行对齐（名字、条数都要对上）；④ 每个文件 sha256 可在 manifest 查到；⑤ `data/raw/` 不在 git 里（README 硬规则 1）；⑥ 每行 `source_url` 能在 `SOURCES.md` 找到、`version` 非空 |
 
 > 【红线】 **别把 `n` 抄错**：附录 A 的条数是从平台 `/api/data-counts` 读的，是"记录数"不是"结构数"。两个数字在 PolyBench 里不等（14,717 个重复单元 vs 42,169 条记录），报告里不能说混。
 
