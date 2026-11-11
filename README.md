@@ -111,7 +111,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 | 阶段 | 做什么 | 产出落在 | 验收标准 | 状态 |
 |---|---|---|---|---|
 | **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` + `lock/` | 每个环境能 import 自己的核心包，版本可复现 | **已交付 2026-11-11**，见 `docs/交付_P0_环境.md` |
-| **P1 获取数据** | 下载四个基准，算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致，每个文件有 sha256 | ← 下一个 |
+| **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | ← 下一个 |
 | **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照 | `data/interim/` + `splits/` | 划分文件带校验，任何人不得改写 | 未开始 |
 | **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | 未开始 |
 | **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
@@ -126,7 +126,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（54 个跟踪文件）
+### 4.1 当前结构（55 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -160,7 +160,7 @@ How-Much-Is-a-Chain-Worth/
 │   ├── interim/         中间产物，可重建
 │   ├── processed/       喂模型前的最终表
 │   ├── external/        基准之外的补充数据
-│   └── manifests/       清单、条数、sha256（入库）+ SOURCES.md（入口与许可）
+│   └── manifests/       清单、条数、sha256（入库）+ SOURCES.md（入口与许可）+ 接口响应快照
 │
 ├── splits/              ← P2 填：划分索引，只读（入库）
 │   ├── polybench/
@@ -216,7 +216,7 @@ How-Much-Is-a-Chain-Worth/
 | `data/interim/` | 中间产物，文件名带中间步骤：`*_harmonised.parquet` | 唯一副本 |
 | `data/processed/` | 一个任务一张最终表 `<task_id>.parquet`；特征放 `features/<task_id>.npz` | 原始文件 |
 | `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
-| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`*_download_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
+| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`*_download_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引 `<task_id>_<fold>.json`，**只读** | 生成脚本的临时输出 |
 | `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录） | 业务逻辑、硬编码路径 |
 | `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |
