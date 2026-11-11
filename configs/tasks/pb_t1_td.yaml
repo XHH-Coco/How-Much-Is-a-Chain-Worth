@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench/pb_t1_td/official_70_30.json
-split_status: pending
+split_status: present
 split_protocol: official_70_30
 status: available
 notes: 同表 `Thermal decomposition weight loss` 是测试条件，另存为条件列。

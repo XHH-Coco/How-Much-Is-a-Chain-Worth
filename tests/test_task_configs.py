@@ -214,9 +214,26 @@ def test_kfold_on_polybench_fails(tmp_path: Path) -> None:
 
 
 def test_split_present_but_missing_fails(tmp_path: Path) -> None:
-    """声明划分已到位但文件不存在，必须报错（A-5 交付后这一条才会变成合法）。 / Declared split must exist."""
+    """声明划分已到位但文件不存在，必须报错。
+
+    Declared split must exist.
+
+    中文：
+        用途：A-5 交付之后 `pb_t1_tg` 的划分文件**真的存在**了，所以只把状态改成 present
+              不再触发错误——必须同时把 `split_ref` 指向一个不存在的路径，这条测试才继续
+              测它该测的东西（"声明了却没有文件"）。
+    English:
+        Purpose: after A-5 the split file for `pb_t1_tg` really exists, so flipping the status
+                 alone no longer fails; the test must also point `split_ref` at a missing path so
+                 it keeps testing "declared but absent".
+    """
     directory = _copy_configs(tmp_path)
-    _mutate(directory, "pb_t1_tg", split_status="present")
+    _mutate(
+        directory,
+        "pb_t1_tg",
+        split_status="present",
+        split_ref="splits/polybench/pb_t1_tg/does_not_exist.json",
+    )
     with pytest.raises(TaskConfigError) as excinfo:
         load_task_config(directory / "pb_t1_tg.yaml")
     assert "文件不存在" in str(excinfo.value)

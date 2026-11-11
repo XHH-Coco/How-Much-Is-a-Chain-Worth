@@ -1,0 +1,30 @@
+{
+ "task_id": "pb26_scaling_cp",
+ "dataset_id": "md5000_alternating_cp",
+ "benchmark": "polybench26",
+ "protocol": "official_scaling_indices_5fold_seed42",
+ "copied_at": "2026-11-12T04:25:18+08:00",
+ "source_repo": "https://github.com/rlearsch/PolymerBenchmark2026",
+ "source_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+ "source_dir": "data\\raw\\polybench26\\Datasets\\scaling_indices\\MD_5000\\Cp\\alternating_Cp\\seed_42",
+ "canonical_source": "PSMILES/MD_5000/Cp/alternating_Cp.csv",
+ "canonical_sha256": "7dad9d1dc0e93d112a2137c728c773d6255bf2c9af9ca4ddda1d90961eec6952",
+ "seed": 42,
+ "num_folds": 5,
+ "train_sizes": [
+  300,
+  1000,
+  3000,
+  10000
+ ],
+ "n_rows": 27802,
+ "files": {
+  "fold_00.npz": "0929653e22fbc249d082f58a8e08ab78587143e62228ddb6b714d531da0d13db",
+  "fold_01.npz": "53a49f45b12c847424e446ceb650897d7e842b5c5968fdcac71b4ce0107f5232",
+  "fold_02.npz": "39a458b9d3c5d8002d1ab3597c34be93f03175005842c038db5930c883c0c07b",
+  "fold_03.npz": "675d09147f6f90df23b2e0ff4484dbb8efde75cc6463063297c79e9d0641381b",
+  "fold_04.npz": "7216749f57fe95cfc3b0fb9adc5427b46a20a14892e094990aabdb70c3cb34a5",
+  "manifest.json": "618db9300f4a7b5c4ce9de019f86a755e42fa3aa786d3221cd7ae4caa7f2c4ed"
+ },
+ "note": "原样拷贝，不改字节；校验命令见 splits/polybench26/README.md"
+}

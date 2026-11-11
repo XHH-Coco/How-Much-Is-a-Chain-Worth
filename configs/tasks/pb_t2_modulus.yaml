@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench/pb_t2_modulus/official_70_30.json
-split_status: pending
+split_status: present
 split_protocol: official_70_30
 status: available
 notes: identity 的理由：数值 0.16~48 GPa 与文献区间自洽，混入 MPa 会在 160~48000 处出现第二簇，实测没有。

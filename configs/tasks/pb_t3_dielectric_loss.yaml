@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench/pb_t3_dielectric_loss/official_70_30.json
-split_status: pending
+split_status: present
 split_protocol: official_70_30
 status: available
 notes: 最大值 4 只有 1 行，无独立证据说它错，保留（A-3 §6.1）。

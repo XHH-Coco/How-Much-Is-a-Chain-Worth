@@ -168,6 +168,17 @@ POLYBENCH26_WANTED_FILES: tuple[str, ...] = (
     # PolyMetriX Tg 的网页源：7,367 条 PSMILES，主表第 7 行与 H2 的锚点。
     # PolyMetriX Tg web source: 7,367 PSMILES; main-table row 7 and the H2 anchor.
     "Datasets/PSMILES/PolyMetriX/Tg/Tg.csv",
+    # ---- A-5 追加：官方构造脚本（canonical PSMILES 表由它们本地物化）----
+    # 官方**不发布** canonical 表，只发布 compact 源 + 生成脚本（SOURCES.md【坑六】）。
+    # 没有这几份，`canonical_sha256` 校验（A-5 验收 ⑥）就无从做起。
+    # A-5 addition: the official construction scripts. The canonical PSMILES tables are NOT
+    # published - only the compact sources plus these scripts - so criterion 6 needs them.
+    "Datasets/Dataset_construction_scripts/generate_basic_datasets.sh",
+    "Datasets/Dataset_construction_scripts/OMers_convert_jsonl.py",
+    "Datasets/Dataset_construction_scripts/polymer_conversions.py",
+    "Datasets/Dataset_construction_scripts/manage_scaling_indices.py",
+    "Datasets/Dataset_construction_scripts/README.md",
+    "Datasets/Dataset_construction_scripts/requirements.txt",
 )
 # 目录前缀：官方入库的紧凑划分索引（整数行号 + PSMILES sha256）。A-5 只快照其中两个
 # 实验的 seed_42/，但 C 的 scaling 实验要用 MD_5000 家族，所以整个目录一起取（约 2 MB）。
@@ -209,6 +220,18 @@ OPENPOLY_COMMIT = "ccaa66900747bfc576ef935e3d5f220b6c9b1f85"
 # and is explicitly banned by SOURCES.md §2.3 pitfall #2, so it is deliberately NOT fetched.
 OPENPOLY_WANTED_FILES: tuple[str, ...] = (
     "data/final_polymer_properties_fromliterature.csv",
+    # ---- A-5 追加：官方"划分随仓库下发"的实际内容 ----
+    # 这 4 个 notebook 就是仓库里**全部**与划分有关的代码。A-5 取它们是为了让
+    # "OpenPoly 官方划分拿不到"这句话可被任何人当场复核：notebook 只读
+    # `experiment_dataset/{train,val,test}_<prop>_data_list.pt`，而那个目录和生成它的
+    # 代码都不在发布物里（D-22）。取回代码 ≠ 拿到划分，二者的差别写进交付文档。
+    # A-5 addition: the four notebooks are the entire split-related surface of the repo.
+    # They read `experiment_dataset/*.pt`, which is not published; fetching them makes that
+    # claim checkable by anyone (D-22). Code retrieved != split retrieved.
+    "train_and_test_code/train_multi_XGBoost_model.ipynb",
+    "train_and_test_code/train_multi_TabPFN_model.ipynb",
+    "train_and_test_code/train_multi_deep_learning_model.ipynb",
+    "train_and_test_code/evaluate_model_on_single_properties.ipynb",
 )
 OPENPOLY_EXPECTED_ROWS: dict[str, int] = {
     "data/final_polymer_properties_fromliterature.csv": 741,
@@ -728,6 +751,40 @@ def manifest_path(label: str, limit: int | None) -> Path:
     if limit is not None:
         return MANIFEST_ROOT / f"{label}_download_manifest.partial.csv"
     return MANIFEST_ROOT / f"{label}_download_manifest.csv"
+
+
+def _read_manifest_rows(path: Path) -> dict[str, dict[str, str]]:
+    """读回已有清单，按 `task_id` 建索引；文件不存在则返回空 dict。
+    Read an existing manifest into a `task_id`-keyed dict; missing file yields an empty dict.
+
+    中文：
+        用途：重跑时判断"这份字节上次是不是已经核过"，从而沿用旧的 `downloaded_at`。
+              这是 **读**，不参与任何判定——校验标准仍然是官方 md5/sha256 与条数。
+        输入：path —— 清单路径（`.partial` 也算）。
+        输出：dict，键为 `task_id`，值为该行原样字段（字符串）。
+        数据来源：磁盘上的清单 CSV。
+        配置来源：无。
+        副作用：只读。
+        异常：无（解析失败按"没有旧清单"处理，宁可刷新时间戳，也不因为一份坏清单中断下载）。
+
+    English:
+        Purpose: tell whether a byte-identical file was already verified in a previous run so
+                 the old `downloaded_at` can be kept. Read-only; it decides nothing about
+                 correctness - the official md5/sha256 and row counts still do.
+        Args: path - manifest path (a `.partial` one included).
+        Returns: dict keyed by task_id, values are the raw string fields.
+        Data source: the manifest CSV on disk.
+        Config: none.
+        Side effects: read-only.
+        Raises: none (an unreadable manifest is treated as "no previous run").
+    """
+    if not path.is_file():
+        return {}
+    try:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            return {row["task_id"]: row for row in csv.DictReader(handle) if row.get("task_id")}
+    except (OSError, KeyError, csv.Error):
+        return {}
 
 
 def write_manifest(rows: Sequence[DownloadRow], out_path: Path) -> None:
@@ -1299,6 +1356,13 @@ def download_repo_benchmark(
     version = spec.commit[:7]
     LOGGER.info("%s：commit %s / fetching tarball", spec.label, version)
 
+    # 已在本机的行：同一个 sha256 就沿用旧的 `downloaded_at`。理由与 PolyBench 的
+    # `adopt_local_polybench()` 相同——"这次真的又下了一遍"与"这份字节早就核过"是两件事，
+    # 每次重跑都刷新时间戳会让清单在 git 里显得像被人动过，而实际上一个字节都没变。
+    # Reuse `downloaded_at` when the sha256 is unchanged (same rule as adopt_local_polybench):
+    # a re-run that yields identical bytes must not look like a manifest edit.
+    previous = _read_manifest_rows(manifest_path(spec.label, limit))
+
     if dry_run:
         LOGGER.info("  dry-run：将从 %s 取 %d 个精确路径 + 前缀 %s / would fetch from the tarball",
                     _tarball_url(spec.repo, spec.commit),
@@ -1347,7 +1411,12 @@ def download_repo_benchmark(
                 sha256=sha,
                 source_url=f"https://github.com/{spec.repo}/blob/{spec.commit}/{repo_path}",
                 version=version,
-                downloaded_at=_now_iso(),
+                downloaded_at=(
+                    previous[repo_path]["downloaded_at"]
+                    if previous.get(repo_path, {}).get("sha256") == sha
+                    and previous.get(repo_path, {}).get("downloaded_at")
+                    else _now_iso()
+                ),
                 bytes=len(data),
                 n_rows_basis=basis,
             )

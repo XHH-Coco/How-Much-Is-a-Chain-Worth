@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench/pb_t3_dmp_sm/official_70_30.json
-split_status: pending
+split_status: present
 split_protocol: official_70_30
 status: available
 notes: 与第 6 行不同族（力学 vs 降解），替换会削弱降解那条轴，必须在快照里如实标注（表 E 原文）。

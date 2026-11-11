@@ -1,0 +1,29 @@
+{
+ "task_id": "pb26_polymetrix_tg",
+ "dataset_id": "polymetrix_tg",
+ "benchmark": "polybench26",
+ "protocol": "official_scaling_indices_5fold_seed42",
+ "copied_at": "2026-11-12T04:25:18+08:00",
+ "source_repo": "https://github.com/rlearsch/PolymerBenchmark2026",
+ "source_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+ "source_dir": "data\\raw\\polybench26\\Datasets\\scaling_indices\\PolyMetriX\\Tg\\Tg\\seed_42",
+ "canonical_source": "PSMILES/PolyMetriX/Tg/Tg.csv",
+ "canonical_sha256": "b6d2b9f83419c94c5b24200b0288d9a7b53256931d87ffc1533c8884119a09d3",
+ "seed": 42,
+ "num_folds": 5,
+ "train_sizes": [
+  300,
+  1000,
+  3000
+ ],
+ "n_rows": 7367,
+ "files": {
+  "fold_00.npz": "9dfbd37fa2fece7cdd1e6eaad08fb72296c509b25d6965686769da0a240f2df5",
+  "fold_01.npz": "1c0b4e58ab17142fd04bb6442644c9f7e601d246d547b12f43c79ac5ebc74157",
+  "fold_02.npz": "f76a627f11fdc695e85d36488d0485fc930ba32ab98e63edb3919b9cebce70c9",
+  "fold_03.npz": "60852f1aeccec7c6d0e2f6ff7e3dcfc44f6ef2e8684b94f92a65a637c0119460",
+  "fold_04.npz": "df4d73e243632083af5fa893ea10394e937d2efaa6a9d5dfd6b4a8ae5681086a",
+  "manifest.json": "fd29180c05d2347ba48f1b55fe21cc2f11d9d3182b89b4af76392e62914d38c0"
+ },
+ "note": "原样拷贝，不改字节；校验命令见 splits/polybench26/README.md"
+}

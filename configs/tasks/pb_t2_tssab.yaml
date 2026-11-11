@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench/pb_t2_tssab/official_70_30.json
-split_status: pending
+split_status: present
 split_protocol: official_70_30
 status: available
 notes: 若按 MPa 读只有 0.01~0.2 MPa，比工程塑料低两个数量级，故单位只能是 GPa。

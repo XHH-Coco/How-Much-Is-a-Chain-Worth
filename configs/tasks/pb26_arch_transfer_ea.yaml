@@ -20,7 +20,7 @@ arms:
 - a2_conventional
 - a3_graph
 split_ref: splits/polybench26/arch/
-split_status: pending
+split_status: deferred
 split_protocol: official_task4_5fold_seed42_ood_holdout
 status: available
 notes: 只承担 H3 的架构子句。训练源为 polyVERSE EA，属 GTRC 许可（D-08）：结果表须随附 GTRC 全文、免费分发、不得商用。canonical 表由官方 create_task4_shared_splits.py

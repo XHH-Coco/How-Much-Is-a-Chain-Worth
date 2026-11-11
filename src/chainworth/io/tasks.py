@@ -83,7 +83,7 @@ TASK_KEYS_REQUIRED = (
     "eval_unit",        # 官方评估单元（70/30×3 种子、5 折×3 种子…）/ official evaluation unit
     "arms",             # 在这个任务上要跑的臂 / arms that run this task
     "split_ref",        # 划分文件（A-5 交付）路径 / split artefact path
-    "split_status",     # pending | present
+    "split_status",     # pending | present | blocked_upstream | deferred
     "split_protocol",   # 划分协议（与 eval_unit 对应）/ split protocol
     "status",           # available | unavailable
 )
@@ -96,7 +96,7 @@ BENCHMARKS = ("polybench", "polybench26", "openpoly")
 ROLES = ("main", "reserve", "boundary", "mechanism")
 SOURCE_KINDS = ("experimental", "md", "dft", "mixed")
 UNIT_STATUS = ("verified", "unverified", "not_required")
-SPLIT_STATUS = ("pending", "present")
+SPLIT_STATUS = ("pending", "present", "blocked_upstream", "deferred")
 TASK_STATUS = ("available", "unavailable")
 
 # 臂名与 `configs/arms/<arm>.yaml` 一一对应（README §4.2）；Q-01 结案后主表固定为 5 臂（D-17）。
@@ -285,14 +285,26 @@ def load_task_config(path: Path) -> dict[str, Any]:
                 if raw.get("status") == "available" and total != n_labels:
                     errors.append(f"n_labels={n_labels} 与 datasets 的 n_rows 之和 {total} 不等")
 
-    # ⑦ 划分：声明 present 就必须真有文件；pending 只登记不报错（A-5 尚未交付）
-    # split declared present must exist; pending is only recorded
+    # ⑦ 划分：声明 present 就必须真有文件；deferred 必须真有"为什么没落盘"的说明；
+    #    blocked_upstream 只允许出现在 OpenPoly（D-22）；pending 只登记不报错。
+    # split declared present must exist; deferred needs its README; blocked_upstream is
+    # OpenPoly-only; pending is only recorded.
     split_ref = raw.get("split_ref")
-    if raw.get("split_status") == "present":
+    split_status = raw.get("split_status")
+    if split_status == "present":
         if not isinstance(split_ref, str) or not split_ref.strip():
             errors.append("split_status=present 但 split_ref 为空")
         elif not (REPO_ROOT / split_ref).exists():
             errors.append(f"split_status=present 但文件不存在：{split_ref}")
+    elif split_status == "deferred":
+        if not isinstance(split_ref, str) or not split_ref.strip():
+            errors.append("split_status=deferred 但 split_ref 为空")
+        elif not (REPO_ROOT / split_ref).is_dir():
+            errors.append(f"split_status=deferred 但说明目录不存在：{split_ref}")
+        elif not any((REPO_ROOT / split_ref).iterdir()):
+            errors.append(f"split_status=deferred 但 {split_ref} 是空目录（必须有 README 说明）")
+    elif split_status == "blocked_upstream" and raw.get("benchmark") != "openpoly":
+        errors.append("blocked_upstream 只允许用于 OpenPoly（D-22：官方未发布划分）")
     if not str(raw.get("split_protocol") or "").strip():
         errors.append("split_protocol 为空（必须写清用的是哪个官方协议）")
 
@@ -669,7 +681,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"任务数 {report['n_tasks']}：main {counts['main']} / reserve {counts['reserve']} / "
           f"boundary {counts['boundary']} / mechanism {counts['mechanism']}")
     if report["pending_splits"]:
-        print(f"划分待 A-5 交付（{len(report['pending_splits'])} 个）：{', '.join(report['pending_splits'])}")
+        # A-5 之后，只有"整任务不可用"的那种才允许还挂 pending（bandgap：没有可用标签）。
+        # After A-5 only unavailable tasks may legitimately stay pending (bandgap has no labels).
+        print(
+            f"划分仍为 pending（{len(report['pending_splits'])} 个，应全部是不可用任务）："
+            f"{', '.join(report['pending_splits'])}"
+        )
     if report["errors"]:
         for problem in report["errors"]:
             print(f"[FAIL] {problem}", file=sys.stderr)

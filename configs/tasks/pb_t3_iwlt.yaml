@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench/pb_t3_iwlt/official_70_30.json
-split_status: pending
+split_status: present
 split_protocol: official_70_30
 status: available
 notes: 同表 `IWLT(℃)` 是测试条件温度（表头有编码损伤），另存为条件列，不进标签；4 行恰好 2500 h 疑似上限，A-3 未删。

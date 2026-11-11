@@ -18,7 +18,7 @@ eval_unit: official tiers x 5 folds x 2 arms
 arms:
 - a2_conventional
 split_ref: splits/polybench26/pb26_scaling_cp/
-split_status: pending
+split_status: present
 split_protocol: official_scaling_indices_5fold_seed42
 status: available
 datasets:

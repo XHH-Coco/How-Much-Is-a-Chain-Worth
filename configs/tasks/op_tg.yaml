@@ -19,7 +19,7 @@ arms:
 - a2_conventional
 - a3_graph
 split_ref: splits/openpoly/op_tg_official.json
-split_status: pending
+split_status: blocked_upstream
 split_protocol: official_train_test_code_5fold
 status: available
 notes: 只承担 H4；n 网格 30/60/120/240/全部，n ≤ 443 不外推（Proposal §5 H4）。

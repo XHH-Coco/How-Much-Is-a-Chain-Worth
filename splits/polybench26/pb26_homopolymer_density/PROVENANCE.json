@@ -1,0 +1,28 @@
+{
+ "task_id": "pb26_homopolymer_density",
+ "dataset_id": "md5000_homopolymer_density",
+ "benchmark": "polybench26",
+ "protocol": "official_scaling_indices_5fold_seed42",
+ "copied_at": "2026-11-12T04:25:17+08:00",
+ "source_repo": "https://github.com/rlearsch/PolymerBenchmark2026",
+ "source_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+ "source_dir": "data\\raw\\polybench26\\Datasets\\scaling_indices\\MD_5000\\density\\homopolymer_density\\seed_42",
+ "canonical_source": "PSMILES/MD_5000/density/homopolymer_density.csv",
+ "canonical_sha256": "b8a576b9fa2749cf943940367147b05baf01d8cd3e48cbaf9431b04d801b34b7",
+ "seed": 42,
+ "num_folds": 5,
+ "train_sizes": [
+  300,
+  1000
+ ],
+ "n_rows": 1800,
+ "files": {
+  "fold_00.npz": "a9d5d8addf80e659f8dc1ea4efe947d0cae293200cb125f712170ca0c6967133",
+  "fold_01.npz": "495bd95974e654c00d28d3a5b8086d52374895461c68d0c0f3ff243997e9406a",
+  "fold_02.npz": "078e607d58bf4270f0f039f156774ab2701cc628374aca194433f713410ad141",
+  "fold_03.npz": "43f6485d443134cf3fb6e93acbf381211e2b69dda69e614cb8ebfe8a88211710",
+  "fold_04.npz": "236d2a4fefbb3593270210d13492c65b3cd5810d1cbbe7019c7f97e07e92ee4d",
+  "manifest.json": "a31de9c60eeb5c8c69d1408cbc3401be0098af8462ef48b1df71a1c91bd309e4"
+ },
+ "note": "原样拷贝，不改字节；校验命令见 splits/polybench26/README.md"
+}

@@ -1,0 +1,15 @@
+task_id,benchmark,protocol,artifact,sha256,bytes,n_train,n_test,created_at
+pb26_homopolymer_density,polybench26,official_scaling_indices_5fold_seed42,splits/polybench26/pb26_homopolymer_density/seed_42,5d429c91c476adb6e13802b509fadc600c2c9458967176a52ec0abd634e8acc9,24926,7200,900,2026-11-12T04:25:17+08:00
+pb26_polymetrix_tg,polybench26,official_scaling_indices_5fold_seed42,splits/polybench26/pb26_polymetrix_tg/seed_42,83b117b4cdc30fcee88b3885309446a25c7a07dc7d9d7b4fdc21fad5f993bf10,96987,29465,3685,2026-11-12T04:25:18+08:00
+pb26_scaling_cp/md5000_alternating_cp,polybench26,official_scaling_indices_5fold_seed42,splits/polybench26/pb26_scaling_cp/md5000_alternating_cp/seed_42,ba69c6992da2a7521ff4446849d85f40fad1dcd342e19ab1863988b0528587e6,380878,111210,13900,2026-11-12T04:25:18+08:00
+pb26_scaling_cp/md5000_homopolymer_cp,polybench26,official_scaling_indices_5fold_seed42,splits/polybench26/pb26_scaling_cp/md5000_homopolymer_cp/seed_42,12e421a25c6c2d208aec5cef35ccff381a76521811151386542345a366fe6b94,24901,7200,900,2026-11-12T04:25:18+08:00
+pb_t1_td,polybench,official_70_30,splits/polybench/pb_t1_td/official_70_30.json,bc8889cfce0d26c0ef05e3cc89129d29991ae3232784b4299e325a6cb011ba8f,38915,3428,1470,2026-11-12T04:25:14+08:00
+pb_t1_tg,polybench,official_70_30,splits/polybench/pb_t1_tg/official_70_30.json,fcbe58cc7d46825288a44e06bddc5a24bd7c02f40aecd00c011e5fb6e842c3d5,64166,5638,2417,2026-11-12T04:25:15+08:00
+pb_t1_tm,polybench,official_70_30,splits/polybench/pb_t1_tm/official_70_30.json,96c53442a7e40edfbba968c6907688a7b90d9f16caedcce03b1506b79bba97d9,30083,2657,1139,2026-11-12T04:25:15+08:00
+pb_t2_modulus,polybench,official_70_30,splits/polybench/pb_t2_modulus/official_70_30.json,0315a675db7bfa12707467e049b42646d3660fbf3ec3211ac5085bdea930e25e,7989,723,311,2026-11-12T04:25:15+08:00
+pb_t2_permeability,polybench,official_70_30,splits/polybench/pb_t2_permeability/official_70_30.json,e4ed12e124563596bd7f22e3c5e0916e53254372cdd8f95768df3af74269d76e,5718,497,214,2026-11-12T04:25:15+08:00
+pb_t2_tssab,polybench,official_70_30,splits/polybench/pb_t2_tssab/official_70_30.json,fdadd81df286681efc1ac3aad8a94766dedad098caabbe170a37fd84bee4f029,8008,723,311,2026-11-12T04:25:15+08:00
+pb_t3_dielectric_loss,polybench,official_70_30,splits/polybench/pb_t3_dielectric_loss/official_70_30.json,c7f3b53f0e2f18c5db44aefe26d5e2e1e8bd360241774dafa44c576e65d15e54,2691,195,84,2026-11-12T04:25:15+08:00
+pb_t3_dlt,polybench,official_70_30,splits/polybench/pb_t3_dlt/official_70_30.json,7e4f51b61d4e45fabf1d3e86975694af844547df02b95a26bf510d423d81f129,2381,166,72,2026-11-12T04:25:15+08:00
+pb_t3_dmp_sm,polybench,official_70_30,splits/polybench/pb_t3_dmp_sm/official_70_30.json,2832c69acbbff5d43ce8f293e4e913bf2587677db7fd1e092edf46a3c7a8276b,3459,270,117,2026-11-12T04:25:16+08:00
+pb_t3_iwlt,polybench,official_70_30,splits/polybench/pb_t3_iwlt/official_70_30.json,6a9d1d91dc0acef481f3e4708bb1a1e448f6823dcab999bb168e507ca15ebf51,2320,159,69,2026-11-12T04:25:16+08:00

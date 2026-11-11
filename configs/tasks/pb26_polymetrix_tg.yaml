@@ -22,7 +22,7 @@ arms:
 - a4_polybert
 - a5_chain
 split_ref: splits/polybench26/pb26_polymetrix_tg/seed_42/manifest.json
-split_status: pending
+split_status: present
 split_protocol: official_scaling_indices_5fold_seed42
 status: available
 datasets:

@@ -45,6 +45,12 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 >
 > 【坑十四】**`bandgap chain_Egc.csv` 没写单位，已整列弃用。** 表头只有 `bandgap_chain`，数值 0.0205 ~ 9.863 只在 eV 口径下说得通——但“唯一说得通的解释”仍是推断，按红线不采信。该任务 3,380 行不进调和产出；要解锁需先拿到该数据集的单位声明，再加一条决策（D-16）。
 >
+> 【坑十八】**PolyBench 的官方划分只有一个来源，而且它长得不像"划分文件"。** 平台接口 `GET http://202.98.16.11/api/dataset/test-download?file_name=<数据集名>.csv` 返回两列 `polymer_name,SMILES`——没有标签、没有 split 列、没有 fold，前端文案是 *Download Test Set (SMILES only)*。**它就是官方 70/30 的"30"**：官方只公布"谁在测试班"，训练集是补集。三条实测：① 10 个可用任务的测试比例 30.01% ~ 30.26%；② `&seed=0/1/2` 返回字节**完全相同**（md5 一致），所以平台侧没有按种子重划的逻辑，"×3 种子"只能是模型种子（D-20）；③ 取回后必须用 **RDKit 规范化**再与调和表匹配，平台串与 `smiles_canonical` 不是同一套写法。
+>
+> 【坑十九】**OpenPoly 的划分没发布，别照 notebook 猜。** 发布物共 39 个文件，`train_and_test_code/` 下只有 4 个 notebook，它们**只读** `experiment_dataset/{train,val,test}_<prop>_data_list.pt`；生成这些 `.pt` 的代码不在仓库里，`.pt` 本身也没发布（README 里那个 Zenodo DOI 是**模型权重**）。所以 A-5 的"快照 train_and_test_code/ 的划分结果"做不到，按红线停住并记 D-22。**任何按 8:1:1 自己重切的方案都不接受**——它不抛异常，只会给出一组好看的 R²。
+>
+> 【坑二十】**PolyBench26 的 canonical 表要本地物化，且必须写成 LF。** 官方只发 compact 源 + `OMers_convert_jsonl.py`，不发 canonical 表；而官方索引存的是**行号**，行号只在那张表的特定顺序下指向正确分子。Windows 下 pandas 按 `os.linesep` 写 CRLF，官方 `canonical_sha256` 与 `manage_scaling_indices.py verify` 都只认 LF，**不归一就直接报 checksum mismatch**。归一后 `PSMILES/MD_5000/density/homopolymer_density.csv` 的 sha256 与官方 `canonical_sha256` 逐位相等（D-21）。注意：PolyMetriX Tg 是例外——它的 canonical 表就是已发布的 `Datasets/PSMILES/PolyMetriX/Tg/Tg.csv`。
+>
 > 【坑十二】**`Isothermal weight loss time.csv` 的表头有一处编码损伤**：列名 `IWLT(â„ƒ)` 是 `℃` 被二次编码，同表的 `IWLT(hour)` 正常。**A-3 做单位判定时不要把这一列当"温度单位证据"**——证据取 `IWLT(hour)` 与文献口径，并在 `unit_decisions.csv` 的 `evidence` 里写明"原始表头存在编码损伤"。其余 38 个文件严格 UTF-8 可解、无乱码特征。
 >
 > 【坑十一】**`*.conda.txt` 那种"一次请求拿全"的思路，在 GitHub 上要靠 tarball。** 实测本机 `raw.githubusercontent.com` 会在传输中途被 TLS 重协商打断（`curl` 退出码 56 / 20 秒断连），而 `codeload.github.com/<repo>/tar.gz/<commit>` 稳定且一个请求就能把整个仓库取回。所以 `scripts/00_download.py` 对两个 GitHub 基准一律走 tarball + 白名单解包，**不改字节、只挑文件**；两个官方公布过 sha256 的文件解出来当场核对，逐位相等才算过。这条不影响可追溯性：清单里的 `source_url` 指向 `github.com/<repo>/blob/<commit>/<path>`，`version` 是 commit 短 sha。
@@ -174,3 +180,4 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | 2026-11-12 | **A-3 调和完成后的两处数据语义备案**：新增【坑十三】`property_log` 是自然对数（不是 log10，逐行 `= ln(label)`，残差 5e−10）；新增【坑十四】`bandgap chain_Egc` 未声明单位、已整列弃用（3,380 行） | 执行 A-3：跑 `scripts/01_harmonise.py`，逐任务核 `property_log` 与标签、检查 bandgap 表头 |
 | 2026-11-12 | **39 个 CSV 到位并验收通过**：人工下载后 `--verify-only` 离线核 md5，39/39 与 `supplied_md5` 相等，清单 39 行 / 42,169 / 与附录 A 逐行对齐；新增【坑十二】`Isothermal weight loss time.csv` 表头编码损伤（`IWLT(â„ƒ)`），A-3 做单位判定时不许拿它当温度证据 | 仓库所有者（代 A 执行 A-2） |
 | 2026-11-12 | **§2.1 新增「39 个文件的标准表」一行**：把 figshare 原始响应冻成快照 + 派生出 39 行 md5 表，作为任何下载路线的唯一验收标准（D-13）；【坑十】的处理办法同步改成"三条路 + 同一个 `--verify-only` 收尾" | 同上 |
+| 2026-11-12 | **A-5 划分来源备案**：新增【坑十八】PolyBench 官方测试集接口（唯一划分来源、无 seed 维度、需 RDKit 规范化）；【坑十九】OpenPoly 划分未发布（notebook 只读 `.pt`，D-22）；【坑二十】PolyBench26 canonical 表需本地物化且写 LF（D-21） | 执行 A-5：调 `test-download` 拉 10 个任务的测试集、跑官方 `OMers_convert_jsonl.py` 与 `manage_scaling_indices.py verify` |
