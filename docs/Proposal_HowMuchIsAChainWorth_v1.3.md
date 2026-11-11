@@ -254,23 +254,23 @@ Units are **person-hours (pH)**. "With agent" assumes an agent that writes, runs
 | P0 | Task list freeze + appendix snapshot | 4 | **2** | CPU | ✓ | A |
 | P0 | PolyBench26 dual conda environments | 6 | **3** | CPU | ✓ | A |
 | P0 | Data generation: PSMILES / wPSMILES / RDKit descriptors (1.5 h wall-clock) | 4 | **1.5** | CPU | ✓ | A |
-| P0 | **polyBERT embeddings, 7.3 GB (1–3 h wall-clock; 6–10 h if CPU-only)** | 4 | **2** | **GPU recommended** | ✓ | A |
+| P0 | **polyBERT embeddings, 7.3 GB (1–3 h wall-clock; 6–10 h if CPU-only)** | 4 | **2** | **GPU recommended** | ✓ | B |
 | P0 | Official split alignment + assertion tests | 8 | **4** | CPU | ✓ | A |
 | **P1** | Representation pipeline (descriptors, Morgan, wPSMILES → graph, **official graph builder**) | 12 | **4.5** | CPU | ✓ | B |
-| P1 | Conventional baselines ×4 (150 fits) | 14 | **5** | CPU | ✓ | B |
+| P1 | Conventional baselines ×4 (150 fits) | 14 | **5** | CPU | ✓ | C |
 | P1 | **Official GNN: 8 tasks — PolyBench 6 × 3 seeds on the official split, PolyBench26 2 × 5 folds × 3 seeds = 48 runs (1–8 min each on one 4070; 3–5 GPU-h total)** | 22 | **11** | **GPU REQUIRED** | ✓ | B |
 | P1 | polyBERT transfer arm | 8 | **3.5** | **GPU recommended** | | B |
 | P1 | Main table + honest comparison with PolyBench leaderboard | 6 | **2.5** | CPU | ✓ | C |
 | **P2** | Scaling experiment (100 fits, official splits) + **OpenPoly size scan: 3 properties × 5 n-levels × 5 folds × 3 seeds = 225 GNN runs, all n ≤ 443 (the classical arm on the same grid adds 225 CPU fits)** | 13 | **6** | **GPU** | | B (GNN) / C (CPU arms) |
 | P2 | Architecture-transfer experiment (60 runs) | 12 | **5** | CPU | | C |
-| P2 | Λ / κ computation, CI, denominator-stability handling | 8 | **3.5** | CPU | | C |
-| **P3** | Figures (5) + three conclusions | 14 | **6.5** | — | | C |
+| P2 | Λ / κ computation, CI, denominator-stability handling | 8 | **3.5** | CPU | | D |
+| **P3** | Figures (5) + three conclusions | 14 | **6.5** | — | | D |
 | P3 | Slides (15–18) + timed rehearsal + Q&A | 16 | **7** | — | ✓ | owner |
-| — | **Audit of agent-generated artefacts** (splits, leakage, metric implementation) | — | **14** | CPU | ✓ | A+B+C |
+| — | **Audit of agent-generated artefacts** (splits, leakage, metric implementation, run records) | — | **14** | CPU | ✓ | C+D |
 | — | Unknown-item rework budget (data defects, OOM, task replacement) | 20 | **14** | — | | — |
 | | **Total** | **189** | **105** | | | |
 
-**Who does what, and why the balance looks like this.** Three members share the 96 pH of technical work equally — **32.0 pH each**, with fixed loads (audit included) falling between 28.0 and 30.0 pH, a spread of 2.0 pH, and the remainder held as each member's own slack. Writing and the talk (7 pH plus 2 pH of slack, 9 pH in total) sit with the repository owner and are not assigned to a member. Two things changed against the itemised column. First, the main table, the scaling / OpenPoly-CPU batches and the architecture-transfer experiment moved from B to C: their outputs are the direct inputs to C's own pre-registered decision criteria (κ, the H4 crossing point, the architecture ordering), and the person who judges should be the person who runs — otherwise every batch costs an extra round of "I ran it, now check whether I ran it right". Second, the 14 pH audit is now split by the direction in which data flows rather than shared between two people: 5 pH on the way in (A: splits, leakage), 4 pH on the run records themselves (B: predictions present, device and config hash correct), 5 pH on the way out (C: one metric implementation, no mixing of split versions or label sources, figures generated from the same aggregate tables).
+**Who does what, and why the balance looks like this.** Four members share the 96 pH of technical work equally — **24.0 pH each**, with fixed loads falling between 21.5 and 22.0 pH, a spread of 0.5 pH, and the remainder held as each member's own slack. Writing and the talk (7 pH plus 2 pH of slack, 9 pH in total) sit with the repository owner and are not assigned to a member. The split now follows the pipeline instead of the old discipline boundaries: **A produces the data, B runs everything that needs a GPU (A3, A4 and the GNN half of the OpenPoly scan), C runs everything that does not (A1, A2, A5 plus the three mechanism batches) and assembles the main table, and D passes judgement and draws the figures.** Two consequences are deliberate. First, with four people the runner and the judge can be different people, so C runs the batches whose outputs feed κ, the H4 crossing point and the architecture ordering, and hands every fit over together with its test predictions; D computes the criteria from those files and never has to ask how a batch was run. Second, the 14 pH audit is allocated by whose number depends on it rather than by production stage: 5 pH on the way in (D: splits and leakage, because Λ's denominator is exactly `n` and `split_ref`), 4 pH on the run records (C: 535 of the 808 fits are his), and 5 pH on the way out (D again — this one is a self-check on his own figures and is labelled as such in `docs/Audit Log.md`, not presented as independent review).
 
 ### 7.2 Schedule
 
@@ -408,12 +408,13 @@ polyBERT is the same story in a different shape: a 110M-parameter transformer at
 
 ## 9. Team and risks
 
-| Role | Responsibility | pH | Share |
+| Role | Responsibility | pH | Share of the 96 pH |
 |---|---|---|---|
-| A — Data & compliance | Environments, benchmark integration, harmonisation, split correctness, descriptors and embeddings, audit on the way in | 32.0 | 30.5% |
-| B — Modelling | Representation assembly, five arms, GNN sweep, the GPU half of the OpenPoly scan, run-record audit | 32.0 | 30.5% |
-| C — Evaluation & figures | Λ/κ, CIs, three diagnostic batches (scaling, OpenPoly classical arm, architecture transfer), main table and five figures, audit on the way out | 32.0 | 30.5% |
-| Writing & talk (repository owner) | Slides, Q&A bank, rehearsals — **not a member's assignment** | 9.0 | 8.5% |
+| A — Data & compliance | Environments, benchmark integration, label harmonisation, task-list freeze, official splits, structure-level descriptors | 24.0 | 25.0% |
+| B — Representations & GPU arms | Representation assembly and graph building, polyBERT embeddings, A3 sweep (48), A4 transfer arm, the GPU half of the OpenPoly scan (225) | 24.0 | 25.0% |
+| C — Classical arms, mechanism runs & main table | A1/A2/A5, scaling (100) and the OpenPoly classical arm (225), architecture transfer (60), main table, run-record audit | 24.0 | 25.0% |
+| D — Evaluation, figures & audit | Λ/κ, CIs, H1–H4, five figures, three conclusions, provenance, entry and exit audit | 24.0 | 25.0% |
+| Writing & talk (repository owner) | Slides, Q&A bank, rehearsals — **not a member's assignment** | 9.0 | — (outside the 96) |
 
 | Risk | P | Impact | Mitigation |
 |---|---|---|---|
