@@ -1,9 +1,11 @@
 # 分工 B · 建模与训练（Modelling）
 
-> **对应**：`docs/Proposal_HowMuchIsAChainWorth_v1.3.md` §6（实验设计）、§7.1 的 Owner 列 `B`、§9 的 `B — Modelling`
-> **工时**：§7.1 逐项归属 **37.5 人时** + 返工分摊 4 = **41.5 人时**（占 105 的 40%，全队最重）
+> **对应**：`docs/Proposal_HowMuchIsAChainWorth_v1.3.md` §6（实验设计）、§7.1 的负责人列 `B`、§9 的 `B — 建模`
+> **工时**：硬项 **26.0 人时** + 审计（运行侧）**4.0** + 弹性余量 **2.0** = **32.0 人时**
 > **你负责的目录**：`src/chainworth/{chem,arms}/`、`configs/{arms,experiments}/`、`results/raw_runs/`、`results/aggregate/predictions/`
 > **一句话**：同一批样品，用五台仪器各测一遍，把每台仪器的读数原样记下来交给 C。
+>
+> **三人均分口径**：全队技术工时 96 pH（原 105 pH 减去写作与汇报的 9 pH，那 9 pH 由仓库所有者承担）。A / B / C 各 **32.0 pH**，差值 ≤ 2 pH。
 
 ---
 
@@ -11,12 +13,11 @@
 
 ### 你要干的活，是"把样品用五台仪器各测一遍"
 
-四个人合写一篇实验报告：
+三个人合写一篇实验报告（写报告本身由仓库所有者负责，不在三个人的分工里）：
 
 - **A** 在实验开始前把试剂配好、天平校准、并在记录本上签字（数据、划分、描述符、嵌入）；
 - **你** 拿着同一批样品，分别用五台仪器测，每测一次就在卡片上记一行读数；
-- **C** 拿你那一叠卡片算"哪台仪器多称出了多少"，并配上误差范围；
-- **D** 把这件事讲成 8 分钟。
+- **C** 拿你那一叠卡片算"哪台仪器多称出了多少"，并配上误差范围，最后画成图。
 
 "臂"（arm）就是**仪器的分支**，不是五个不同的模型比赛。同一批样品、同一套划分、同一批种子，只换一个变量：
 
@@ -50,26 +51,28 @@
 
 ### 做完的标志（一句话）
 
-> **C 拿到 `results/aggregate/` 之后，不需要再问你任何一句话，就能算出 Λ、κ 和它们的置信区间。**
+> **C 拿到你的 `results/raw_runs/` 与 `predictions/` 之后，不需要再问你任何一句话，就能算出 Λ、κ 和它们的置信区间。**
 > 也就是说：每次运行都留了 run 记录、留了预测、留了 split 版本、留了配置哈希。
 
 ---
 
 ## 1. 你在流水线上的位置
 
-| 阶段 | A | B（你） | C | D |
-|:--|:--|:--|:--|:--|
-| **P0 环境** | ● 装包锁版本 | ○ 同时把 `polymer_chemprop` 跑通一个 fold | – | ○ 读 Proposal |
-| **P1 获取数据** | ● 下载 + 完整性 | – | – | – |
-| **P2 清洗与划分** | ● 标签调和 + 划分快照 | ○ 写特征装配，等 A 的产物 | ○ 先写指标单测 | – |
-| **P3 配置** | ● `configs/tasks/` 冻结 | ● **主责**：`configs/arms/`、`configs/experiments/` | – | ○ 搭幻灯片骨架 |
-| **P4 代码** | ○ 划分/泄漏测试 | ● **主责**：五个臂 | ● **主责**：Λ/κ | – |
-| **P5 运行** | ○ 审计 | ● **主责**：全部拟合 | ○ 等 run 记录 | – |
-| **P6 图表与文档** | ○ 审计签字 | ○ 补跑与答疑 | ● **主责**：5 张图 | ● **主责**：讲稿/彩排 |
+| 阶段 | A | B（你） | C |
+|:--|:--|:--|:--|
+| **P0 环境** | ● 装包锁版本 | ○ 同时把 `polymer_chemprop` 跑通一个 fold | ○ 先用合成数据写指标单测 |
+| **P1 获取数据** | ● 下载 + 完整性 | – | ○ 把 Λ/κ 代码写完 |
+| **P2 清洗与划分** | ● 标签调和 + 划分快照 | ○ 写特征装配，等 A 的产物 | ● 指标与 Λ 计算器 |
+| **P3 配置** | ● `configs/tasks/` 冻结 | ● **主责**：`configs/arms/`、`configs/experiments/` | ○ 定义汇总表与图的数据契约 |
+| **P4 代码** | ○ 划分/泄漏测试 | ● **主责**：五个臂 | ● **主责**：Λ/κ + 规模与架构实验入口 |
+| **P5 运行** | ○ 审计 | ● **主责**：GPU 批量（主扫 48 + OpenPoly 225） | ● **主责**：CPU 批量（scaling 100 + OpenPoly 225 + 架构 60） |
+| **P6 图表与文档** | ○ 审计签字 | ○ 补跑与答疑 | ● **主责**：5 张图 + 主表 + 三条结论 |
 
 ● 主责　○ 参与/等待
 
-**你是唯一一个"卡在中间"的人**：上面等 A 的数据，下面 C 等你跑完。所以你的策略必须是**先用小样本把管线跑通，再放大**——不要等 8 个任务的数据全齐了才开始写第一行代码。
+**你是唯一一个"卡在中间"的人**：上面等 A 的数据，下面 C 等你跑完才有 A3/A5 的预测可算。所以你的策略必须是**先用小样本把管线跑通，再放大**——不要等 8 个任务的数据全齐了才开始写第一行代码。
+
+> C 自己也会跑 scaling、OpenPoly 的 CPU 臂与架构迁移（见 `分工_C`），但那三类都是 `--limit` 级别的轻量批量，不占你的卡。**GPU 只有你一个人在排队**，所以你的队列顺序就是全队的 GPU 队列顺序：主扫 48 → OpenPoly 225，中间隔夜，不许抢。 
 
 ### 与 A 的接口（划清边界，避免重复劳动）
 
@@ -84,8 +87,10 @@
 
 ## 2. 任务清单（拿什么 → 怎么做 → 验收标准）
 
-> 每项标了 pH（人时，含 agent 辅助）与是否关键路径。**8 项合计 37.5 pH**，与 §7.1 一致。
+> 每项标了 pH（人时，含 agent 辅助）与是否关键路径。**7 项合计 26.0 pH**。
 > 说明：§7.1 把"表示管线"记成 4.5 pH 一行，这里拆成 B-1（3.0）+ B-5（1.5），合计不变，拆开是因为 A5 有独立的验收标准。
+>
+> **已经移出去的三块**（都在 `分工_C`）：主表汇总与排行榜对齐 2.5、scaling 100 fits + OpenPoly 经典臂 225 fits 4.0、架构迁移 60 runs 5.0。理由见 §9：这三块的产出正是 C 自己判据的输入，"谁判谁跑"比"一个人跑、另一个人干等"少一轮返工。
 
 ### B-1 · 表示装配与图构建（3.0 pH｜关键）
 
@@ -142,32 +147,27 @@
 
 > **为什么加打乱对照**：A5 相对 A2 多了几列特征，任何模型都会因为维度增加而略有变化。没有一个对照，你无法回答"这 0.02 是信息还是维度"。这个对照成本极低（一次重跑），但它是 H3 能不能站住的关键。
 
-### B-6 · 主表汇总与 leaderboard 对齐（2.5 pH｜关键）
+### B-6 · OpenPoly 扫描的 GPU 部分（2.0 pH｜**GPU 必需**｜关键）
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | 全部 run 记录 + 预测；PolyBench 排行榜上的公开数 |
-| **怎么做** | 汇总 8 任务 × 5 臂的表（均值 ± std，附 bootstrap CI 由 C 提供）；逐格标注 run_id；与排行榜的差，写成"差在协议 / 差在实现"两类，不许混为一谈 |
-| **产出** | `results/aggregate/main_table.csv` + `docs/Main Table Notes.md` |
-| **验收标准** | ① 表中每一格都能点回具体 run_id；② 与排行榜对比时注明"官方数来自哪一版、哪个模型、哪种划分"；③ 差距 > 10% 的格子必须给出解释或标注 `unexplained`（诚实标注比编解释好） |
+| **拿什么** | A-9 复核过的 OpenPoly 三性质（Tg 443 / 介电常数 295 / Tm 168）+ 官方 5 折；B-3 已调通的 GNN 管线与配置 |
+| **怎么做** | 3 性质 × 5 个 n 档（30 / 60 / 120 / 240 / all）× 5 折 × 3 种子 = **225 runs**。复用 B-3 的配置，**只改训练集大小**，别的都不动；排在 P2 那一夜，**不许和主扫抢卡**（4–11 GPU-h） |
+| **产出** | 225 条 `results/raw_runs/` + 225 份预测 + `results/aggregate/openpoly_gpu_index.csv`（`run_id, property, n_level, fold, seed, wall_clock_s`） |
+| **验收标准** | ① 225 条齐全，缺的写 `blocked_no_gpu` 并说明是哪条；② 一律 **n ≤ 443**，不许外推；③ 每 run 都落 `predictions/<run_id>.parquet`（C 要拿它算 bootstrap，没有预测这 225 条等于白跑）；④ 实测墙钟写进索引，超 §7.4 预测 1.5× 就立刻报 |
 
-### B-7 · 机制实验：数据规模 + OpenPoly 扫描（6.0 pH｜部分 GPU）
+> 【边界】 同一网格上的 **经典臂 225 fits 归 C**（`分工_C` 的 C-6），因为那些数直接进 H4 的交叉点判定，谁判谁跑更省一轮沟通。你只管 GNN 这 225 条。
 
-| 项 | 内容 |
-|:--|:--|
-| **拿什么** | PolyBench26 官方 `scaling_splits`（300 / 1000 / 3000 / 10000；homopolymer MD_5000 只有 300 / 1000）；OpenPoly 的 3 个性质（Tg 443 / 介电常数 295 / Tm 168） |
-| **怎么做** | ① **scaling**：5 档 × 5 折 × 2 性质 × 2 臂 = **100 fits**（CPU，XGBoost/RF）；② **OpenPoly 扫描**：3 性质 × 5 个 n 档（30/60/120/240/all）× 5 折 × 3 种子 = **225 GNN runs**（GPU 4–11 h），同网格经典臂另 **225 CPU fits** |
-| **产出** | `results/aggregate/scaling.csv`、`results/aggregate/openpoly_scan.csv` + 对应 run 记录 |
-| **验收标准** | ① 断言使用的是官方 `scaling_splits` 文件哈希，不是自己按行数截的（测试卡死）；② 5 档逐档齐全，缺档要报"哪一档不可能建成"（homopolymer MD_5000 没有 3000 档，这是事实不是失败）；③ OpenPoly 一律 **n ≤ 443**，不许外推；④ 225 个 run 必须与主扫**错夜跑**，不许抢同一张卡 |
-
-### B-8 · 架构迁移实验（5.0 pH｜CPU）
+### B-7 · 运行记录自查（4.0 pH｜关键）
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | PolyBench26 官方 task 4 的划分（homopolymer → alternating / random / block） |
-| **怎么做** | 2 性质 × 2 臂 × 5 折 × 3 种子 = **60 runs**，经典臂为主；有条件再加 GNN 臂（属可选项，+4–7 GPU-h，不进核心预算） |
-| **产出** | `results/aggregate/arch_transfer.csv` + run 记录 |
-| **验收标准** | ① 四个架构逐档齐全；② 报告**实际排序**（block > random > alternating > homopolymer 是否成立），而不是只报"通过/不通过"；③ 若排序不成立，直接写入 §5 的证伪条件，不许重调超参再试 |
+| **拿什么** | 你自己落盘的 `results/raw_runs/*.json` 与 `results/aggregate/predictions/*.parquet` |
+| **怎么做** | 写 `tests/test_run_records.py`，六条断言：① 每条记录字段齐全（`run_id, task, arm, seed, split_version, config_hash, env_fingerprint, device, wall_clock_s, metrics`）；② 每个 run 有对应预测文件；③ 预测行数 = 该 split 测试集行数；④ 同一 `run_id` 不出现两次；⑤ `--limit` 试跑产物不得出现在全量目录；⑥ `device` 与 `env_fingerprint` 对得上（`cuda` ↔ `gnn.json`） |
+| **产出** | `tests/test_run_records.py` + `docs/Audit Log.md` 的运行侧章节 |
+| **验收标准** | ① 故意删掉一条记录的 `split_version`，测试必须红；② 故意把一份 `--limit 200` 的试跑产物改名当全量，测试必须红；③ 每次批量结束跑一遍，并记下条数（48 / 225），缺哪条说清是哪条、为什么 |
+
+> 【注意】 这 4 pH 是全队审计 14 里属于你的那份（A 查入口 5、C 查出口 5）。run 记录是全篇唯一一张"数字的出生证明"，也恰恰是最容易被 agent 悄悄写歪的东西——它错了不会抛异常，只会让结论对不上账。
 
 ---
 
@@ -175,15 +175,16 @@
 
 ```
 configs/arms/a1_floor.yaml  a2_conventional.yaml  a3_graph.yaml  a4_polybert.yaml  a5_chain.yaml
-configs/experiments/main_table.yaml  scaling.yaml  arch_transfer.yaml  openpoly_scan.yaml
+configs/experiments/main_table.yaml  openpoly_scan.yaml     （scaling / arch_transfer 两个配置归 C）
 src/chainworth/chem/features.py  graph.py
 src/chainworth/arms/{floor,conventional,graph,polybert,chain_info}.py
 src/chainworth/io/loaders.py
 results/raw_runs/<run_id>.json                      全部 run，入库
 results/aggregate/predictions/<run_id>.parquet       预测，入库（小文件）
-results/aggregate/{main_table,scaling,arch_transfer,openpoly_scan,gpu_hours}.csv
+results/aggregate/{openpoly_gpu_index,gpu_hours,scramble_control}.csv
 data/processed/features/<task>.npz + feature_manifest.csv
-docs/Main Table Notes.md
+tests/test_run_records.py
+docs/Audit Log.md（运行侧章节）
 ```
 
 **不入库**：模型权重（`.pt`/`.ckpt`）、`logs/`、`outputs/`。权重可由 `config_hash` + seed 重建，没有入库价值。
@@ -192,7 +193,7 @@ docs/Main Table Notes.md
 
 ## 4. 没有 GPU 怎么办
 
-你的活有 **3 项必须 GPU**、**1 项建议 GPU**，其余全 CPU。**没有卡不等于没事做，只等于这 4 项改成"交代码 + 交请求"。**
+你的活有 **2 项必须 GPU**、**1 项建议 GPU**，其余全 CPU。**没有卡不等于没事做，只等于这 3 项改成"交代码 + 交请求"。**
 
 | 任务 | GPU | 没卡的处置 |
 |:--|:--|:--|
@@ -201,10 +202,8 @@ docs/Main Table Notes.md
 | **B-3 GNN 主扫 48 runs** | **必需** | 交代码 + 交请求，由仓库所有者代跑 |
 | B-4 polyBERT | 建议 | 只跑 (a) 冻结+ridge（CPU 可完成）；微调写进请求单 |
 | B-5 A5 注入器 | 无 | 全做完（A5a/b/c 都可只用 XGBoost/RF 跑） |
-| B-6 主表 | 无 | 全做完（缺的格子标 `blocked_no_gpu`） |
-| B-7 scaling | 无 | scaling 的 100 fits 全做完 |
-| **B-7 OpenPoly 225 runs** | **必需** | 交代码 + 交请求 |
-| B-8 架构迁移 | 无 | 经典臂全做完（60 runs） |
+| **B-6 OpenPoly 225 GNN runs** | **必需** | 交代码 + 交请求（C 会同时用 CPU 臂跑同一网格，你的 225 条是 GPU 那一半） |
+| B-7 运行记录自查 | 无 | 全做完——**这一项和有没有卡无关，必须自己交** |
 
 ### 交接协议（三条，缺一条不算交接完成）
 
@@ -222,7 +221,7 @@ docs/Main Table Notes.md
 
 代跑完成后，run 记录会回到 `results/raw_runs/`。**你仍然负责验收**：
 
-- [ ] 条数对不对（48 / 225 / 60，缺一条都要说清是哪条、为什么）
+- [ ] 条数对不对（48 / 225，缺一条都要说清是哪条、为什么）
 - [ ] 每条记录里 `device` 是 `cuda`、`env_fingerprint` 指向 `gnn.json`
 - [ ] 预测文件行数与 split 测试集行数一致
 - [ ] 随机抽 3 条，用同一命令在 CPU 上 `--limit` 重跑，指标量级合理（不要求相同，只要求不是明显坏掉）
@@ -235,7 +234,7 @@ docs/Main Table Notes.md
 ## 5. 依赖关系与冻结边界
 
 **你依赖**：A 的 `data/processed/`、`configs/tasks/`、`splits/`（全部是只读输入）。
-**依赖你的**：C（run 记录 + 预测 → Λ/κ）、D（主表与图的数据源）、A（审计对象）。
+**依赖你的**：C（run 记录 + 预测 → Λ/κ，没有你的预测她算不出区间）、A（审计对象）。
 
 | 冻结项 | 冻结在 | 谁能改 |
 |:--|:--|:--|
@@ -254,8 +253,8 @@ docs/Main Table Notes.md
 | **D0 24:00** | **GNN 单任务单折跑完并记录耗时**；B-2 的第一个基线数出来 | 硬门；跑不完就触发 §7.2 的降级判断 |
 | **D1 12:00** | 主扫 48 runs 已启动，**实测每 run 耗时与 §7.4 对照**；超标立刻 triage (i) | 硬门 |
 | **D1 24:00** | 48 条 run 记录齐全且经你验收；A2 四臂 8 任务跑完 | 主表能不能做就看这个 |
-| **P2 结束** | scaling 100 fits + OpenPoly 225 runs 完成（可与 P1 重叠，取决于卡数） | — |
-| **P3 结束** | 主表逐格能点回 run_id；与排行榜的差已分类 | 交 D 前 |
+| **P2 结束** | OpenPoly 225 GNN runs 完成（scaling 与 OpenPoly 经典臂在 C 手上，两件事排不同的页面/时段，别互相断路） | — |
+| **P3 结束** | B-7 自查全绿；交给 C 的 run 记录与预测**一条不缺**，缺的都有 `blocked_no_gpu` 占位 | 交付前 |
 
 > **夜间是给别人用的**：主扫在你手上那一夜，OpenPoly 扫描必须排在**另一夜**，不许抢卡。有第二张卡时两件事可以并行。
 
@@ -290,12 +289,12 @@ docs/Main Table Notes.md
 - [ ] `git status` 里没有权重文件、没有 `logs/`、没有 `outputs/`
 - [ ] 所有训练入口都有 `--limit` 与 `--dry-run`，CPU 上 2 分钟能跑完一片
 - [ ] `pytest tests/` 全绿，含 `test_splits_identity.py`、`test_no_leakage.py`
-- [ ] run 记录条数与该跑的数目对得上（48 / 225 / 60 / 100），缺的都有 `blocked_no_gpu` 占位
+- [ ] run 记录条数与该跑的数目对得上（48 / 225），缺的都有 `blocked_no_gpu` 占位
 - [ ] 每份 run 记录都带 `split_version`、`config_hash`、`env_fingerprint`
 - [ ] 每份 run 记录都有对应 `predictions/*.parquet`，行数与测试集一致
 - [ ] `configs/arms/*.yaml` 里的预算表 ≤30 trials，且与 `docs/` 里的说明一致
 - [ ] A5 的 `config_hash` 与 A2 只在输入特征上不同（断言过）
-- [ ] 打乱对照跑过了，结论写进 `docs/Main Table Notes.md`
+- [ ] 打乱对照跑过了，数字与一句话结论写进 `results/aggregate/scramble_control.csv`（C 画图 4 时直接引用）
 - [ ] `docs/RUN_REQUESTS.md` 里，所有需要 GPU 的项都写清了命令、预计耗时、期望产出
 - [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第七节）
 
@@ -303,14 +302,17 @@ docs/Main Table Notes.md
 
 ## 9. 工时口径核对（全队共用一张表）
 
-| 角色 | §7.1 硬归属 | 返工池分摊 | 合计 | 占 105 pH |
+| 角色 | 硬项 | 审计 | 弹性余量 | **合计** |
 |:--|--:|--:|--:|--:|
-| A 数据与合规 | 29.5（22.5 + 审计 7） | +4 | 33.5 | 32% |
-| **B 建模（你）** | **37.5** | **+4** | **41.5** | **40%** |
-| C 分析 | 17.0（10 + 审计 7） | +4 | 21.0 | 20% |
-| D 写作 | 7.0 | +2 | 9.0 | 9% |
-| 合计 | 91.0 | 14 | 105 | 100% |
+| A 数据与合规 | 23.5 | 5.0 | 3.5 | 32.0 |
+| **B 建模与训练（你）** | **26.0** | **4.0** | **2.0** | **32.0** |
+| C 评测与图表 | 23.0 | 5.0 | 4.0 | 32.0 |
+| 合计 | 72.5 | 14.0 | 9.5 | **96.0** |
 
-> **口径说明**：Proposal §9 写的是 28 / 32 / 28 / 12（百分比粗估），与 §7.1 逐项归属重算的结果（32 / 40 / 20 / 9）不一致——B 被低估、C 被高估。**以逐项归属为准**；若被问到，标准回答是"§9 是比例估计，§7.1 是逐项分解，两者以逐项分解为准"。这条差异需要记进 `docs/DECISIONS.md`（P3 建该文件时补一行）。
+**你这 26.0 是怎么来的**：B-1 3.0 + B-2 5.0 + B-3 11.0 + B-4 3.5 + B-5 1.5 + B-6 2.0 = 26.0。
 
-> **那 4 人时是什么**：B 的 8 项加总已是 37.5（3.0+5.0+11.0+3.5+1.5+2.5+6.0+5.0），与 §7.1 完全对上；这 4 人时是**未预先分配的余量**——数据缺陷返工、OOM 重跑、任务替换。别提前花掉。
+> **你原来是 41.5，现在 32.0，动的是哪几笔**：原 37.5 移出 13.5（主表汇总 2.5 + scaling 与 OpenPoly 经典臂 4.0 + 架构迁移 5.0）→ 剩 24.0；加回 OpenPoly 的 GNN 那一半 2.0 → 26.0；加审计 4.0 → 30.0；余量 2.0 → 32.0。
+>
+> **为什么你的余量只有 2.0**：你的主要风险是"GPU 排队"和"OOM"，这两种风险已经用排期吸收了（过夜跑、可重试、降级梯）；真正需要临时补工时的两类返工——数据缺陷归 A、图与口径归 C。别把这 2.0 提前花在"再调一轮超参"上，那不属于返工，属于改协议。
+>
+> **总量为什么是 96 而不是 105**：原 105 pH 里有 9 pH 是写作与汇报，现在由仓库所有者承担，不进组员的分工池。105 − 9 = 96，96 ÷ 3 = 32.0。
