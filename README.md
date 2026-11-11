@@ -17,10 +17,10 @@ conda env create -f environment/core.yml       # 数据、化学信息学、经�
 conda env create -f environment/gnn.yml        # 图神经网络（与上者 OpenMP 冲突，必须分开）
 conda env create -f environment/polybert.yml   # 预训练嵌入，权重缓存约 7 GB
 conda activate DSC6020_Project_Core
-python -V                                      # 期望 3.10.x
+python -V                                      # Core/Polybert 3.10.x；GNN 3.11.x（见下）
 ```
 
-- **Python 必须 3.10.x，全队统一。** 三个环境的包版本是按 3.10 的 wheel 兼容性逐一钉死的；谁单独升到 3.11/3.12，别人拿到的 `lock` 就对他失效。（3.10 已于 2026-10-31 EOL，这是已知取舍；要整体升到 3.12 必须重算版本表，并在 `docs/DECISIONS.md` 记一条，不能各自升级。）
+- **Python 版本：Core / Polybert 用 3.10.14，GNN 用 3.11.18。** 不是随手混的：`chemprop 2.x` 强制要求 ≥3.11（PyPI 上 2.0.0–2.3.1 全部如此），而 1.x 只支持 <3.9，所以 **3.10 上不存在任何可安装的 chemprop**，而 A3 臂正是建立在它上面。三套包版本各自按对应 Python 的 wheel 兼容性钉死；谁单独升大版本，别人拿到的 `lock` 就对他失效。（3.10 已于 2026-10-31 EOL，目前是已知取舍，记在 `environment/*.yml` 的头注释里。）
 - **三个环境不许互相 install。** 把 RDKit 塞进 GNN 环境，`libgomp` 会让训练半路崩，而且报错与化学库毫无关系，极难查。
 - **不要往系统 Python 里装，也不要新建 `requirements.txt`。** 本仓库只有 conda 一套声明。
 - P0 验收后以 `lock/*.lock.yml` 为准（`environment/*.yml` 只是声明）。两者不一致时找分工 A，不要自己改。
@@ -72,7 +72,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 | 检查 | 命令 | 期望 |
 |---|---|---|
-| Python 版本 | `python -V` | 3.10.x |
+| Python 版本 | `python -V` | Core/Polybert 3.10.x；GNN 3.11.x |
 | 三个环境在 | `conda env list` | `DSC6020_Project_{Core,GNN,Polybert}` |
 | 远端正确 | `git remote -v` | `github.com/XHH-Coco/How-Much-Is-a-Chain-Worth` |
 | 没把数据带进来 | `git status --short` | 不出现 `data/raw/` 下的文件 |
@@ -245,10 +245,18 @@ How-Much-Is-a-Chain-Worth/
 | 文件 | conda 环境 | Python | GPU | 为什么单独一个 |
 |---|---|---|---|---|
 | `environment/core.yml` | `DSC6020_Project_Core` | 3.10 | 否 | 化学信息学工具 + 经典模型 + 统计 |
-| `environment/gnn.yml` | `DSC6020_Project_GNN` | 3.10 | 是 | 图神经网络框架，与上者的 OpenMP 运行库冲突 |
+| `environment/gnn.yml` | `DSC6020_Project_GNN` | 3.11 | 是 | 图神经网络框架 + chemprop 2.x（该包强制要求 ≥3.11），且与上者的 OpenMP 运行库冲突 |
 | `environment/polybert.yml` | `DSC6020_Project_Polybert` | 3.10 | 是 | 预训练嵌入，权重缓存约 7 GB，需可独立删除 |
 
-三个 `.yml` 只是**声明**，装包在 P0 做。现在三个环境都还没有装包。装法与三条禁忌见第一节第 1 步。
+三份 `.yml` 既是声明，也是**安装凭据**：2026-11-11 已按此装好（Core / Polybert 为 Python 3.10.14，GNN 为 Python 3.11.18）。重装命令：
+
+```bash
+conda env update -n DSC6020_Project_Core    -f environment/core.yml    --prune
+conda env update -n DSC6020_Project_GNN     -f environment/gnn.yml     --prune
+conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
+```
+
+装法与三条禁忌见第一节第 1 步。`lock/` 还没生成（`conda-lock` 是 P0 的另一半），所以现在只能说"按 yml 装得出同样版本"，还不能说"逐字节可复现"。
 
 ---
 

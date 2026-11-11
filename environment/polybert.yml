@@ -1,5 +1,6 @@
-# Phase P0 declaration only -- no package is installed yet.
-# Install later with: conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml
+# Phase P0 declaration. Installed on 2026-11-11 (Python 3.10.14).
+# Reinstall with: conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
+# Separate environment only because the polyBERT weights (~7 GB) must be deletable on their own.
 name: DSC6020_Project_Polybert
 channels:
   - conda-forge
@@ -7,7 +8,10 @@ dependencies:
   - python=3.10.14
   - pip=24.3.1
   - pip:
-      - --extra-index-url https://download.pytorch.org/whl/cu121
+      # cu121 作为主索引：PyPI 上的 torch 是 CPU 版，若用 --extra-index-url，
+      # 同版本号会二选一，容易静默装成 CPU 版。故主索引指 cu121，PyPI 只作兜底。
+      - --index-url https://download.pytorch.org/whl/cu121
+      - --extra-index-url https://pypi.org/simple
       - torch==2.3.1
       - numpy==1.26.4
       - transformers==4.41.2

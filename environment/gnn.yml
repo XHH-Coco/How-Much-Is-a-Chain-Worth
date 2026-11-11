@@ -1,13 +1,25 @@
-# Phase P0 declaration only -- no package is installed yet.
-# Install later with: conda env update -n DSC6020_Project_GNN -f environment/gnn.yml
+# Phase P0 declaration. Installed on 2026-11-11 (RTX 4070 Laptop, driver 572.83).
+# Reinstall with: conda env update -n DSC6020_Project_GNN -f environment/gnn.yml --prune
+#
+# Python is 3.11 here, not 3.10 like the other two environments:
+# chemprop 2.x requires >=3.11 (every release 2.0.0-2.3.1), and chemprop 1.x
+# requires <3.9, so on 3.10 no chemprop version exists at all -- and the A3 arm
+# is built on chemprop. See README section 6.
 name: DSC6020_Project_GNN
 channels:
   - conda-forge
 dependencies:
-  - python=3.10.14
+  - python=3.11.18
   - pip=24.3.1
   - pip:
-      - --extra-index-url https://download.pytorch.org/whl/cu121
+      # cu121 作为主索引：PyPI 上的 torch 是 CPU 版，若用 --extra-index-url，
+      # 同版本号会二选一，容易静默装成 CPU 版。故主索引指 cu121，PyPI 只作兜底。
+      - --index-url https://download.pytorch.org/whl/cu121
+      - --extra-index-url https://pypi.org/simple
+      # torch-scatter / torch-sparse 在 PyPI 上没有 Windows 预编译包（只有源码，
+      # 需要 MSVC 自行编译）。改从 PyG 官方 wheel 索引取同版本预编译包；
+      # pt23cu121 = torch 2.3.1 + cu121，与本文件 torch 钉版一一对应。
+      - -f https://data.pyg.org/whl/torch-2.3.1+cu121.html
       - torch==2.3.1
       - numpy==1.26.4
       - pandas==2.2.2
@@ -19,3 +31,6 @@ dependencies:
       - torch-sparse==0.6.18
       - pytorch-lightning==2.3.0
       - chemprop==2.1.0
+      # lightning_fabric 仍 import pkg_resources，而 setuptools>=81 已删除该模块。
+      # 必须钉在这个上限以下，否则 `import pytorch_lightning` 直接 ModuleNotFoundError。
+      - setuptools==75.8.0

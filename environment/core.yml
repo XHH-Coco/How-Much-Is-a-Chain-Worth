@@ -1,5 +1,6 @@
-# Phase P0 declaration only -- no package is installed yet.
-# Install later with: conda env update -n DSC6020_Project_Core -f environment/core.yml
+# Phase P0 declaration. Installed on 2026-11-11 (Python 3.10.14).
+# Reinstall with: conda env update -n DSC6020_Project_Core -f environment/core.yml --prune
+# Every package below is pinned on purpose; bumping one means rerunning the full table.
 name: DSC6020_Project_Core
 channels:
   - conda-forge
