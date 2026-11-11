@@ -130,7 +130,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（59 个跟踪文件）
+### 4.1 当前结构（61 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -223,7 +223,7 @@ How-Much-Is-a-Chain-Worth/
 | `data/interim/` | 中间产物，文件名带中间步骤：`*_harmonised.parquet` | 唯一副本 |
 | `data/processed/` | 一个任务一张最终表 `<task_id>.parquet`；特征放 `features/<task_id>.npz` | 原始文件 |
 | `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
-| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`<bench>_download_manifest.csv`（一文件一行，列见 `docs/交付_P1_A2_下载与完整性.md` §2）、`*.sha256`、`unit_decisions.csv` | 数据本体；`.partial.csv`（限量跑的调试产物，已 gitignore） |
+| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`polybench_api_article_20261112.json` + `polybench_expected_files.csv`（figshare 原始响应快照与派生的 **39 行标准表**：文件名 / 字节数 / 官方 md5 / 直链，任何下载路线的验收标准，见 `DECISIONS.md` D-13）、`<bench>_download_manifest.csv`（一文件一行，列见 `docs/交付_P1_A2_下载与完整性.md` §2）、`*.sha256`、`unit_decisions.csv` | 数据本体；`.partial.csv`（限量跑的调试产物，已 gitignore） |
 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引，**只读**：PolyBench / OpenPoly 是 `*_official*.json`；PolyBench26 是官方 `scaling_indices/` 的**原样拷贝** `<task>/seed_42/{manifest.json, fold_00..04.npz}`（不改字节），外加一份 `README.md` 记来源 commit 与三组 sha256。`splits/polybench26/arch/` 留空（本地物化、不入库） | 生成脚本的临时输出、自己切的划分 |
 | `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录） | 业务逻辑、硬编码路径 |
 | `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |

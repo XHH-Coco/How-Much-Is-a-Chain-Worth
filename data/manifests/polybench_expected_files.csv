@@ -1,0 +1,40 @@
+file_name,task_id,size_bytes,md5,figshare_file_id,download_url
+bandgap bulk_Egb.csv,bandgap bulk_Egb,18491,21260bafd222dda949f2263eb7479395,60551066,https://ndownloader.figshare.com/files/60551066
+bandgap chain_Egc.csv,bandgap chain_Egc,148223,75f43c837f8009927afcd7f8dd217539,60551063,https://ndownloader.figshare.com/files/60551063
+Cohesive energy density.csv,Cohesive energy density,29118,2989c66db77d59fab5ba2737d3c8a096,60551069,https://ndownloader.figshare.com/files/60551069
+Contact angle.csv,Contact angle,28170,3f6a5b36ca6ec4b22f82cf3b0bb10da5,60551060,https://ndownloader.figshare.com/files/60551060
+Crystallization temperature.csv,Crystallization temperature,59992,ba813feafcb8d702edb1f1d213a36a86,60551072,https://ndownloader.figshare.com/files/60551072
+Density.csv,Density,215275,122f6ed4c41a6b025a1dda17759d08b8,60551075,https://ndownloader.figshare.com/files/60551075
+Dielectric Constant_EPS.csv,Dielectric Constant_EPS,11384,ced76a103b022c87e80153441749d5e7,60551078,https://ndownloader.figshare.com/files/60551078
+Dielectric loss factor.csv,Dielectric loss factor,33612,cc1ea8b9b225767fb83a55734dc81740,60551081,https://ndownloader.figshare.com/files/60551081
+Dielectric loss tangent.csv,Dielectric loss tangent,29130,efdd283e6b9ba56cf9e09167eece6d63,60551084,https://ndownloader.figshare.com/files/60551084
+Dynamic mechanical properties loss modulus.csv,Dynamic mechanical properties loss modulus,23505,45a7a7d6a0a0ded0337c940b8293680e,60551087,https://ndownloader.figshare.com/files/60551087
+Dynamic mechanical properties loss tangent.csv,Dynamic mechanical properties loss tangent,40926,97782cfce3e89e95b72eafc1b212e308,60551090,https://ndownloader.figshare.com/files/60551090
+Dynamic mechanical properties storage modulus.csv,Dynamic mechanical properties storage modulus,57740,76882559f5d22aff615801a6e812bc3c,60551093,https://ndownloader.figshare.com/files/60551093
+Electric conductivity.csv,Electric conductivity,132822,cb2eabd09ad2aa869282b82d0a68e22f,60551096,https://ndownloader.figshare.com/files/60551096
+Electron Affinity_Eea.csv,Electron Affinity_Eea,11644,18103bdfd9aba1cf24b91b4b4c91538f,60551099,https://ndownloader.figshare.com/files/60551099
+Elongation at break.csv,Elongation at break,223813,904a659e02481625bf5625b28efa661e,60551102,https://ndownloader.figshare.com/files/60551102
+Gas diffusion coefficient.csv,Gas diffusion coefficient,76342,0a3f413bae47ebf5edc9b97c630544db,60551105,https://ndownloader.figshare.com/files/60551105
+Gas permeability coefficient.csv,Gas permeability coefficient,127956,961964390fc240ff055b088e78b4ed54,60551108,https://ndownloader.figshare.com/files/60551108
+Gas solubility coefficient.csv,Gas solubility coefficient,39221,8a6c8f5e521951014f14c74efce48329,60551111,https://ndownloader.figshare.com/files/60551111
+Glass transition temperature.csv,Glass transition temperature,1327077,b638ac90e28ff644ccd9cb94f70c650b,60551114,https://ndownloader.figshare.com/files/60551114
+Heat of fusion mol conversion.csv,Heat of fusion mol conversion,22554,5ac809c6b8a7f57a9710e12366744468,60551117,https://ndownloader.figshare.com/files/60551117
+Heat of fusion.csv,Heat of fusion,72077,17d6eb6e4f1416e46b1ca0cbfc7f5888,60551120,https://ndownloader.figshare.com/files/60551120
+Intrinsic viscosity.csv,Intrinsic viscosity,267956,ae6e86eb7fc2a4c88e3a7d3523cc2008,60551123,https://ndownloader.figshare.com/files/60551123
+Ionization Energy_Ei.csv,Ionization Energy_Ei,11682,75ac78ca227d9b2c4c3abc516b023aff,60551126,https://ndownloader.figshare.com/files/60551126
+Isothermal weight loss time.csv,Isothermal weight loss time,41640,edac855c33e7dc14d1382e39c192db33,60551129,https://ndownloader.figshare.com/files/60551129
+Lc phase transition temperature.csv,Lc phase transition temperature,158843,ded502aad82f4a36b360afb39495d55b,60551132,https://ndownloader.figshare.com/files/60551132
+Melting temperature.csv,Melting temperature,453812,dc47a01e28a5f49d1bd497f52f0a0e98,60551135,https://ndownloader.figshare.com/files/60551135
+PCE_OPV_aug.csv,PCE_OPV_aug,173004,d0fa10a6db0dc58837674a017eb25a3d,60551138,https://ndownloader.figshare.com/files/60551138
+Refractive Index_Nc.csv,Refractive Index_Nc,12152,bc4f2450ba348d562e80e9a3b5395b3f,60551141,https://ndownloader.figshare.com/files/60551141
+Softening temperature.csv,Softening temperature,87862,ffbbd8bc1ee5abb2f62dc40d9e839b51,60551144,https://ndownloader.figshare.com/files/60551144
+Solubility parameter.csv,Solubility parameter,30628,2c8f6bd4f097a70860a60e1ba5f6ca5b,60551147,https://ndownloader.figshare.com/files/60551147
+Specific heat capacity.csv,Specific heat capacity,15659,96d027e471466d0e4f60dcdb68e54728,60551150,https://ndownloader.figshare.com/files/60551150
+Specific volume.csv,Specific volume,216748,302328d51c0f6c364ebfed73cfe243d9,60551153,https://ndownloader.figshare.com/files/60551153
+Surface tension.csv,Surface tension,34943,8c8e20c86c19f58d0ef9e5c23b121e8d,60551156,https://ndownloader.figshare.com/files/60551156
+Tensile modulus.csv,Tensile modulus,215823,d835f83929b41f96c7623314b2c4bcc5,60551159,https://ndownloader.figshare.com/files/60551159
+Tensile stress strength at break.csv,Tensile stress strength at break,218067,c3eb489833234a01c60dc953cff503b2,60551162,https://ndownloader.figshare.com/files/60551162
+Tensile stress strength at yield.csv,Tensile stress strength at yield,41125,30df448677cb1c381206c4043eb3257c,60551165,https://ndownloader.figshare.com/files/60551165
+Thermal decomposition temperature.csv,Thermal decomposition temperature,959295,11c43d42b0c954c05aac4163386ffbfd,60551168,https://ndownloader.figshare.com/files/60551168
+Volume resistivity.csv,Volume resistivity,129686,0ed30a006296b160bf99c3410a698f47,60551171,https://ndownloader.figshare.com/files/60551171
+Water absorption.csv,Water absorption,139502,4c4b4128e8ee0a77fb66e5325b818f9d,60551174,https://ndownloader.figshare.com/files/60551174

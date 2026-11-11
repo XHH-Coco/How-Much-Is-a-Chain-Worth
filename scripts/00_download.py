@@ -85,6 +85,21 @@ POLYBENCH_API = f"https://api.figshare.com/v2/articles/{POLYBENCH_ARTICLE_ID}"
 # 39 tasks, 42,169 records: Proposal appendix A; also SOURCES.md §2.1 "scale".
 POLYBENCH_EXPECTED_FILES = 39
 POLYBENCH_EXPECTED_ROWS = 42169
+POLYBENCH_VERSION = "figshare:v2"
+
+# 39 个文件的权威清单：文件名 / 字节数 / 官方 md5 / 下载 URL。
+# 来源是 figshare `/articles/30917717` 的原始响应，已存快照
+# `data/manifests/polybench_api_article_20261112.json`（v2、CC BY 4.0）。
+# 两条用途：①「手动下 / 别人代下 / 浏览器打包」这条路线唯一的验收标准——文件放进目录后核
+# 这份 md5，核不上的就不是官方字节；② API 被拦时的兜底文件列表（URL 与 md5 表里都有，
+# 不必先问 API 才能下）。
+# The authoritative list of the 39 files (name / bytes / official md5 / download URL), captured
+# from figshare's raw article response into the JSON snapshot above. It is (1) the only
+# acceptance standard for any manual or third-party download route and (2) the offline fallback
+# file list when the API is blocked.
+POLYBENCH_EXPECTED_TABLE = MANIFEST_ROOT / "polybench_expected_files.csv"
+POLYBENCH_ARCHIVE_BYTES = 5_937_499   # 39 份合计；等于 figshare article 的 `size` 字段
+
 
 # 附录 A 的 39 行：任务名 -> 记录数。**这是校验用的副本，不是数据来源**；
 # 数据来源永远是 figshare 的 CSV 本身。名字必须逐字一致（含大小写与空格）。
@@ -758,6 +773,242 @@ def write_manifest(rows: Sequence[DownloadRow], out_path: Path) -> None:
 # ---- PolyBench / PolyBench ----
 
 
+def load_polybench_expected_files() -> list[dict[str, object]]:
+    """读出 39 个文件的权威清单：文件名、字节数、官方 md5、下载 URL。
+    Load the authoritative list of the 39 files: name, bytes, official md5, download URL.
+
+    中文：
+        用途：手动下载路线只有一条验收标准——md5 与官方存档一致。这张表就是那份标准，
+              顺带充当 API 被拦时的文件列表（不用先问 API 才知道要下哪 39 个文件）。
+        输入：无（读 `data/manifests/polybench_expected_files.csv`）。
+        输出：按文件名排序的 dict 列表，键为 name / task_id / size / md5 / download_url / file_id。
+        数据来源：`data/manifests/polybench_api_article_20261112.json`，即 figshare
+                  `/articles/30917717` 原始响应的快照（v2、CC BY 4.0）。
+        配置来源：无。
+        副作用：只读。
+        异常：FileNotFoundError —— 表不在（`--verify-only` 据此报"还没有标准可依"）；
+              ValueError —— 行数不是 39、文件名重复、或字节合计不等于存档声明的 5,937,499
+              （说明表被改坏了，宁可拦住也不能拿它去核别人下的文件）。
+
+    English:
+        Purpose: any manual route has exactly one acceptance standard — md5 equality with the
+                 official archive. This table is that standard, and doubles as the file list
+                 when the API is blocked.
+        Args: none (reads data/manifests/polybench_expected_files.csv).
+        Returns: dicts sorted by file name with keys name / task_id / size / md5 /
+                 download_url / file_id.
+        Data source: the JSON snapshot of figshare's raw article response (v2, CC BY 4.0).
+        Config: none.
+        Side effects: read-only.
+        Raises: FileNotFoundError when the table is missing; ValueError when it has the wrong
+                row count, duplicate names, or a byte total other than 5,937,499 — a corrupted
+                table must not be used to certify someone else's download.
+    """
+    if not POLYBENCH_EXPECTED_TABLE.exists():
+        raise FileNotFoundError(
+            f"没有 39 个文件的标准表 / expected-file table missing: {POLYBENCH_EXPECTED_TABLE}"
+        )
+    with POLYBENCH_EXPECTED_TABLE.open("r", encoding="utf-8", newline="") as handle:
+        records = list(csv.DictReader(handle))
+
+    if len(records) != POLYBENCH_EXPECTED_FILES:
+        raise ValueError(
+            f"标准表 {len(records)} 行，应为 {POLYBENCH_EXPECTED_FILES} 行 / "
+            f"expected-file table has {len(records)} rows, expected {POLYBENCH_EXPECTED_FILES}"
+        )
+    names = [str(record["file_name"]) for record in records]
+    if len(set(names)) != len(names):
+        raise ValueError("标准表里有重复文件名 / duplicate file names in the expected-file table")
+    total = sum(int(str(record["size_bytes"])) for record in records)
+    if total != POLYBENCH_ARCHIVE_BYTES:
+        raise ValueError(
+            f"标准表字节合计 {total:,}，存档声明 {POLYBENCH_ARCHIVE_BYTES:,} / byte total mismatch"
+        )
+
+    return [
+        {
+            "name": str(record["file_name"]),
+            "task_id": str(record["task_id"]),
+            "size": int(str(record["size_bytes"])),
+            "md5": str(record["md5"]),
+            "download_url": str(record["download_url"]),
+            "file_id": int(str(record["figshare_file_id"])),
+        }
+        for record in sorted(records, key=lambda record: str(record["file_name"]).lower())
+    ]
+
+
+def _polybench_files() -> tuple[list[dict[str, object]], str]:
+    """确定 PolyBench 要下载的文件列表：先问 API，被拦就退回冻结表，两者都在时互相核对。
+    Resolve the PolyBench file list: ask the API, fall back to the frozen table when blocked,
+    and cross-check the two whenever both are available.
+
+    中文：
+        用途：把"文件列表从哪来"和"没网也能下"分开。API 通的时候它是最新事实来源，同时
+              与冻结表逐名逐 md5 对齐——对不上说明上游发了新版本，必须停下来记 DECISIONS，
+              不能拿旧 md5 去核新文件。API 被拦时退回冻结表，下载 URL 与 md5 都在表里，
+              `ndownloader.figshare.com` 若可达仍然能下。
+        输入：无。
+        输出：(files, version)：files 为 dict 列表（name / size / md5 / download_url / file_id），
+              version 形如 `figshare:v2`。
+        数据来源：figshare `/articles/30917717`；退化路径为 `polybench_expected_files.csv`。
+        配置来源：无。
+        副作用：发一次网络请求（退化路径不发）。
+        异常：ValueError —— 文件数不是 39，或 API 与冻结表的文件名 / md5 对不上；
+              RuntimeError —— API 与非 403 的网络错误（此时不该静默退化）。
+
+    English:
+        Purpose: separate "where the file list comes from" from "download without the API".
+                 A reachable API is the current source of truth and is cross-checked name by
+                 name and md5 by md5 against the frozen table; a mismatch means upstream
+                 published a new version, which must stop the run and be recorded in
+                 DECISIONS. When the API is blocked the frozen table takes over, so
+                 ndownloader remains usable if only the API host is blocked.
+        Args: none.
+        Returns: (files, version) where files are dicts with name / size / md5 / download_url /
+                 file_id and version looks like `figshare:v2`.
+        Data source: figshare article 30917717, falling back to the expected-file table.
+        Config: none.
+        Side effects: one network request (none on the fallback path).
+        Raises: ValueError on a wrong file count or an API/table mismatch; RuntimeError for
+                non-403 network failures, which must not be silently papered over.
+    """
+    try:
+        meta = _http_json(POLYBENCH_API, what="figshare article metadata")
+    except urllib.error.HTTPError as exc:
+        if exc.code != 403:
+            raise
+        LOGGER.warning(
+            "figshare 返回 403（Server: awselb/2.0）：本机出口被存档方拦截，改用冻结表里的"
+            "下载 URL 直连 ndownloader / 403 from figshare, falling back to the frozen table"
+        )
+        return load_polybench_expected_files(), POLYBENCH_VERSION
+    except (RuntimeError, OSError, ValueError) as exc:
+        LOGGER.warning(
+            "figshare 元数据取不到（%s），改用冻结表 / metadata unavailable, using the frozen table", exc
+        )
+        return load_polybench_expected_files(), POLYBENCH_VERSION
+
+    files = meta.get("files") or []
+    version = f"figshare:v{meta.get('version', '?')}"
+    if len(files) != POLYBENCH_EXPECTED_FILES:
+        raise ValueError(
+            f"figshare 列出 {len(files)} 个文件，官方应为 {POLYBENCH_EXPECTED_FILES} 个；"
+            f"版本变了要记 docs/DECISIONS.md / figshare listed {len(files)} files, expected "
+            f"{POLYBENCH_EXPECTED_FILES}"
+        )
+
+    # API 与冻结表对齐：名字集合先对，再逐名核 md5。 / names first, then md5 per name.
+    expected = {str(row["name"]): row for row in load_polybench_expected_files()}
+    live = {str(entry["name"]): entry for entry in files}
+    if set(live) != set(expected):
+        raise ValueError(
+            f"figshare 的文件名与冻结表不一致：新增 {sorted(set(live) - set(expected))}，"
+            f"缺失 {sorted(set(expected) - set(live))}；上游版本变了，先记 docs/DECISIONS.md"
+        )
+    changed = {
+        name: (live[name]["supplied_md5"], expected[name]["md5"])
+        for name in live
+        if live[name]["supplied_md5"] != expected[name]["md5"]
+    }
+    if changed:
+        raise ValueError(f"figshare 的 md5 与冻结表不符（线上, 表内）：{changed} / md5 drift")
+
+    return [
+        {
+            "name": entry["name"],
+            "size": int(entry["size"]),
+            "md5": entry["supplied_md5"],
+            "download_url": entry["download_url"],
+            "file_id": int(entry["id"]),
+        }
+        for entry in files
+    ], version
+
+
+def adopt_local_polybench(out_manifest: Path | None = None) -> int:
+    """把已放进 `data/raw/polybench/` 的 39 个 CSV 逐一核 md5，通过后写成清单（不联网）。
+    Verify the 39 CSVs already sitting in data/raw/polybench by md5, then write the manifest
+    (no network involved).
+
+    中文：
+        用途：给"浏览器打包下载 / 别人代下 / 平台手动下"这条路线一个正式的收尾动作——
+              文件丢进目录，跑一条命令，逐份核官方 md5，全过才出清单。核不过就**不出清单**
+              并逐条说明差在哪（缺哪个、多哪个、哪个字节数不对、哪个 md5 不对）。
+        输入：out_manifest —— 默认 `data/manifests/polybench_download_manifest.csv`。
+        输出：写了几行；本地一个 CSV 都没有时返回 0 并记一条 INFO（按"还没下"处理，不算错）。
+        数据来源：`data/raw/polybench/*.csv`；期望值来自 `polybench_expected_files.csv`。
+        配置来源：无。
+        副作用：写清单文件（仅当 39 份全部核对通过）。
+        异常：ValueError —— 有缺、有多、字节数或 md5 不符，异常信息里逐条列全。
+
+    English:
+        Purpose: give the "browser bundle / colleague-downloaded / platform manual" routes a
+                 proper closing step: drop the files in, run one command, check the official
+                 md5 of each, and only then emit a manifest. A failure emits nothing and lists
+                 every problem (missing, unexpected, wrong size, wrong md5).
+        Args: out_manifest - defaults to data/manifests/polybench_download_manifest.csv.
+        Returns: the number of rows written; 0 with an INFO line when no CSV is present yet.
+        Data source: data/raw/polybench/*.csv; expectations from the expected-file table.
+        Config: none.
+        Side effects: writes the manifest, only when all 39 files verify.
+        Raises: ValueError listing every discrepancy when anything fails to match.
+    """
+    expected = {str(row["name"]): row for row in load_polybench_expected_files()}
+    raw_dir = RAW_ROOT / "polybench"
+    present = sorted(path.name for path in raw_dir.glob("*.csv")) if raw_dir.exists() else []
+    if not present:
+        LOGGER.info("本地还没有 PolyBench CSV（%s），按\"尚未下载\"处理 / no local CSVs yet", raw_dir)
+        return 0
+
+    problems: list[str] = []
+    missing = sorted(set(expected) - set(present))
+    unexpected = sorted(set(present) - set(expected))
+    if missing:
+        problems.append(f"缺 {len(missing)} 个 / missing {len(missing)}: {missing}")
+    if unexpected:
+        problems.append(f"多出 {len(unexpected)} 个非官方文件 / unexpected: {unexpected}")
+
+    rows: list[DownloadRow] = []
+    for name in sorted(set(expected) & set(present)):
+        path = raw_dir / name
+        payload = path.read_bytes()
+        want_size = int(str(expected[name]["size"]))
+        want_md5 = str(expected[name]["md5"])
+        if len(payload) != want_size:
+            problems.append(f"{name}：{len(payload):,} B，应为 {want_size:,} B / size mismatch")
+            continue
+        got_md5 = _digest(payload, "md5")
+        if got_md5 != want_md5:
+            problems.append(f"{name}：md5 {got_md5}，应为 {want_md5} / md5 mismatch")
+            continue
+        rows.append(
+            DownloadRow(
+                task_id=name.removesuffix(".csv"),
+                n_rows=_count_csv_rows(path),
+                sha256=_digest(payload, "sha256"),
+                source_url=str(expected[name]["download_url"]),
+                version=POLYBENCH_VERSION,
+                downloaded_at=_now_iso(),
+                bytes=len(payload),
+                n_rows_basis="csv_data_rows",
+            )
+        )
+
+    if problems:
+        raise ValueError(
+            "本地文件与官方存档对不上，不出清单 / local files do not match the archive:\n  - "
+            + "\n  - ".join(problems)
+        )
+
+    target = out_manifest or (MANIFEST_ROOT / "polybench_download_manifest.csv")
+    write_manifest(rows, target)
+    LOGGER.info(
+        "39 份逐一核过官方 md5，清单已写 / all 39 files matched, manifest written: %s", target
+    )
+    return len(rows)
+
+
 def download_polybench(*, limit: int | None, force: bool, dry_run: bool) -> list[DownloadRow]:
     """从 figshare 存档取 PolyBench 的 39 个 CSV，逐份校验 md5 并算 sha256。
     Fetch the 39 PolyBench CSVs from the figshare archive, verify md5 and hash each.
@@ -770,7 +1021,8 @@ def download_polybench(*, limit: int | None, force: bool, dry_run: bool) -> list
               force —— 忽略本地已有文件，强制重下；
               dry_run —— 只列清单与目标路径，不写盘。
         输出：`DownloadRow` 列表，每份 CSV 一行；顺序沿用 figshare 返回顺序。
-        数据来源：`data/manifests/SOURCES.md` §2.1 的 figshare 存档（DOI 10.6084/m9.figshare.30917717，v2）。
+        数据来源：`data/manifests/SOURCES.md` §2.1 的 figshare 存档（DOI 10.6084/m9.figshare.30917717，v2）；
+                  文件列表由 `_polybench_files()` 给出（API 优先，被拦退回 `polybench_expected_files.csv`）。
         配置来源：无。
         副作用：写 `data/raw/polybench/<数据集名>.csv`。
         异常：RuntimeError —— 网络不可达或被拦截（含 HTTP 403，见下方提示）；
@@ -783,48 +1035,23 @@ def download_polybench(*, limit: int | None, force: bool, dry_run: bool) -> list
         Args: limit - take only the first N files (debugging; None = all 39);
               force - ignore existing local files; dry_run - print the plan, write nothing.
         Returns: one `DownloadRow` per CSV, in figshare's order.
-        Data source: the figshare archive in SOURCES.md §2.1 (DOI 10.6084/m9.figshare.30917717, v2).
+        Data source: the figshare archive in SOURCES.md §2.1 (DOI 10.6084/m9.figshare.30917717, v2);
+                 the file list comes from `_polybench_files()` (API first, frozen table when blocked).
         Config: none.
         Side effects: writes data/raw/polybench/<dataset name>.csv.
         Raises: RuntimeError when the network is unreachable or blocked (HTTP 403 included);
                 ValueError when md5 mismatches three times or the file count is not 39.
     """
-    LOGGER.info("PolyBench：读取 figshare 元数据 / reading figshare metadata: %s", POLYBENCH_API)
-    try:
-        meta = _http_json(POLYBENCH_API, what="figshare article metadata")
-    except urllib.error.HTTPError as exc:
-        if exc.code == 403:
-            raise RuntimeError(
-                "figshare 返回 403（Server: awselb/2.0），本机出口被存档方拦截。\n"
-                "  这不是脚本问题：同一台机器上 figshare.com / api.figshare.com / "
-                "ndownloader.figshare.com 的全部路径都返回 403，直连与走代理都一样。\n"
-                "  三条可行出路（按优先级）：\n"
-                "    1) 换一个能访问 figshare 的网络重跑本命令；\n"
-                "    2) 用 PolyBench 平台（http://202.98.16.11）登录后下载，文件名照抄，\n"
-                "       落到 data/raw/polybench/，再跑 --verify-only 补清单；\n"
-                "    3) 找同学代下同一版本（v2）的 39 个 CSV，把 md5 抄回来核对。\n"
-                "  详见 docs/交付_P1_A2_下载与完整性.md §5。\n"
-                "  figshare returned 403 (awselb/2.0): this host's egress is blocked. See the doc."
-            ) from exc
-        raise
-
-    files = meta.get("files") or []
-    version = f"figshare:v{meta.get('version', '?')}"
-    if len(files) != POLYBENCH_EXPECTED_FILES:
-        raise ValueError(
-            f"figshare 列出 {len(files)} 个文件，官方应为 {POLYBENCH_EXPECTED_FILES} 个；"
-            f"版本变了要记 docs/DECISIONS.md / figshare listed {len(files)} files, expected "
-            f"{POLYBENCH_EXPECTED_FILES}"
-        )
+    LOGGER.info("PolyBench：确定要下的 39 个文件 / resolving the 39 files")
+    files, version = _polybench_files()
 
     wanted = files[:limit] if limit else files
     out_dir = RAW_ROOT / "polybench"
     rows: list[DownloadRow] = []
     for index, entry in enumerate(wanted, start=1):
-        name = entry["name"]
-        file_id = entry["id"]
-        url = entry["download_url"]
-        supplied_md5 = entry["supplied_md5"]
+        name = str(entry["name"])
+        url = str(entry["download_url"])
+        supplied_md5 = str(entry["md5"])
         target = out_dir / name
         LOGGER.info("[%d/%d] %s（%d B）/ fetching", index, len(wanted), name, entry["size"])
 
@@ -847,7 +1074,21 @@ def download_polybench(*, limit: int | None, force: bool, dry_run: bool) -> list
         if target.exists() and not force:
             LOGGER.info("  已存在，跳过（--force 可重下）/ exists, skipped (use --force)")
         else:
-            payload = _http_get(url, what=f"polybench/{name}")
+            try:
+                payload = _http_get(url, what=f"polybench/{name}")
+            except urllib.error.HTTPError as exc:
+                if exc.code == 403:
+                    raise RuntimeError(
+                        f"下载 {name} 时 ndownloader 也返回 403：本机到 figshare 的出口整体被拦。\n"
+                        "  脚本这条路走不通不代表数据拿不到——任一条人工路线走通后：\n"
+                        "    1) 把 39 个 CSV 放进 data/raw/polybench/，文件名照抄（空格、大小写、下划线都要一致）；\n"
+                        "    2) 跑 python scripts/00_download.py --verify-only，它不出网，逐份核官方 md5，\n"
+                        "       全过就写出 polybench_download_manifest.csv。\n"
+                        "  39 个文件名、字节数、官方 md5 见 data/manifests/polybench_expected_files.csv；\n"
+                        "  出处与取舍见 docs/交付_P1_A2_下载与完整性.md §5。\n"
+                        "  ndownloader also returned 403; use the manual route, then --verify-only."
+                    ) from exc
+                raise
             if _digest(payload, "md5") != supplied_md5:
                 raise ValueError(
                     f"{name} 的 md5 与 figshare 公布值不符 / md5 mismatch for {name}: "
@@ -1263,7 +1504,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
              "PolyBench only: re-download even if present; the GitHub ones always replay from the tarball",
     )
     parser.add_argument("--dry-run", action="store_true", help="只打印计划，不写盘、不联网改状态 / print the plan only")
-    parser.add_argument("--verify-only", action="store_true", help="只校验已有清单，不联网 / validate existing manifests only")
+    parser.add_argument(
+        "--verify-only",
+        action="store_true",
+        help="不出网：先把 data/raw/polybench/ 里手动放进去的 CSV 逐一核官方 md5 并补清单，"
+             "再校验清单（39 行 / 42,169 / 与附录 A 对齐）/ offline: adopt hand-placed CSVs, then validate",
+    )
     parser.add_argument(
         "--ca-bundle",
         default=os.environ.get("CHAINWORTH_CA_BUNDLE"),
@@ -1317,8 +1563,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.verify_only:
         try:
+            # 先看盘上有没有人手动放进去的 39 个 CSV：有就核 md5 并补清单（不出网）。
+            # First adopt any hand-placed CSVs: verify md5 and write the manifest, offline.
+            if args.source in ("all", "polybench"):
+                adopt_local_polybench()
             validate_polybench_manifest()
-        except (FileNotFoundError, AssertionError) as exc:
+        except (FileNotFoundError, AssertionError, ValueError) as exc:
             # 校验失败要把"差在哪"原样说出来，别用 traceback 吓人；返回码 1 供 CI 判断。
             # State exactly what is wrong instead of dumping a traceback; exit 1 for CI.
             LOGGER.error("校验未通过 / verification failed: %s", exc)
