@@ -105,6 +105,14 @@
 > **红线**：`X` 的行序如果按 DataFrame 顺序走，划分就失效了——而代码不会报错。这是 §7.5 点名的第 (i) 类失败模式。
 >
 > 【接口】 C 会复用你的 `feature_manifest.csv` 与装配函数跑 A2/A5。**装配函数一旦被 C 引用就冻结**，改字段要提前一天说。
+>
+> 【状态】 **已交付 2026-11-12**：10 个 PolyBench 任务 × 20,660 行 × 2,253 列，行序由划分文件决定，
+> 图（72/14）与 chemprop 2.1.0 逐位对拍 200 例。产物是 `scripts/03b_assemble.py` +
+> `data/processed/features/<task>.npz`（不入库）+ `data/manifests/{task_features_manifest,graph_manifest}.csv`，
+> 五条验收全过。凭据见 [`交付_P2_B1_表示装配.md`](交付_P2_B1_表示装配.md)。
+> **没做的两条**：PolyBench26 / OpenPoly 的装配（它们的标签不在 A-3 调和表里，是 B-3 开工前的第一件事）、
+> A3/A4 的训练代码（B-3/B-4）。清单命名从分工书的 `feature_manifest.csv` 改为
+> `task_features_manifest.csv`——A-6 已有一份 `features_manifest.csv`，两份同名会互相覆盖（D-29）。
 
 ### B-2 · polyBERT 嵌入（2.0 pH｜GPU 建议，CPU 可跑）
 

@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://chainworth.local/schemas/run_record_v1.json",
+  "title": "chainworth run record v1",
+  "description": "一次运行的记录。字段只能新增、不能改语义（分工_B §5 冻结项）。中文：记录只能由训练脚本落盘，手写或手改等于伪造（红线 4）；没有预测文件（results/aggregate/predictions/<run_id>.parquet）的 run 不能用于区间估计。English: one record per run. Fields may only be added, never redefined (division B section 5 freeze). Records are written by the training script, never by hand (red line 4); a run without its predictions parquet cannot feed interval estimation.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "status",
+    "benchmark",
+    "task",
+    "arm",
+    "seed",
+    "split_version",
+    "config_hash",
+    "env_fingerprint"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "全局唯一，格式 <task>__<arm>__<fold>__seed<N>。中文：文件名必须等于它，便于 ls 对账。English: globally unique; the file name must equal it.",
+      "pattern": "^[a-z0-9_]+__[a-z0-9_]+__[a-z0-9_]+__seed[0-9]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "blocked_no_gpu", "failed"],
+      "description": "ok = 跑完且指标齐全；blocked_no_gpu = 没跑（占位，必带 requested_at 与 command）；failed = 跑了但失败（必带 error）。中文：三种状态让主表能区分「没跑」与「跑了没成」。English: three states let the main table tell 'not run' from 'ran and failed'."
+    },
+    "benchmark": {
+      "type": "string",
+      "enum": ["polybench", "polybench26", "openpoly"]
+    },
+    "task": {
+      "type": "string",
+      "description": "configs/tasks/<task>.yaml 的 task_id。"
+    },
+    "arm": {
+      "type": "string",
+      "enum": ["a1_floor", "a2_conventional", "a3_graph", "a4_polybert", "a5_chain"]
+    },
+    "seed": {
+      "type": "integer",
+      "description": "模型初始化种子（PolyBench 没有划分种子，D-20）。中文：不是划分种子。English: model seed, not a split seed (D-20)."
+    },
+    "split_version": {
+      "type": "string",
+      "description": "划分文件的身份，形如 <sha256 前 12 位>@<仓库相对路径>。中文：必须是文件字节哈希，手写版本号在文件被换时不会变。English: must be a file-bytes hash; a hand-written version does not change when the file is swapped.",
+      "pattern": "^[0-9a-f]{12}@splits/"
+    },
+    "split_fold": {
+      "type": "string",
+      "description": "折名，与 loaders.SplitSpec.fold_names 里的一个值相同（official_70_30 / fold_00… / seed0…）。"
+    },
+    "config_hash": {
+      "type": "string",
+      "description": "该次运行的配置文件字节 sha256（含臂配置与实验配置），形如 sha256:<64 位>。",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "n_train": {"type": "integer", "minimum": 1},
+    "n_test": {"type": "integer", "minimum": 1},
+    "metrics": {
+      "type": "object",
+      "description": "测试集指标。键名固定为 r2 / mae / rmse（分工_B §0 的例子），其他指标只能追加。",
+      "required": ["r2", "mae", "rmse"],
+      "properties": {
+        "r2": {"type": "number"},
+        "mae": {"type": "number"},
+        "rmse": {"type": "number"}
+      }
+    },
+    "wall_clock_s": {
+      "type": "number",
+      "minimum": 0,
+      "description": "实测墙钟（秒）。中文：D 要用它判断预算；超过 §7.4 预测 1.5 倍立即报 triage。English: measured wall clock; D needs it for the budget."
+    },
+    "device": {
+      "type": "string",
+      "enum": ["cuda", "cpu"],
+      "description": "由脚本自动填，人不可改（红线 5：同一条 run 只允许一个 device）。"
+    },
+    "gpu": {
+      "type": "object",
+      "description": "仅 device=cuda 时必填（B-3 验收③）。",
+      "properties": {
+        "model": {"type": "string"},
+        "driver": {"type": "string"},
+        "torch_cuda": {"type": "string"},
+        "cudnn_deterministic": {"type": "boolean"}
+      }
+    },
+    "env_fingerprint": {
+      "type": "string",
+      "description": "环境指纹文件的仓库相对路径，如 results/env_fingerprints/env_gnn.json。",
+      "pattern": "^results/env_fingerprints/env_(core|gnn|polybert)\\.json$"
+    },
+    "predictions": {
+      "type": "string",
+      "description": "测试集预测文件的仓库相对路径 results/aggregate/predictions/<run_id>.parquet（两列 row_id, y_pred）。中文：没有它 D 算不出 bootstrap 区间。English: without it D cannot bootstrap.",
+      "pattern": "^results/aggregate/predictions/[a-z0-9_]+__[a-z0-9_]+__[a-z0-9_]+__seed[0-9]+\\.parquet$"
+    },
+    "requested_at": {
+      "type": "string",
+      "description": "status=blocked_no_gpu 时必填：提交到 docs/RUN_REQUESTS.md 的时间（ISO 8601）。"
+    },
+    "command": {
+      "type": "string",
+      "description": "status=blocked_no_gpu 时必填：应当执行的完整命令，供代跑的人照抄。"
+    },
+    "error": {
+      "type": "string",
+      "description": "status=failed 时必填：失败原因，写清是 OOM、断言失败还是数据问题。"
+    },
+    "started_at": {"type": "string"},
+    "finished_at": {"type": "string"},
+    "notes": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "ok"}}},
+      "then": {"required": ["metrics", "wall_clock_s", "device", "predictions", "n_train", "n_test"]}
+    },
+    {
+      "if": {"properties": {"status": {"const": "blocked_no_gpu"}}},
+      "then": {"required": ["requested_at", "command"]}
+    },
+    {
+      "if": {"properties": {"status": {"const": "failed"}}},
+      "then": {"required": ["error"]}
+    },
+    {
+      "if": {"properties": {"device": {"const": "cuda"}}},
+      "then": {"required": ["gpu"]}
+    }
+  ],
+  "additionalProperties": true
+}

@@ -118,6 +118,8 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **任务清单已冻结**（2026-11-12，A-4）：`configs/tasks/` 下 **18 份**配置——8 个主表（PolyBench 每层 2 个 + PolyBench26 2 个）、5 个预注册备用、3 个 OpenPoly 边界性质、2 个机制实验任务，另有 `SHA256SUMS` 与快照 [`docs/Task List Snapshot D0.md`](docs/Task%20List%20Snapshot%20D0.md)（冻结于 `2026-11-12T03:48:00+08:00`）。校验器在 `src/chainworth/io/tasks.py`：字段缺失、任务名拼错、n 与上游清单不符**一律当场报错**。同一次交付里结案 Q-01（**主表 = 8 任务 × 5 臂**，D-17），并纠正两处口径：PolyMetriX Tg 源数据已是 K（D-18）、密度单位官方未声明故不写（D-19）。凭据见 [`docs/交付_P1_A4_任务清单冻结.md`](docs/交付_P1_A4_任务清单冻结.md)。
 
+**任务级表示已装配**（2026-11-12，B-1）：**20,660 行"测量"各自拿到了自己的分子画像**——205 描述符 + 2048 位指纹，**行序由划分文件说了算**（`row_id` = A-3 调和表的行位置，与 `splits/*/official_70_30.json` 的 `test_index` 同一坐标系；第 k 行就是第 k 行，一行没删、一行没重排）。10 份 `data/processed/features/<task>.npz`（2,253 列，标签单独存 `y`，合计 7.2 MiB，**不入库**，跑 `python scripts/03b_assemble.py` 重建，36 秒）。分子图按 chemprop 2.1.0 的默认口径建（原子 72 / 键 14 / 图级 5），**先规范化再建图**所以同一根链的两种写法给出同一个 `edge_index`，并与官方 featurizer 逐位对拍 200 例全过。五条验收全过，另加两条自查：改一个特征值并同步改清单哈希会被整矩阵比对抓到；特征矩阵里没有标签列。**没做的两条**：PolyBench26 / OpenPoly 的装配（它们的标签不在 A-3 调和表里，是 B-3 开工前的第一件事）、A3/A4 的训练代码；`feature_manifest.csv` 改名为 `task_features_manifest.csv`（A-6 已占 `features_manifest.csv`，同名会互相覆盖，D-29）。凭据见 [`docs/交付_P2_B1_表示装配.md`](docs/交付_P2_B1_表示装配.md)。
+
 上一版仓库曾在初始化阶段一次性写入了代码、配置、任务清单与测试。那不是本次初始化的范围，已被整体移除；那些内容保留在提交 `21be74f` 里，需要时按阶段逐项取回，而不是一次全塞进来。
 
 **原则：一个阶段只做一件事，做完、验完、提交，再进下一阶段。**
@@ -132,7 +134,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 | **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | **已交付 2026-11-12**：三份清单齐备；PolyBench 39 行 / 42,169 / 与附录 A 逐行对齐，39/39 核过官方 md5，见 `docs/交付_P1_A2_下载与完整性.md` §9 |
 | **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照；结构级特征算一次 | `data/interim/` + `data/processed/`（结构级，不入库）+ `splits/` | 划分文件带校验，任何人不得改写；特征文件带 sha256 与列序字典 | **已交付 2026-11-12**（A-3 / A-5 / A-6 三件主体，A-7 复核与 A-8 转录同日补做；整体验收见 `docs/验收_P1_分工A.md`）（A-3：10 个任务调和入库、4 条验收标准全过，见 `docs/交付_P1_A3_标签调和.md` §5）；**官方划分快照已交付 2026-11-12**（A-5：14 份官方快照 + 30 份 OpenPoly 规则复现划分，8 条验收全过——⑤ 条由「停住」改判为「规则复现」，D-24，见 `docs/交付_P1_A5_官方划分快照.md` §9）；**结构级表征已交付 2026-11-12**（A-6：11,494 个结构 × 205 描述符 + 2048 位指纹，116 个结构拒绝 wPSMILES，见 `docs/交付_P1_A6_结构表征.md`）；**OpenPoly 分母已复核 2026-11-12**（A-7：741 / 3,985 / 443 / 295 / 168 五个靶子全对，但 741 行只有 585 个规范结构、Tg 443 行只有 304 个结构且重复标签全部矛盾，D-26 / Q-06，见 `docs/交付_P1_A7_OpenPoly复核.md`）；**Table S27 已转录 2026-11-12**（A-8：39 行 14/15/10、合计 42,169 四处一致；主表 6 任务与 SI 全部一致故替换条款未触发；唯一分歧 σy 是让计数成立的唯一解，D-27 / Q-07，见 `docs/交付_P1_A8_S27转录.md`） |
 | **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | **◐ 任务清单已冻结 2026-11-12**（A-4：18 份 `configs/tasks/*.yaml` + 快照，见 `docs/交付_P1_A4_任务清单冻结.md`）；`configs/arms/`、`configs/experiments/` 未开始 |
-| **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
+| **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | **◐ B-1 已交付 2026-11-12**（任务级装配 + 分子图：10 任务 × 20,660 行 × 2,253 列，行序由划分决定，图与 chemprop 2.1.0 逐位对拍 200 例；`03b_assemble.py` + `--verify`，见 `docs/交付_P2_B1_表示装配.md`）；A3/A4 训练与 C/D 的臂代码未开始 |
 | **P5 运行** | 按配置跑，逐次落记录 | `results/raw_runs/` | 每个数字都能追到某一次运行 | 未开始 |
 | **P6 图表与文档** | 出图、写方法与结论 | `results/figures/` + `docs/` | 图能由脚本一键重画 | 未开始 |
 
@@ -144,7 +146,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（193 个跟踪文件）
+### 4.1 当前结构（202 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -177,9 +179,10 @@ How-Much-Is-a-Chain-Worth/
 │   ├── raw/             原样下载，只读
 │   ├── interim/         中间产物，可重建
 │   │                    ← A-3 已填：harmonised/<task_id>_harmonised.parquet（10 张，不入库）
-│   ├── processed/       喂模型前的最终表（A-6 已填，**不入库**，靠 `02_features.py` 重建）
-│   │                    ← structures/psmiles.parquet（11,494 结构 + wPSMILES）
-│   │                    ← descriptors/<task>.parquet（10 份，2,255 列 = 205 描述符 + 2048 位指纹）
+│   ├── processed/       喂模型前的最终表（**不入库**，靠阶段脚本重建）
+│   │                    ← A-6：structures/psmiles.parquet（11,494 结构 + wPSMILES）
+│   │                    ← A-6：descriptors/<task>.parquet（10 份，2,255 列 = 205 描述符 + 2048 位指纹）
+│   │                    ← B-1：features/<task>.npz（10 份，每次**测量**一行，2,253 列 + y + row_id；`03b_assemble.py` 重建）
 │   ├── external/        基准之外的补充数据（**全部不入库**）
 │   │                    ← A-8 已填：`table_s27.csv`（39 行 × 11 列，SI 的 Table S27 转录；`python -m chainworth.io.table_s27 --write` 重建）
 │   └── manifests/       清单、条数、sha256（入库）+ SOURCES.md（入口与许可）+ 接口响应快照
@@ -187,6 +190,7 @@ How-Much-Is-a-Chain-Worth/
 │                        ← A-3 已填：`unit_decisions.csv`（30 行）+ `harmonised_manifest.csv` + `harmonise_spotcheck.csv`
 │                        ← A-6 已填：`structures_manifest.csv`（1 行）+ `features_manifest.csv`（10 行）+ `structure_failures.csv`（116 行）+ `descriptor_columns.json`（205 列列序与指纹参数）
 │                        ← A-7 已填：`openpoly_property_counts.csv`（28 行 × 10 列：非空数 + 唯一结构数 + 重复/冲突组数）
+│                        ← B-1 已填：`task_features_manifest.csv`（10 行：行数/列数/NaN/划分版本/哈希）+ `graph_manifest.csv`（10 行：图数/维度/确定性/chemprop 对拍）
 │
 ├── splits/              ← P2 填：划分索引，只读（入库）—— A-5 已填 14 份
 │   ├── polybench/       A-5：10 份 `official_70_30.json` + `README.md`（官方测试集来源与对号规则）
@@ -195,8 +199,8 @@ How-Much-Is-a-Chain-Worth/
 │   └── openpoly/        A-5：3 任务 × 10 种子 = 30 份 `rule_replicated_seed*.json` + `PROTOCOL.json` + `README.md`（D-24：官方只发规则、未发划分，按规则复现并报区间）
 │
 ├── src/chainworth/      ← P4 填：包代码
-│   ├── io/              数据与配置的唯一出入口（A-3 填 `harmonise.py`；A-4 填 `tasks.py`；A-7 填 `openpoly.py`；A-8 填 `table_s27.py`）
-│   ├── chem/            结构解析、描述符、分子图（A-6 填 `notation.py` / `descriptors.py` / `structures.py`：结构级表征；**任务级装配归 B**）
+│   ├── io/              数据与配置的唯一出入口（A-3 `harmonise.py`；A-4 `tasks.py`；A-7 `openpoly.py`；A-8 `table_s27.py`；B-1 `loaders.py`：row_id 口径 + 三种划分的统一解析）
+│   ├── chem/            结构解析、描述符、分子图（A-6 `notation.py` / `descriptors.py` / `structures.py`；B-1 `features.py` 任务级装配、`graph.py` 分子图）
 │   ├── arms/            五个臂各一个模块
 │   ├── metrics/         指标与 bootstrap
 │   ├── analysis/        Λ、κ、假设检验
@@ -204,11 +208,11 @@ How-Much-Is-a-Chain-Worth/
 │   └── protocol/        种子、常量、划分校验（A-3 填 `constants.py`；A-5 填 `splits.py`：快照生成 + 四层校验 + 自切扫描）
 │
 ├── scripts/             ← P1 起填：阶段入口 00–07（入库，必须可重跑）
-│                        ← 已填 `00_download.py`（A-2）、`01_harmonise.py`（A-3）、`02_features.py`（A-6：结构表征 + `--verify --deep`）、`03_splits.py`（A-5）
-├── tests/               ← P4 起填（A-3 已先落 `test_harmonise.py`：17 项；A-4 落 `test_task_configs.py`：15 项；A-5 落 `test_splits.py`：41 个用例（23 个函数，含参数化）；A-6 落 `test_features.py`：35 项，其中 deep 那项要 `CHAINWORTH_SLOW=1`；A-7 落 `test_openpoly_counts.py`：16 项；A-8 落 `test_table_s27.py`：26 项，其中 PDF 回查 2 项要 SI 原件 + `pypdf`；整体验收补 `test_no_leakage.py`：10 项，含「`src/` 里出现全量 `fit` 即红」与「OpenPoly 泄漏数按规范式重算」）
+│                        ← 已填 `00_download.py`（A-2）、`01_harmonise.py`（A-3）、`02_features.py`（A-6：结构表征 + `--verify --deep`）、`03_splits.py`（A-5）、`03b_assemble.py`（B-1：任务级装配 + 图 + `--verify`）
+├── tests/               ← P4 起填（A-3 已先落 `test_harmonise.py`：17 项；A-4 落 `test_task_configs.py`：15 项；A-5 落 `test_splits.py`：41 个用例（23 个函数，含参数化）；A-6 落 `test_features.py`：35 项，其中 deep 那项要 `CHAINWORTH_SLOW=1`；A-7 落 `test_openpoly_counts.py`：16 项；A-8 落 `test_table_s27.py`：26 项，其中 PDF 回查 2 项要 SI 原件 + `pypdf`；整体验收补 `test_no_leakage.py`：10 项，含「`src/` 里出现全量 `fit` 即红」与「OpenPoly 泄漏数按规范式重算」；B-1 落 `test_task_assembly.py`：19 项，含「改一个特征值并同步改哈希必须被抓」与「chemprop 对拍」（core 环境跳过））
 │
 ├── results/             ← P5 起填（P0 已先落三份环境指纹）
-│   ├── raw_runs/        一次运行一份 JSON（入库）
+│   ├── raw_runs/        一次运行一份 JSON（入库）+ `_schema.json`（B-1：run 记录 v1 的字段契约）
 │   ├── aggregate/       汇总表与预测（入库）
 │   ├── figures/         图（可由脚本重画）
 │   └── env_fingerprints/ 指纹（入库）：P0 三份，P5 起每次运行一份
@@ -234,6 +238,7 @@ How-Much-Is-a-Chain-Worth/
     ├── 交付_P1_A6_结构表征.md      A-6 交付记录：11,494 个结构怎么算出来的、116 个为什么没有 wPSMILES、四条验收怎么过的
     ├── 交付_P1_A7_OpenPoly复核.md  A-7 交付记录：五个分母怎么数的、741 行为什么不是 741 种材料、counts 文件为什么不能用
     ├── 交付_P1_A8_S27转录.md      A-8 交付记录：156 MB SI 怎么拿到的（PMC 的 POW 挑战）、39 行 14/15/10、σy 那一处分歧为什么反而证明转录是对的
+    ├── 交付_P2_B1_表示装配.md      B-1 交付记录：row_id 凭什么这么定、五条验收怎么过的、哪两条没做
     ├── 验收_P1_分工A.md            **A-1→A-8 整体验收记录**：怎么验的、八项结论、改了哪三处（含缺失的 `test_no_leakage.py` 与泄漏口径勘误 D-28）
     └── Task List Snapshot D0.md   **任务清单快照（冻结物）**：冻结时刻、清单表、替换登记
 ```
@@ -251,12 +256,12 @@ How-Much-Is-a-Chain-Worth/
 | `configs/experiments/` | 一次实验一份，写清跑哪些任务 × 哪些臂 × 几个种子：`main_table.yaml`、`scaling.yaml`、`arch_transfer.yaml`、`openpoly_scan.yaml` | 单任务字段（放 `tasks/`） |
 | `data/raw/` | 原样下载，**保留发布方原文件名** | 清洗、改名、合并、补列 |
 | `data/interim/` | 中间产物，文件名带中间步骤：`harmonised/<task_id>_harmonised.parquet`（A-3 已出 10 张，**不入库**，靠 `scripts/01_harmonise.py` 重建；行数与哈希登记在 `data/manifests/harmonised_manifest.csv`） | 唯一副本 |
-| `data/processed/` | 结构级表征（A-6 已出，**不入库**，靠 `scripts/02_features.py` 重建）：`structures/psmiles.parquet`（11,494 结构 + wPSMILES + 画像）、`descriptors/<task>.parquet`（10 份，`structure_id` + `psmiles_canonical` + 205 描述符 + `morgan_0000..2047`）；行数与哈希登记在 `data/manifests/features_manifest.csv`。B 的任务级 `features/<task>.npz` 与 `polybert/` 归 B 自己写 | 原始文件；**标签与 `row_id`**（装配是 B 的活，混进来 B-1 的验收就不独立了） |
+| `data/processed/` | **全部不入库，靠阶段脚本重建**。A-6：`structures/psmiles.parquet`（11,494 结构 + wPSMILES + 画像）、`descriptors/<task>.parquet`（10 份，`structure_id` + `psmiles_canonical` + 205 描述符 + `morgan_0000..2047`），行数与哈希登记在 `data/manifests/features_manifest.csv`。B-1：`features/<task>.npz`（10 份，每次**测量**一行：`row_id` + `y` + `psmiles` + 205 描述符 float64 + 2048 位指纹 uint8，`scripts/03b_assemble.py` 重建，合计 7.2 MiB），行序由 `splits/` 决定，登记在 `task_features_manifest.csv`。`polybert/` 仍归 B 自己写 | 原始文件；**A-6 那层不许有标签与 `row_id`**（装配是 B 的活，混进来 B-1 的验收就不独立了）；B-1 的 npz 里标签只能单独存成 `y`，不许进特征矩阵 |
 | `data/external/` | 基准之外补充的数据：`table_s27.csv`（A-8：SI 的 Table S27 转录，39 行 × 11 列，`python -m chainworth.io.table_s27 --write` 重建；**不入库**）。SI 原件本身在 `data/raw/polybench_si/`（156 MB，`--fetch` 取回） | 主基准（那在 `raw/`） |
 | `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`polybench_api_article_20261112.json` + `polybench_expected_files.csv`（figshare 原始响应快照与派生的 **39 行标准表**：文件名 / 字节数 / 官方 md5 / 直链，任何下载路线的验收标准，见 `DECISIONS.md` D-13）、`<bench>_download_manifest.csv`（一文件一行，列见 `docs/交付_P1_A2_下载与完整性.md` §2）、`*.sha256`、**`unit_decisions.csv`**（A-3：每条单位/去重/弃列判定一行，**只可追加**）、**`harmonised_manifest.csv`**（A-3：一任务一行，`rows_in/rows_out/source_sha256/parquet_sha256`）、**`harmonise_spotcheck.csv`**（A-3：抽检 20 行，原始/调和/重算三列并排）、**`splits_manifest.csv`**（A-5：14 份快照一文件一行，`sha256/bytes/n_train/n_test/created_at`）、**`polybench_official_test_manifest.csv`**（A-5：10 份官方测试集 CSV 一行一任务，`n_rows/n_total/test_ratio/sha256/source_url`）、**`openpoly_property_counts.csv`**（A-7：28 个性质列一行一列，`n_nonnull` = 分母，另有 `n_unique_structures`/`n_duplicate_rows`/`n_duplicate_groups`/`n_conflicting_groups` 四列把"去重会剩多少"摆在旁边，D-26） | 数据本体；`.partial.csv`（限量跑的调试产物，已 gitignore） |
 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引，**只读**：PolyBench 是 `<task>/official_70_30.json`（A-5 出 10 份：`n_total`/`n_test`/`test_index`/`device_label`/`source_url`，行号绑定 A-3 那张表）；PolyBench26 是官方 `scaling_indices/` 的**原样拷贝** `<task>/seed_42/{manifest.json, fold_00..04.npz}`（不改字节，A-5 出 4 份）+ `PROVENANCE.json`（commit、源目录、逐文件 sha256、`canonical_sha256`、折数、档位），外加一份 `README.md` 记来源与三组 sha256。OpenPoly 是 `<task>/rule_replicated_seed{0..9}.json`（**规则复现，不是官方那一份**，D-24：8:1:1 + 值域 10 等宽箱，种子 0–9 公开，其中 0–4 即 `eval_unit` 的 5 折），配 `PROTOCOL.json` 记引文与验收靶子；`splits/polybench26/arch/` 只有一份说明（本地物化、不入库） | 生成脚本的临时输出、自己切的划分 |
-| `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录）、`harmonise.py`（A-3：原始 CSV → 调和表 + 决策行）、`tasks.py`（A-4：读并校验 `configs/tasks/*.yaml`，CLI 见 `python -m chainworth.io.tasks --verify`）、`openpoly.py`（A-7：OpenPoly 属性计数复核，CLI 见 `python -m chainworth.io.openpoly --verify`）、`table_s27.py`（A-8：SI 的 Table S27 转录与校验，CLI 见 `python -m chainworth.io.table_s27 --verify`，取原件用同模块 `--fetch`） | 业务逻辑、硬编码路径 |
-| `src/chainworth/chem/` | `notation.py`（A-6：PSMILES 规范化 + wPSMILES）、`descriptors.py`（A-6：205 描述符 + 2048 位指纹 + 带 provenance 的 SQLite 缓存）、`structures.py`（A-6：结构表 / 每任务投影 / 四份清单 / 校验）；`graph.py`（B：分子图构建） | 模型定义、任务级装配（B 的活） |
+| `src/chainworth/io/` | `loaders.py`（**B-1 已落**：`row_id` = 调和表行位置、三种基准划分的统一解析 `load_split()`、A-6 特征表读取；C/B-3 取数都从这里，不另写 parser）、`writers.py`（写 run 记录，未落）、`harmonise.py`（A-3：原始 CSV → 调和表 + 决策行）、`tasks.py`（A-4：读并校验 `configs/tasks/*.yaml`，CLI 见 `python -m chainworth.io.tasks --verify`）、`openpoly.py`（A-7：OpenPoly 属性计数复核，CLI 见 `python -m chainworth.io.openpoly --verify`）、`table_s27.py`（A-8：SI 的 Table S27 转录与校验，CLI 见 `python -m chainworth.io.table_s27 --verify`，取原件用同模块 `--fetch`） | 业务逻辑、硬编码路径 |
+| `src/chainworth/chem/` | `notation.py`（A-6：PSMILES 规范化 + wPSMILES）、`descriptors.py`（A-6：205 描述符 + 2048 位指纹 + 带 provenance 的 SQLite 缓存）、`structures.py`（A-6：结构表 / 每任务投影 / 四份清单 / 校验）；`features.py`（**B-1 已落**：任务级装配、npz 落盘、train-only 标准化、五条验收的校验）、`graph.py`（**B-1 已落**：原子 72 / 键 14 / 图级 5，与 chemprop 2.1.0 逐位对拍） | 模型定义、训练循环（`train.py` 与 `arms/`） |
 | `src/chainworth/arms/` | 一臂一文件：`floor.py`、`conventional.py`、`graph.py`、`polybert.py`、`chain_info.py` | 训练循环（`train.py`） |
 | `src/chainworth/metrics/` | `regression.py`（R²、Spearman）、`bootstrap.py`（残差重采样） | 图、表格 |
 | `src/chainworth/analysis/` | `lambda_.py`、`kappa.py`、`hypotheses.py` | 画图 |
@@ -264,16 +269,16 @@ How-Much-Is-a-Chain-Worth/
 | `src/chainworth/protocol/` | `seeds.py`、`constants.py`、`splits.py`（A-5：官方划分快照的唯一实现——PolyBench 取测试集并对行号、PB26 canonical 物化与快照、OpenPoly 停住结论、四层校验 `verify_splits(deep=)`、`find_self_cut_calls()` 自切扫描） | 实验结果 |
 | `scripts/` | 阶段入口 `00_download.py`…`07_figures.py`，必须支持 `--dry-run` / `--limit` | 临时脚本（`scripts/_scratch/`，已忽略）、可复用库代码（放 `src/`） |
 | `tests/` | `test_<模块>.py`；小型合成样例放 `fixtures/` | 真实数据副本、必须 GPU 才能跑的测试 |
-| `results/raw_runs/` | 一次运行一份 `<run_id>.json` | 手写或手改的数字 |
+| `results/raw_runs/` | 一次运行一份 `<run_id>.json`，字段契约是 **`_schema.json`**（B-1 已落 v1：`ok` / `blocked_no_gpu` / `failed` 三态，`device=cuda` 时强制带 GPU 型号与驱动）；`blocked_no_gpu` 占位由脚本写、人不可手改 | 手写或手改的数字 |
 | `results/aggregate/` | 汇总 `<name>.csv`（`main_table` / `scaling` / `arch_transfer` / `openpoly_scan`）+ `predictions/<run_id>.parquet` | 手改的数字 |
 | `results/figures/` | 脚本导出的图 `<figN>_<name>.pdf` / `.png` | 截图、从 PPT 里抠出来的图 |
 | `results/env_fingerprints/` | P0 已填 `env_core.json`、`env_gnn.json`、`env_polybert.json`；P5 起一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
-| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`、`交付_P1_A2_下载与完整性.md`、`交付_P1_A3_标签调和.md`、`交付_P1_A4_任务清单冻结.md`、`交付_P1_A5_官方划分快照.md`）、`Task List Snapshot D0.md`（**任务清单快照，冻结物**）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
+| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`、`交付_P1_A2_下载与完整性.md`、`交付_P1_A3_标签调和.md`、`交付_P1_A4_任务清单冻结.md`、`交付_P1_A5_官方划分快照.md`、`交付_P1_A6_结构表征.md`、`交付_P1_A7_OpenPoly复核.md`、`交付_P1_A8_S27转录.md`、`交付_P2_B1_表示装配.md`）、`验收_P1_分工A.md`（A-1→A-8 整体验收）、`Task List Snapshot D0.md`（**任务清单快照，冻结物**）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
 | 仓库根目录 | 只允许 `README.md`、`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` 五个文件 + 上面九个目录 | 散落文件（`test.py`、`tmp.csv`、`notes.md`、`新建文本文档.txt`） |
 
 #### 4.2.1 阶段入口 00–07 归谁（**写代码之前先看这张表**）
 
-`scripts/` 已落地 `00_download.py`、`01_harmonise.py`、`02_features.py`、`03_splits.py` 四个（对应行标了"已交付"），其余四个仍是**预先约定**。编号只表示"流水线第几步"，不表示谁的私产；谁接手别人的编号，先改这张表并到 `docs/DECISIONS.md` 记一条——否则两个人会各自写出一个 `01_*.py`。
+`scripts/` 已落地 `00_download.py`、`01_harmonise.py`、`02_features.py`、`03_splits.py`、`03b_assemble.py` 五个（对应行标了"已交付"），其余四个仍是**预先约定**。`03b` 的编号是**插入式**的：它属于"03 之后、运行之前"的一步，不占用 04–07 的编号（D-29）。编号只表示"流水线第几步"，不表示谁的私产；谁接手别人的编号，先改这张表并到 `docs/DECISIONS.md` 记一条——否则两个人会各自写出一个 `01_*.py`。
 
 | 编号 | 脚本 | 主责 | 输入 | 输出 |
 |:--|:--|:--|:--|:--|
@@ -281,6 +286,7 @@ How-Much-Is-a-Chain-Worth/
 | 01 | `01_harmonise.py` | A | `data/raw/**` | `data/interim/harmonised/*.parquet` + `unit_decisions.csv` + `harmonised_manifest.csv`（**已交付 2026-11-12**，见 `docs/交付_P1_A3_标签调和.md`） |
 | 02 | `02_features.py` | A | `data/interim/harmonised/` | `data/processed/structures/`、`descriptors/`（不入库，靠它重建）（**已交付 2026-11-12**：`--source {all,structures,descriptors}` + `--limit` / `--force` / `--verify --deep`，见 `docs/交付_P1_A6_结构表征.md`） |
 | 03 | `03_splits.py` | A | 各基准官方划分索引 | `splits/**`（只读快照）（**已交付 2026-11-12**：`--source {all,canonical,polybench,polybench26,openpoly}` + `--verify --deep`，见 `docs/交付_P1_A5_官方划分快照.md`） |
+| 03b | `03b_assemble.py` | B | `data/interim/harmonised/` + `configs/tasks/` + `splits/` + `data/processed/`（02） | `data/processed/features/<task>.npz`（不入库）+ `task_features_manifest.csv` + `graph_manifest.csv`（**已交付 2026-11-12**：`--tasks` / `--limit` / `--verify` / `--graphs` / `--dry-run`，见 `docs/交付_P2_B1_表示装配.md`） |
 | 04 | `04_run_cpu.py` | C | `configs/**` + `splits/` | `results/raw_runs/*.json`（经典臂批量） |
 | 05 | `05_run_gpu.py` | B | `configs/**` + `splits/` | `results/raw_runs/*.json`（GNN / polyBERT 臂） |
 | 06 | `06_aggregate.py` | C | `results/raw_runs/` | `results/aggregate/main_table.csv` 等 |
@@ -402,7 +408,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 | 2 | 原始下载文件 | `data/raw/`（**不入库**，只有 `.gitkeep`） | **P1 · 2026-11-12** | 三份下载清单的 `sha256` 列（`polybench` 39 行 / `polybench26` 69 行 / `openpoly` 5 行）+ `python scripts/00_download.py --verify-only`（不出网，逐份核官方 md5 与 sha256） | **A-2 已交（2026-11-12）**：39 份 CSV 逐份对上 figshare `supplied_md5`，清单合计 42,169 与附录 A 逐行一致；字节可证、传输无机器日志（403，D-13 / D-14） |
 | 3 | 任务清单与条数 | `data/manifests/polybench_download_manifest.csv` + `polybench_expected_files.csv` + `openpoly_property_counts.csv` | **P1 · 2026-11-12** | 条数与官方发布逐行对齐 + `sha256`；`python -m chainworth.io.openpoly --verify` 每次重算 741 / 3,985 / 443 / 295 / 168 | **A-2 / A-7 已交（2026-11-12）**：39 行 / 42,169 与附录 A 逐行一致；OpenPoly 五个分母全对，但 741 行只有 585 个规范结构（D-26） |
 | 4 | 单位换算决策 | `data/manifests/unit_decisions.csv` | P2 | 只能追加、不能覆盖；每行带 evidence；`python scripts/01_harmonise.py --verify` 逐条核 | **A-3 已交 v1（2026-11-12，30 行，sha256 见 `git log` 该文件首条提交）**，P2 划分完成后一并冻结 |
-| 5 | 清洗后的规范表 | `data/interim/`、`data/processed/` | P2 | 行数/列数断言 + sha256：A-3 用 `harmonised_manifest.csv` 的 `rows_out` + `parquet_sha256`；A-6 用 `structures_manifest.csv` + `features_manifest.csv` 的行数、205 列列序、`n_nan_cells`，`python scripts/02_features.py --verify` 一跑即知 | **A-3 已交 v1（2026-11-12，10 张表）；A-6 已交 v1（2026-11-12，11,494 结构 / 20,660 行 / 10 份特征表）**，P2 结束后一并冻结 |
+| 5 | 清洗后的规范表 | `data/interim/`、`data/processed/` | P2 | 行数/列数断言 + sha256：A-3 用 `harmonised_manifest.csv` 的 `rows_out` + `parquet_sha256`；A-6 用 `structures_manifest.csv` + `features_manifest.csv` 的行数、205 列列序、`n_nan_cells`，`python scripts/02_features.py --verify` 一跑即知；B-1 用 `task_features_manifest.csv` 的 `pack_sha256` + `split_sha256`，`python scripts/03b_assemble.py --verify` 一跑即知（含整矩阵与 A-6 逐位比对） | **A-3 已交 v1（2026-11-12，10 张表）；A-6 已交 v1（2026-11-12，11,494 结构 / 20,660 行 / 10 份特征表）；B-1 已交 v1（2026-11-12，10 份 npz / 20,660 行 / 2,253 列）**，P2 与 P4 收尾后一并冻结 |
 | 6 | 官方划分快照 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | P2 | 每份文件的 sha256（json 与 npz 都算），`tests/test_splits.py` 断言；PolyBench26 另需 `canonical_sha256` 与 `train_pool[:N]` 前缀断言；OpenPoly 需按种子重算一致（`--deep`） | **A-5 已交 v1（2026-11-12）：14 份官方快照（PolyBench 10 + PolyBench26 4）+ 30 份 OpenPoly 规则复现划分**，指纹表 `data/manifests/splits_manifest.csv`（44 行）与 `openpoly_split_manifest.csv`（30 行），`python scripts/03_splits.py --verify --deep` 通过。注意 OpenPoly 那 30 份是 `rule_replicated`（D-24），**不是官方那一份** |
 | 7 | 任务配置 | `configs/tasks/*.yaml` | P3 | `configs/tasks/SHA256SUMS`（`cd configs/tasks && sha256sum -c`）+ 每次 run 记录里的 `config_hash` 必须对得上 | **A-4 已交 v1（2026-11-12，18 份，指纹表 `configs/tasks/SHA256SUMS`）**；`config_hash` 与臂/实验配置在 P3 一并登记 |
 | 8 | 臂的超参数 | `configs/arms/*.yaml` | P3 | 同上 | 未冻结（待 P3） |
