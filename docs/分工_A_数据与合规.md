@@ -166,6 +166,12 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-6 · 表征数据生成：PSMILES / wPSMILES / RDKit 描述符（1.5 pH｜关键）
 
+> **状态：已交付 2026-11-12**（仓库所有者代做）。**20,660 行 → 11,494 个唯一结构**，各算一次：205 个 RDKit 描述符（210 减去官方 `DROP_COLUMNS` 那 5 个）+ 2048 位 Morgan 指纹；10 份 `descriptors/<task>.parquet`（2,255 列）+ 1 份 `structures/psmiles.parquet`；四份清单（结构表 / 特征 / 失败 116 行 / 特征字典）。四条验收标准**全过**：行丢失 0、解析失败 0、列数与位数入清单、第二次取数 100% 命中缓存且 deep 重算逐位相同。凭据见 [`docs/交付_P1_A6_结构表征.md`](交付_P1_A6_结构表征.md)。
+>
+> **三条会改变后来做法的事实**：① **描述符要跟着官方丢 5 列**（4 个电荷类对每个含 `*` 的分子恒为 NaN，`Ipc` 到 1e30 量级），保留 205 列才有资格和 PolyBench26 的 `RDKit_RF` 基线对话（D-25）；② **wPSMILES 只对恰好 2 个星号有定义**——实测 116 个唯一结构是 3/4/6 个星号，官方 `replace_astrix()` 会静默拼出带残留 `*` 的假串，我们改成返回 `None` 并逐条列出；③ **指纹参数不是官方设置**（OpenPoly 的 `morgan_fp` 在未发布的 `.pt` 里，维度不可考），`radius=2 / 2048` 是我们的选择，两臂共用。
+>
+> **给 B 的一句话**：这两个 parquet **不入库**。跑一次 `python scripts/02_features.py --source all` 就得到同一批文件；join 用 `psmiles_canonical`（不要用 `structure_id`，那是行号，任务集一变就平移）。特征文件里**没有** `row_id`、没有标签、没有任务行序——按划分文件排行的活是你的。
+
 | 项 | 内容 |
 |:--|:--|
 | **拿什么** | `data/interim/harmonised/` 的结构列（PSMILES）+ `environment/core.yml`（`rdkit`、`pysmiles`） |

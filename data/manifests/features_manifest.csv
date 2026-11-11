@@ -1,0 +1,11 @@
+task_id,n_rows,n_unique_structures,n_without_wpsmiles,n_descriptors,n_fingerprint_bits,n_nan_cells,descriptor_file,descriptor_sha256,built_at,rdkit_version
+pb_t1_td,4898,4898,65,205,2048,39184,data/processed/descriptors/pb_t1_td.parquet,d54cdb6d3b146c67683698d27f3f42cf27cc54eb0e16cc6d347c92d63e1e7332,2026-11-12T05:04:57+08:00,2024.03.5
+pb_t1_tg,8055,8055,87,205,2048,64458,data/processed/descriptors/pb_t1_tg.parquet,d167a12efd8cbb3a8c976efa8c16d9ec6703466cae44e8a5e086c58ac6cbced7,2026-11-12T05:05:47+08:00,2024.03.5
+pb_t1_tm,3796,3796,18,205,2048,30374,data/processed/descriptors/pb_t1_tm.parquet,61e71372e41296a0c10bf94bd6b863e495f2373389871d3113469202eaa98599,2026-11-12T05:06:02+08:00,2024.03.5
+pb_t2_modulus,1034,1034,6,205,2048,8272,data/processed/descriptors/pb_t2_modulus.parquet,c618b75b3c4f2a88a3e87f0db474da8f6c9a482d1334139246d15e2c1960da30,2026-11-12T05:06:03+08:00,2024.03.5
+pb_t2_permeability,711,711,2,205,2048,5688,data/processed/descriptors/pb_t2_permeability.parquet,ad711d3cf2eed579c6fcdf0574d381f41ae36e6faa194c80ff8cacc3a8a39c39,2026-11-12T05:06:04+08:00,2024.03.5
+pb_t2_tssab,1034,1034,5,205,2048,8272,data/processed/descriptors/pb_t2_tssab.parquet,b397cc26ec49f4cb8b077151afc8ac527f4b2f1388f7f0719202fe494d2aa792,2026-11-12T05:06:05+08:00,2024.03.5
+pb_t3_dielectric_loss,279,279,0,205,2048,2232,data/processed/descriptors/pb_t3_dielectric_loss.parquet,150cc0c2aadc89b523aa9763123253dcd68f8f96d8bf15ae9c9d6ef8ff7a00dd,2026-11-12T05:06:05+08:00,2024.03.5
+pb_t3_dlt,238,238,2,205,2048,1904,data/processed/descriptors/pb_t3_dlt.parquet,57d5c08c0a2cda9981f4519f8d3c8d8134e65d01e0376d6359831e26ec6d4657,2026-11-12T05:06:05+08:00,2024.03.5
+pb_t3_dmp_sm,387,387,4,205,2048,3096,data/processed/descriptors/pb_t3_dmp_sm.parquet,98f9563c15293e1fcd164d487232d390b121c7f3db5762c1531337a113d31235,2026-11-12T05:06:06+08:00,2024.03.5
+pb_t3_iwlt,228,228,10,205,2048,1824,data/processed/descriptors/pb_t3_iwlt.parquet,bf5aad3bfb1920b810e5fe0458d7cad89f19553dd465d5a117283d048d8a09eb,2026-11-12T05:06:34+08:00,2024.03.5

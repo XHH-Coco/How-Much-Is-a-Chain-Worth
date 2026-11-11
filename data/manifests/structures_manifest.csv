@@ -1,0 +1,2 @@
+n_structures,n_rows_total,n_wpsmiles,n_without_wpsmiles,n_rows_without_structure,psmiles_parquet,psmiles_sha256,rdkit_version,algorithm_version,built_at
+11494,20660,11378,116,0,data/processed/structures/psmiles.parquet,31dba5209fa1f1a691286b4aec93df5f11231667c792fb4d1794a393f4e9a159,2024.03.5,1,2026-11-12T05:03:35+08:00
