@@ -34,9 +34,13 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 | 存档（**已解析，v2**） | figshare，DOI `10.6084/m9.figshare.30917717`，**实际版本 `v2`**（`doi` 字段为 `.v2`），CC BY 4.0（`license.value=1`），公开、**无需登录、未禁用下载**（`download_disabled: false`、`is_embargoed: false`）。**39 个文件**，合计 **5,937,499 B ≈ 5.66 MiB**，全部 `mimetype: text/csv`，`folder_structure` 均为 `SMILES`。文件名 = 数据集名 + `.csv`（含空格原样），**39 个与 `/api/data-counts` 的 39 条、附录 A 的 39 行三方对齐**。每个文件自带 `supplied_md5` 且与 `computed_md5` **全部相同**，可直接用于二次校验。下载地址形态：`https://ndownloader.figshare.com/files/<file_id>`，清单从 `GET https://api.figshare.com/v2/articles/30917717` 取 |
 | `version` 取值 | 存档取 **`v2`**（写进 manifest 的 `version` 列，形如 `figshare:v2`）；若从平台直取，记抓取日期 + 平台页脚版本串 |
 | 核实时点 | URL、规模、论文元数据：2026-11-11 公开检索核实；**figshare 版本号、39 文件清单、总字节、md5、免登录：2026-11-11 当晚调 figshare API v2 核实** |
-| 待确认（A 在 D0 前做） | **只剩一条**：平台的**批量获取方式**——是导出按钮、有 API，还是只能逐个点。这条不影响 figshare 路线，因为 figshare 已可直接下载；它决定的是"平台 vs 存档"哪个当 `source_url`。**账号、接口、版本号、文件名对应四条均已闭合**，不要再当未解决问题 |
+| 待确认（A 在 D0 前做） | ✅ **已全部闭合（2026-11-12）**。**平台的批量获取方式：没有。** `GET /api/dataset/test-download?file_name=<名>.csv` 只返回两列 `polymer_name,SMILES`（前端文案即 *Download Test Set (SMILES only)*，标签不给）；`/api/polymers-data` 是平台展示库（分页 JSON，每页 10 条），**不是**这 39 个官方 CSV；`/api/dataset/download`、`/api/datasets`、`/data/SMILES/<名>.csv` 均 404 或回落前端。**所以 figshare 存档是唯一可脚本化的正规入口**——但它对本机出口一律 403，见【坑十】。账号、接口、版本号、文件名对应四条均已闭合 |
 
 > 【坑】42,169 是**记录数**，14,717 是**重复单元数**。两者在 PolyBench 里不相等，报告里不能说混（Proposal 附录 A 已按记录数给）。
+>
+> 【坑十】**figshare 从我们这台机器的出口一律 403，不是脚本问题。** 2026-11-12 实测：`figshare.com` / `api.figshare.com` / `ndownloader.figshare.com` 的**全部**路径都返回 `403`，响应头 `Server: awselb/2.0`——拒绝方是 figshare 自己的负载均衡。走代理、不走代理、IPv4、IPv6、`http://`、伪装 UA 与 Referer，结果一致；`doi.org` 能 `302` 落到存档页，随后仍是 `403`。**同一时刻换一条网络路径读同一个 API 是通的**（能列出 39 个文件与各自 `supplied_md5`，`version: 2`、CC BY 4.0、`download_disabled: false`），所以存档没下架、也没改版本。**处理办法只有三条**：换网络重跑 `python scripts/00_download.py --source polybench`；或登录平台手下 39 个 CSV 放进 `data/raw/polybench/` 再 `--verify-only`；或找人代下同一版本并把 md5 抄回来对。**不许用平台的 `/api/polymers-data` 或 test-download 的 SMILES 表顶替**——那样 sha256 与发布方对不上，A-3 之后每个数都会带一个查不出来的来源。详见 `docs/交付_P1_A2_下载与完整性.md` §5。
+>
+> 【坑十一】**`*.conda.txt` 那种"一次请求拿全"的思路，在 GitHub 上要靠 tarball。** 实测本机 `raw.githubusercontent.com` 会在传输中途被 TLS 重协商打断（`curl` 退出码 56 / 20 秒断连），而 `codeload.github.com/<repo>/tar.gz/<commit>` 稳定且一个请求就能把整个仓库取回。所以 `scripts/00_download.py` 对两个 GitHub 基准一律走 tarball + 白名单解包，**不改字节、只挑文件**；两个官方公布过 sha256 的文件解出来当场核对，逐位相等才算过。这条不影响可追溯性：清单里的 `source_url` 指向 `github.com/<repo>/blob/<commit>/<path>`，`version` 是 commit 短 sha。
 
 ### 2.2 PolyBench26（承重 · H2 与 H1 架构子句）
 
@@ -101,7 +105,7 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 | 预训练权重 | Zenodo DOI `10.5281/zenodo.15551637`。**本仓库不需要**——我们只跑自己的五个臂，不加载别人的权重 |
 | `version` 取值 | git commit 短 sha（仓库 2025-05-30 首次上传） |
 | 核实时点 | URL、规模、许可、论文元数据：**2026-11-11 公开检索核实**；741 / 3,985 两个数：2026-11-11 直接数发布 CSV（Proposal §2.3） |
-| 待确认 | `data/` 下 CSV 的确切文件名与列名——A-7 逐列数之前先把这一层记下来，否则数的对象都可能不是同一张表 |
+| 待确认 | ✅ **已落定（2026-11-12）**：`data/` 下只有两个 CSV，**我们用的是 `data/final_polymer_properties_fromliterature.csv`**（178,587 B，741 行 × 32 列，前 12 列依次为 `Name` `PSMILES` `Bandgap (eV)` `CO2 Permeability (Barrer)` `Compressive Strength (MPa)` `Crystallization Temperature (K)` `Elongation at Break (%)` `Flexural Strength (MPa)` `Tg (K)` `H2 Permeability (Barrer)` `Hardness (MPa)` `Impact Strength (kJ/m2)`；sha256 `8de5baf7…9db5eb3`，commit `ccaa669`）；同目录的 `final_polymer_property_counts_fromliterature.csv`（849 B）就是【坑二】那张**不许用**的文献计数表，`scripts/00_download.py` 因此**故意不下载它** |
 
 > 【坑一】仓库 README 写的是 "3,985 polymer entries"，而实测是 **741 行**、3,985 条**标注**。措辞与结构对不上，**以实测为准**（A-7 复核项）。
 >
@@ -157,3 +161,4 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | 2026-11-11 深夜 | **task3 定性闭合**：读 `task3_complexity/README.md` 原文，确认它是 *post-hoc stratification*、**不是复杂度留出任务**，`legacy_test_fold` 是 legacy 协议折号而非官方划分；新增【坑八】并把它移出 A-5；任务目录表该行由"待确认"改为"不适用" | 读 `task3_complexity/README.md` 原文 + GitHub contents API（目录仅 2 文件，CSV 3,344,980 B） |
 | 2026-11-11 深夜 | **task4 结构与统计口径闭合**：目标只有 **1 个性质（EA）**；补 VIPEA 生成步骤（`process_Vipea_data.py`）、`--polybert-dictionary` 可省略的说明；新增【坑九】**OOD 折固定、不是独立重复、禁止对五折 OOD RMSE 做 t 检验**，只能五折集成后报一个点值——直接影响 D 的置信区间与 H1 判决 | 读 `task4_architecture_transfer/README.md` 全文 |
 | 2026-11-11 深夜 | §4 四件事全部标为闭合；末尾两条由"悬空项"改为"已定口径的执行提醒"（`splits/polybench26/` 只放 indices 快照、架构迁移不进 `splits/`） | — |
+| 2026-11-12 | **§2.1 最后一条「待确认」闭合**：平台**没有**批量导出/已标注数据接口（只有 *test set, SMILES only* 与展示库），figshare 存档是唯一可脚本化的正规入口；新增【坑十】figshare 对本站出口一律 403（`awselb/2.0`）的证据与三条出路、新增【坑十一】GitHub 走 tarball 而不是 `raw.`（TLS 重协商断连）；**§2.3「待确认」落定**：OpenPoly 用 `data/final_polymer_properties_fromliterature.csv`（741 行 × 32 列），文献计数那张故意不下载 | 执行 A-2：跑 `scripts/00_download.py`、实测 39 个文件清单与平台端点 |

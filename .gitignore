@@ -10,6 +10,10 @@ data/external/*
 !data/processed/.gitkeep
 !data/external/.gitkeep
 
+# 限量跑的清单是调试产物，不是证据：`--limit` 只许写 *.partial.csv，完整清单才入库。
+# A --limit run writes *.partial.csv as a debugging artefact; only the full manifest is evidence.
+data/manifests/*.partial.csv
+
 # ---- weights and caches (polyBERT alone is 7.3 GB) -------------------
 *.pt
 *.pth

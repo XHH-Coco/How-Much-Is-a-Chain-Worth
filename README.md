@@ -51,6 +51,8 @@ python -V                                                       # Core/Polybert 
 
 仓库永远不含基准数据（第五节硬规则 1）。按分工文档里 P1 的步骤下载，落到 `data/raw/`，算 sha256 写进 `data/manifests/`。**拷贝来的文件没有 sha256，等于没有来源，一律退回。**
 
+**P1 起的下载不要手点**：`python scripts/00_download.py --source polybench26|openpoly|polybench` 就是这一步的唯一入口（`--dry-run` 空跑、`--limit` 限量、`--verify-only` 只校验清单）。它逐份校验发布方公布的 md5/sha256、数条数、写清单，并拒绝在哈希对不上时落盘。当前进度与 PolyBench 的网络阻塞见 [`docs/交付_P1_A2_下载与完整性.md`](docs/交付_P1_A2_下载与完整性.md)。
+
 ### 5. 配好 git，按格式提交
 
 ```bash
@@ -98,7 +100,9 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 | **三份环境指纹**：`results/env_fingerprints/env_{core,gnn,polybert}.json` | 没有测试 |
 | 文档：两份 Proposal、四份分工任务书、代码规范、运行请求单、P0 交付记录 | — |
 
-**P0 已完成并冻结**（2026-11-11）：三个 conda 环境按声明装好，导出了两层锁与三份指纹，验收凭据在 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。下一阶段是 P1 获取数据。
+**P0 已完成并冻结**（2026-11-11）：三个 conda 环境按声明装好，导出了两层锁与三份指纹，验收凭据在 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。
+
+**P1 进行中**（2026-11-12）：A-2 的三个基准完成两个——PolyBench26（63 文件 / 66.0 MiB，两个官方 sha256 逐位相等）与 OpenPoly（741 行 / 174 KiB）已落 `data/raw/` 并各留一份清单；**PolyBench 39 个 CSV 未取到**，figshare 对本机出口一律 `403`（`Server: awselb/2.0`），平台侧也确认没有批量导出。阶段小结与三条出路见 [`docs/交付_P1_A2_下载与完整性.md`](docs/交付_P1_A2_下载与完整性.md)。
 
 上一版仓库曾在初始化阶段一次性写入了代码、配置、任务清单与测试。那不是本次初始化的范围，已被整体移除；那些内容保留在提交 `21be74f` 里，需要时按阶段逐项取回，而不是一次全塞进来。
 
@@ -111,7 +115,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 | 阶段 | 做什么 | 产出落在 | 验收标准 | 状态 |
 |---|---|---|---|---|
 | **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` + `lock/` | 每个环境能 import 自己的核心包，版本可复现 | **已交付 2026-11-11**，见 `docs/交付_P0_环境.md` |
-| **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | ← 下一个 |
+| **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | **◐ 2/3 已交付 2026-11-12**：PolyBench26（63 文件）+ OpenPoly（741 行）完成并留清单；**PolyBench 39 个 CSV 被 figshare 403 拦住，未取到**，见 `docs/交付_P1_A2_下载与完整性.md` |
 | **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照 | `data/interim/` + `splits/` | 划分文件带校验，任何人不得改写 | 未开始 |
 | **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | 未开始 |
 | **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
@@ -126,7 +130,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（55 个跟踪文件）
+### 4.1 当前结构（59 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -161,6 +165,7 @@ How-Much-Is-a-Chain-Worth/
 │   ├── processed/       喂模型前的最终表
 │   ├── external/        基准之外的补充数据
 │   └── manifests/       清单、条数、sha256（入库）+ SOURCES.md（入口与许可）+ 接口响应快照
+│                        ← A-2 已填：polybench26 / openpoly 两份 `*_download_manifest.csv`
 │
 ├── splits/              ← P2 填：划分索引，只读（入库）
 │   ├── polybench/
@@ -177,6 +182,7 @@ How-Much-Is-a-Chain-Worth/
 │   └── protocol/        种子、常量、划分校验
 │
 ├── scripts/             ← P1 起填：阶段入口 00–07（入库，必须可重跑）
+│                        ← 已填 `00_download.py`（A-2：三基准下载 + 完整性核对）
 ├── tests/               ← P4 起填
 │
 ├── results/             ← P5 起填（P0 已先落三份环境指纹）
@@ -198,7 +204,8 @@ How-Much-Is-a-Chain-Worth/
     ├── CODE_STYLE.md      代码怎么写
     ├── RUN_REQUESTS.md    没有 GPU 时怎么请求代跑
     ├── DECISIONS.md       决策记录（D-xx 已定）与待决问题（Q-xx）
-    └── 交付_P0_环境.md     P0 交付记录：装了什么、怎么验、哪些没做到
+    ├── 交付_P0_环境.md     P0 交付记录：装了什么、怎么验、哪些没做到
+    └── 交付_P1_A2_下载与完整性.md  A-2 交付记录：下了什么、哈希对没对上、PolyBench 为什么没下成
 ```
 
 **每个空目录里有一个 `.gitkeep`。** git 不记录空目录，删掉它，别人克隆下来这个目录就消失了。`← Pn 填` 的意思是：在这个阶段之前，该目录应该是空的；谁提前往里塞东西，就是越阶段。
@@ -216,7 +223,7 @@ How-Much-Is-a-Chain-Worth/
 | `data/interim/` | 中间产物，文件名带中间步骤：`*_harmonised.parquet` | 唯一副本 |
 | `data/processed/` | 一个任务一张最终表 `<task_id>.parquet`；特征放 `features/<task_id>.npz` | 原始文件 |
 | `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
-| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`*_download_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
+| `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`<bench>_download_manifest.csv`（一文件一行，列见 `docs/交付_P1_A2_下载与完整性.md` §2）、`*.sha256`、`unit_decisions.csv` | 数据本体；`.partial.csv`（限量跑的调试产物，已 gitignore） |
 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引，**只读**：PolyBench / OpenPoly 是 `*_official*.json`；PolyBench26 是官方 `scaling_indices/` 的**原样拷贝** `<task>/seed_42/{manifest.json, fold_00..04.npz}`（不改字节），外加一份 `README.md` 记来源 commit 与三组 sha256。`splits/polybench26/arch/` 留空（本地物化、不入库） | 生成脚本的临时输出、自己切的划分 |
 | `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录） | 业务逻辑、硬编码路径 |
 | `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |
@@ -231,7 +238,7 @@ How-Much-Is-a-Chain-Worth/
 | `results/aggregate/` | 汇总 `<name>.csv`（`main_table` / `scaling` / `arch_transfer` / `openpoly_scan`）+ `predictions/<run_id>.parquet` | 手改的数字 |
 | `results/figures/` | 脚本导出的图 `<figN>_<name>.pdf` / `.png` | 截图、从 PPT 里抠出来的图 |
 | `results/env_fingerprints/` | P0 已填 `env_core.json`、`env_gnn.json`、`env_polybert.json`；P5 起一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
-| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
+| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`、`交付_P1_A2_下载与完整性.md`）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
 | 仓库根目录 | 只允许 `README.md`、`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` 五个文件 + 上面九个目录 | 散落文件（`test.py`、`tmp.csv`、`notes.md`、`新建文本文档.txt`） |
 
 #### 4.2.1 阶段入口 00–07 归谁（**写代码之前先看这张表**）

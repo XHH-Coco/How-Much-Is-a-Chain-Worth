@@ -87,6 +87,10 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-2 · 三基准下载 + 完整性核对（3.0 pH｜关键）
 
+> **状态：部分交付 2026-11-12**（仓库所有者代做）。**3 个基准完成 2 个**：PolyBench26（63 文件 / 66.0 MiB，两个官方 sha256 逐位相等）、OpenPoly（741 行）已落 `data/raw/` 并写出清单；**PolyBench 39 个 CSV 未取到**——figshare 对本机出口一律 `403`（`Server: awselb/2.0`），平台侧也已查清没有批量导出（只有 *test set, SMILES only* 那个口）。证据、三条出路与验收命令见 `docs/交付_P1_A2_下载与完整性.md`。
+>
+> **你的下一步**：找一条能连 figshare 的网络跑 `python scripts/00_download.py --source polybench`，它会自己校验 `supplied_md5`、写 39 行清单、顺手把下面 ①②③ 三条断言过一遍。**在那之前 A-3 不许开工**，也不许拿平台的展示库顶替官方 CSV。
+
 > **口径**：Proposal §2.1 数的是**承重资源**，不是数据集个数——四个资源里承重的只有 PolyBench 与 PolyBench26，OpenPoly 仅边界，第四个（MoleculeNet / PCQM4Mv2）**不承重**。所以只下**三个**，第四个只在 `SOURCES.md` 登记、不下载、不建 manifest。若将来有人要用它，先改 `SOURCES.md` §3 + 记 `docs/DECISIONS.md`，再动手。
 
 | 项 | 内容 |

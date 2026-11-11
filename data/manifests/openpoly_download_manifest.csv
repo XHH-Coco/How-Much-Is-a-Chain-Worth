@@ -1,0 +1,2 @@
+task_id,n_rows,sha256,source_url,version,downloaded_at,bytes,n_rows_basis
+data/final_polymer_properties_fromliterature.csv,741,8de5baf76f79610fe9173e63c65b824714aeb8445f9d670e1767956ea9db5eb3,https://github.com/WangGroupFDU/Openpoly_benchmark/blob/ccaa66900747bfc576ef935e3d5f220b6c9b1f85/data/final_polymer_properties_fromliterature.csv,ccaa669,2026-11-12T02:55:40+08:00,178587,csv_data_rows
