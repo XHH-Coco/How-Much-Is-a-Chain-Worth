@@ -10,20 +10,25 @@
 
 **先读这一节，再动手。** 这是一个空骨架：没有数据、没有代码、没有配置。下面的顺序是刻意的——跳过第 1 步会在装包时炸，跳过第 3 步会在跑完之后返工。
 
-### 1. 装环境：严格按 `environment/*.yml`，不要 `pip install` 最新版
+### 1. 装环境：按 `lock/` 精确重放，`environment/*.yml` 只用来读
 
 ```bash
-conda env create -f environment/core.yml       # 数据、化学信息学、经典模型
-conda env create -f environment/gnn.yml        # 图神经网络（与上者 OpenMP 冲突，必须分开）
-conda env create -f environment/polybert.yml   # 预训练嵌入，权重缓存约 7 GB
-conda activate DSC6020_Project_Core
-python -V                                      # Core/Polybert 3.10.x；GNN 3.11.x（见下）
+# 三个环境各走一遍，把 gnn 换成 core / polybert
+conda create -n DSC6020_Project_GNN --file lock/gnn.conda.txt   # 1) conda 层：按 URL 重放，不重新求解
+conda activate DSC6020_Project_GNN
+pip install -r lock/gnn.pip.txt                                 # 2) pip 层：索引地址在文件头，pip 会自动带上
+sha256sum -c lock/SHA256SUMS                                    # 3) 校验锁文件自身完好，6 个文件全 OK 才继续
+python -V                                                       # Core/Polybert 3.10.x；GNN 3.11.x（见下）
 ```
 
+- **为什么不用 `environment/*.yml` 装。** `.yml` 只写直接依赖（`gnn.yml` 12 条），`lock/` 连间接依赖一起写（`gnn` 环境 = 18 个 conda 构建产物 + 69 个 pip 包）。按 `.yml` 装，conda 求解器会**现场重算一遍**，间接依赖（`torchmetrics`、`sympy`、`filelock` 这些）跟着当时的索引走，结果是"能跑，但和别人不是同一套版本"，后面主表的数字就对不上。
+- **`.yml` 的用途是读，不是装。** 它头部注释解释了每条钉版的原因：为什么 GNN 是 3.11、为什么必须 `setuptools==75.8.0`、为什么索引只能用 `--index-url cu121`。要动版本之前先读那里。
+- **重放有两个前提**：① 同操作系统——`lock/*.conda.txt` 头部写死 `platform: win-64`，换成 Linux/Mac 第 1 步就会失败；② 网络能到 `mirrors.tuna.tsinghua.edu.cn`，conda 锁里 18 个 URL 全指这个镜像。
+- **退路只有一条**：`lock/` 重放失败时才退回 `conda env update -n <env> -f environment/<env>.yml --prune`。这条路装出来的环境**不保证与锁一致**，装完必须重新导出锁（`conda list --explicit` + `pip freeze`）并告知分工 A 登记，否则你和别人就不是同一套版本了。
 - **Python 版本：Core / Polybert 用 3.10.14，GNN 用 3.11.18。** 不是随手混的：`chemprop 2.x` 强制要求 ≥3.11（PyPI 上 2.0.0–2.3.1 全部如此），而 1.x 只支持 <3.9，所以 **3.10 上不存在任何可安装的 chemprop**，而 A3 臂正是建立在它上面。三套包版本各自按对应 Python 的 wheel 兼容性钉死；谁单独升大版本，别人拿到的 `lock` 就对他失效。（3.10 已于 2026-10-31 EOL，目前是已知取舍，记在 `environment/*.yml` 的头注释里。）
 - **三个环境不许互相 install。** 把 RDKit 塞进 GNN 环境，`libgomp` 会让训练半路崩，而且报错与化学库毫无关系，极难查。
 - **不要往系统 Python 里装，也不要新建 `requirements.txt`。** 本仓库只有 conda 一套声明。
-- **P0 已验收，现在以 `lock/*.conda.txt` + `lock/*.pip.txt` 为准**（`environment/*.yml` 是声明，`lock/` 是从装好的环境反向导出的精确版本表）。两者不一致时找分工 A，不要自己改——`environment/` 三份文件已冻结（第九节第 1 行）。装法、验收命令与已知局限见 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。
+- **`environment/` 三份已冻结**（第九节第 1 行），不要自己改；发现它和 `lock/` 不一致时**找分工 A**，不要自行"修"其中一边。装法、验收命令与已知局限见 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。
 
 ### 2. 按这个顺序读文档
 
@@ -264,15 +269,34 @@ How-Much-Is-a-Chain-Worth/
 | `environment/gnn.yml` | `DSC6020_Project_GNN` | 3.11 | 是 | 图神经网络框架 + chemprop 2.x（该包强制要求 ≥3.11），且与上者的 OpenMP 运行库冲突 |
 | `environment/polybert.yml` | `DSC6020_Project_Polybert` | 3.10 | 是 | 预训练嵌入，权重缓存约 7 GB，需可独立删除 |
 
-三份 `.yml` 既是声明，也是**安装凭据**：2026-11-11 已按此装好（Core / Polybert 为 Python 3.10.14，GNN 为 Python 3.11.18）。重装命令：
+**两张表是什么关系**：`environment/*.yml` 是**声明**——写"要哪个版本"，只列直接依赖，装的时候由 conda 求解器现场解析；`lock/*.txt` 是**快照**——从装好的环境反向导出，"实际装出了哪些文件"，连间接依赖一起写死。**装环境按 `lock/`，`.yml` 留作读。** 理由与失败后果见第一节第 1 步。
+
+2026-11-11 已按锁装好并冻结（Core / Polybert 为 Python 3.10.14，GNN 为 Python 3.11.18）。新机器或重装：
 
 ```bash
-conda env update -n DSC6020_Project_Core    -f environment/core.yml    --prune
-conda env update -n DSC6020_Project_GNN     -f environment/gnn.yml     --prune
+# 1) conda 层：按 URL + 构建号精确重放，不重新求解
+conda create -n DSC6020_Project_Core      --file lock/core.conda.txt
+conda create -n DSC6020_Project_GNN       --file lock/gnn.conda.txt
+conda create -n DSC6020_Project_Polybert  --file lock/polybert.conda.txt
+
+# 2) pip 层：索引地址（cu121 / PyPI / PyG wheel）写在文件头，pip 会自动带上
+conda activate DSC6020_Project_Core      && pip install -r lock/core.pip.txt
+conda activate DSC6020_Project_GNN       && pip install -r lock/gnn.pip.txt
+conda activate DSC6020_Project_Polybert  && pip install -r lock/polybert.pip.txt
+
+# 3) 校验锁文件自身没被改坏，6 个文件全 OK 才继续
+sha256sum -c lock/SHA256SUMS
+```
+
+**退路（只在锁重放失败时走）**——例如换了操作系统、或镜像不可达。这条路会让求解器重新解析，**装出来的环境不保证与锁一致**；走完必须重新导出锁并告知分工 A 登记：
+
+```bash
+conda env update -n DSC6020_Project_Core     -f environment/core.yml     --prune
+conda env update -n DSC6020_Project_GNN      -f environment/gnn.yml      --prune
 conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 ```
 
-装法与三条禁忌见第一节第 1 步。
+三条禁忌（环境不许互相 install、不许装进系统 Python、不许另建 `requirements.txt`）见第一节第 1 步。`environment/` 三份已冻结（第九节第 1 行）。
 
 **P0 已完成并冻结（2026-11-11）**：`lock/` 里每个环境两份锁——`<env>.conda.txt` 是 conda 层（包 URL + 构建号，可 `conda create --file` 直接重建），`<env>.pip.txt` 是 pip 层（`==` 精确版本 + 索引地址，可 `pip install -r`）。`lock/SHA256SUMS` 给这 6 个文件做校验。三份指纹在 `results/env_fingerprints/`。
 
