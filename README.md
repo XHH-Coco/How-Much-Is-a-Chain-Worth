@@ -106,6 +106,8 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **P2 进行中**（2026-11-12）：A-3 标签调和已交付——**6 个主表任务（14,103 条）+ 4 个预备队任务（6,557 条）**已调和入库，`bandgap chain_Egc` 因表头不写单位按红线整列弃用（3,380 条），决策表 30 行、10 个任务去重删 **0** 行。官方划分快照尚未开始。验收凭据见 [`docs/交付_P1_A3_标签调和.md`](docs/交付_P1_A3_标签调和.md)。
 
+**任务清单已冻结**（2026-11-12，A-4）：`configs/tasks/` 下 **18 份**配置——8 个主表（PolyBench 每层 2 个 + PolyBench26 2 个）、5 个预注册备用、3 个 OpenPoly 边界性质、2 个机制实验任务，另有 `SHA256SUMS` 与快照 [`docs/Task List Snapshot D0.md`](docs/Task%20List%20Snapshot%20D0.md)（冻结于 `2026-11-12T03:48:00+08:00`）。校验器在 `src/chainworth/io/tasks.py`：字段缺失、任务名拼错、n 与上游清单不符**一律当场报错**。同一次交付里结案 Q-01（**主表 = 8 任务 × 5 臂**，D-17），并纠正两处口径：PolyMetriX Tg 源数据已是 K（D-18）、密度单位官方未声明故不写（D-19）。凭据见 [`docs/交付_P1_A4_任务清单冻结.md`](docs/交付_P1_A4_任务清单冻结.md)。
+
 上一版仓库曾在初始化阶段一次性写入了代码、配置、任务清单与测试。那不是本次初始化的范围，已被整体移除；那些内容保留在提交 `21be74f` 里，需要时按阶段逐项取回，而不是一次全塞进来。
 
 **原则：一个阶段只做一件事，做完、验完、提交，再进下一阶段。**
@@ -119,7 +121,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 | **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` + `lock/` | 每个环境能 import 自己的核心包，版本可复现 | **已交付 2026-11-11**，见 `docs/交付_P0_环境.md` |
 | **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | **已交付 2026-11-12**：三份清单齐备；PolyBench 39 行 / 42,169 / 与附录 A 逐行对齐，39/39 核过官方 md5，见 `docs/交付_P1_A2_下载与完整性.md` §9 |
 | **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照 | `data/interim/` + `splits/` | 划分文件带校验，任何人不得改写 | **◐ 标签调和已交付 2026-11-12**（A-3：10 个任务调和入库、4 条验收标准全过，见 `docs/交付_P1_A3_标签调和.md` §5）；**官方划分快照未开始** |
-| **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | 未开始 |
+| **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | **◐ 任务清单已冻结 2026-11-12**（A-4：18 份 `configs/tasks/*.yaml` + 快照，见 `docs/交付_P1_A4_任务清单冻结.md`）；`configs/arms/`、`configs/experiments/` 未开始 |
 | **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
 | **P5 运行** | 按配置跑，逐次落记录 | `results/raw_runs/` | 每个数字都能追到某一次运行 | 未开始 |
 | **P6 图表与文档** | 出图、写方法与结论 | `results/figures/` + `docs/` | 图能由脚本一键重画 | 未开始 |
@@ -132,7 +134,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（71 个跟踪文件）
+### 4.1 当前结构（94 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -156,8 +158,8 @@ How-Much-Is-a-Chain-Worth/
 │   ├── polybert.pip.txt
 │   └── SHA256SUMS       上面 6 个文件的校验和
 │
-├── configs/             ← P3 填：配置文件
-│   ├── tasks/           一个任务一份
+├── configs/             ← P3 填；A-4 已先落 tasks/（18 份，冻结 v1）
+│   ├── tasks/           一个任务一份（A-4 已填 18 份 + `SHA256SUMS`）
 │   ├── experiments/     一次实验一份
 │   └── arms/            一个臂一份
 │
@@ -177,7 +179,7 @@ How-Much-Is-a-Chain-Worth/
 │   └── openpoly/
 │
 ├── src/chainworth/      ← P4 填：包代码
-│   ├── io/              数据与配置的唯一出入口（A-3 已填 `harmonise.py`）
+│   ├── io/              数据与配置的唯一出入口（A-3 填 `harmonise.py`；A-4 填 `tasks.py`）
 │   ├── chem/            结构解析、描述符、分子图
 │   ├── arms/            五个臂各一个模块
 │   ├── metrics/         指标与 bootstrap
@@ -187,7 +189,7 @@ How-Much-Is-a-Chain-Worth/
 │
 ├── scripts/             ← P1 起填：阶段入口 00–07（入库，必须可重跑）
 │                        ← 已填 `00_download.py`（A-2：三基准下载 + 完整性核对）、`01_harmonise.py`（A-3：标签调和）
-├── tests/               ← P4 起填（A-3 已先落 `test_harmonise.py`：17 项）
+├── tests/               ← P4 起填（A-3 已先落 `test_harmonise.py`：17 项；A-4 落 `test_task_configs.py`：15 项）
 │
 ├── results/             ← P5 起填（P0 已先落三份环境指纹）
 │   ├── raw_runs/        一次运行一份 JSON（入库）
@@ -210,7 +212,9 @@ How-Much-Is-a-Chain-Worth/
     ├── DECISIONS.md       决策记录（D-xx 已定）与待决问题（Q-xx）
     ├── 交付_P0_环境.md     P0 交付记录：装了什么、怎么验、哪些没做到
     ├── 交付_P1_A2_下载与完整性.md  A-2 交付记录：下了什么、哈希对没对上、PolyBench 为什么没下成
-    └── 交付_P1_A3_标签调和.md      A-3 交付记录：单位凭什么这么定、删了几行、哪些任务没做
+    ├── 交付_P1_A3_标签调和.md      A-3 交付记录：单位凭什么这么定、删了几行、哪些任务没做
+    ├── 交付_P1_A4_任务清单冻结.md  A-4 交付记录：18 份配置怎么点出来的、臂数口径、三处新事实
+    └── Task List Snapshot D0.md   **任务清单快照（冻结物）**：冻结时刻、清单表、替换登记
 ```
 
 **每个空目录里有一个 `.gitkeep`。** git 不记录空目录，删掉它，别人克隆下来这个目录就消失了。`← Pn 填` 的意思是：在这个阶段之前，该目录应该是空的；谁提前往里塞东西，就是越阶段。
@@ -221,7 +225,7 @@ How-Much-Is-a-Chain-Worth/
 |---|---|---|
 | `environment/` | 一个环境一份声明，首行带 `# FROZEN v2`：`core.yml`、`gnn.yml`、`polybert.yml` | 锁文件（放 `lock/`）、装包产物 |
 | `lock/` | 一律成对：`<env>.conda.txt`（conda 层，URL+构建号）+ `<env>.pip.txt`（pip 层，`==` 版本）+ `SHA256SUMS` | 手改的锁；`conda-lock` 的 `.lock.yml`（本项目不用，原因见 `docs/交付_P0_环境.md` §4） |
-| `configs/tasks/` | 一个任务一份 `<dataset>_t<n>_<property>.yaml`，如 `pb_t1_tg.yaml` | 实验编排、超参数 |
+| `configs/tasks/` | 一个任务一份 `<dataset>_t<n>_<property>.yaml`，如 `pb_t1_tg.yaml`。**A-4 已填 18 份**（8 主表 + 5 备用 + 3 OpenPoly + 2 机制），schema 与校验在 `src/chainworth/io/tasks.py`，指纹在 `configs/tasks/SHA256SUMS`，清单快照是 `docs/Task List Snapshot D0.md` | 实验编排、超参数、臂的名单（臂在 `configs/arms/`，这里的 `arms` 只是"这个任务要跑哪些"） |
 | `configs/arms/` | 一个臂一份 `<arm>.yaml`：`a1_floor`…`a5_chain` | 任务定义、种子列表 |
 | `configs/experiments/` | 一次实验一份，写清跑哪些任务 × 哪些臂 × 几个种子：`main_table.yaml`、`scaling.yaml`、`arch_transfer.yaml`、`openpoly_scan.yaml` | 单任务字段（放 `tasks/`） |
 | `data/raw/` | 原样下载，**保留发布方原文件名** | 清洗、改名、合并、补列 |
@@ -230,7 +234,7 @@ How-Much-Is-a-Chain-Worth/
 | `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
 | `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`polybench_api_article_20261112.json` + `polybench_expected_files.csv`（figshare 原始响应快照与派生的 **39 行标准表**：文件名 / 字节数 / 官方 md5 / 直链，任何下载路线的验收标准，见 `DECISIONS.md` D-13）、`<bench>_download_manifest.csv`（一文件一行，列见 `docs/交付_P1_A2_下载与完整性.md` §2）、`*.sha256`、**`unit_decisions.csv`**（A-3：每条单位/去重/弃列判定一行，**只可追加**）、**`harmonised_manifest.csv`**（A-3：一任务一行，`rows_in/rows_out/source_sha256/parquet_sha256`）、**`harmonise_spotcheck.csv`**（A-3：抽检 20 行，原始/调和/重算三列并排） | 数据本体；`.partial.csv`（限量跑的调试产物，已 gitignore） |
 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引，**只读**：PolyBench / OpenPoly 是 `*_official*.json`；PolyBench26 是官方 `scaling_indices/` 的**原样拷贝** `<task>/seed_42/{manifest.json, fold_00..04.npz}`（不改字节），外加一份 `README.md` 记来源 commit 与三组 sha256。`splits/polybench26/arch/` 留空（本地物化、不入库） | 生成脚本的临时输出、自己切的划分 |
-| `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录）、`harmonise.py`（A-3：原始 CSV → 调和表 + 决策行） | 业务逻辑、硬编码路径 |
+| `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录）、`harmonise.py`（A-3：原始 CSV → 调和表 + 决策行）、`tasks.py`（A-4：读并校验 `configs/tasks/*.yaml`，CLI 见 `python -m chainworth.io.tasks --verify`） | 业务逻辑、硬编码路径 |
 | `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |
 | `src/chainworth/arms/` | 一臂一文件：`floor.py`、`conventional.py`、`graph.py`、`polybert.py`、`chain_info.py` | 训练循环（`train.py`） |
 | `src/chainworth/metrics/` | `regression.py`（R²、Spearman）、`bootstrap.py`（残差重采样） | 图、表格 |
@@ -243,7 +247,7 @@ How-Much-Is-a-Chain-Worth/
 | `results/aggregate/` | 汇总 `<name>.csv`（`main_table` / `scaling` / `arch_transfer` / `openpoly_scan`）+ `predictions/<run_id>.parquet` | 手改的数字 |
 | `results/figures/` | 脚本导出的图 `<figN>_<name>.pdf` / `.png` | 截图、从 PPT 里抠出来的图 |
 | `results/env_fingerprints/` | P0 已填 `env_core.json`、`env_gnn.json`、`env_polybert.json`；P5 起一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
-| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`、`交付_P1_A2_下载与完整性.md`、`交付_P1_A3_标签调和.md`）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
+| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`、`交付_P1_A2_下载与完整性.md`、`交付_P1_A3_标签调和.md`、`交付_P1_A4_任务清单冻结.md`）、`Task List Snapshot D0.md`（**任务清单快照，冻结物**）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
 | 仓库根目录 | 只允许 `README.md`、`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` 五个文件 + 上面九个目录 | 散落文件（`test.py`、`tmp.csv`、`notes.md`、`新建文本文档.txt`） |
 
 #### 4.2.1 阶段入口 00–07 归谁（**写代码之前先看这张表**）
@@ -379,7 +383,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 | 4 | 单位换算决策 | `data/manifests/unit_decisions.csv` | P2 | 只能追加、不能覆盖；每行带 evidence；`python scripts/01_harmonise.py --verify` 逐条核 | **A-3 已交 v1（2026-11-12，30 行，sha256 见 `git log` 该文件首条提交）**，P2 划分完成后一并冻结 |
 | 5 | 清洗后的规范表 | `data/interim/`、`data/processed/` | P2 | 行数/列数断言 + `MANIFEST.sha256`（A-3 用 `harmonised_manifest.csv` 的 `rows_out` + `parquet_sha256` 顶上） | **A-3 已交 v1（2026-11-12，10 张表）**，P2 划分完成后一并冻结 |
 | 6 | 官方划分快照 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | P2 | 每份文件的 sha256（json 与 npz 都算），`tests/test_splits.py` 断言；PolyBench26 另需 `canonical_sha256` 与 `train_pool[:N]` 前缀断言 | 未冻结（待 P2） |
-| 7 | 任务配置 | `configs/tasks/*.yaml` | P3 | 每次 run 记录里的 `config_hash` 必须对得上 | 未冻结（待 P3） |
+| 7 | 任务配置 | `configs/tasks/*.yaml` | P3 | `configs/tasks/SHA256SUMS`（`cd configs/tasks && sha256sum -c`）+ 每次 run 记录里的 `config_hash` 必须对得上 | **A-4 已交 v1（2026-11-12，18 份，指纹表 `configs/tasks/SHA256SUMS`）**；`config_hash` 与臂/实验配置在 P3 一并登记 |
 | 8 | 臂的超参数 | `configs/arms/*.yaml` | P3 | 同上 | 未冻结（待 P3） |
 
 > 每次冻结后**立即更新本表**，并在提交信息里写"冻结了什么、版本号是什么"。这张表是组员判断"我能不能动这个文件"的唯一依据。

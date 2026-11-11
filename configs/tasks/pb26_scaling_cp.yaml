@@ -1,0 +1,41 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb26_scaling_cp
+dataset_name: MD_5000 Cp (alternating + homopolymer)
+benchmark: polybench26
+role: mechanism
+tier: null
+tier_basis: 不适用：Proposal §3.1 表 C，机制实验不进主表
+property: 等压热容 Cp（MD_5000，数据规模操纵）
+target_column: Cp
+target_unit: null
+unit_status: not_required
+unit_evidence: 机制实验只比较同一性质内的 RMSE，单位不进入 κ 或 Λ，故不为此猜单位；报告若需物理值须先补来源
+source_kind: md
+n_labels: 29602
+n_source: 官方 manifest.json 的 n_rows 相加：27,802（alternating_Cp）+ 1,800（homopolymer_Cp），2026-11-12 本地核
+data_ref: null
+eval_unit: official tiers x 5 folds x 2 arms
+arms:
+- a2_conventional
+split_ref: splits/polybench26/pb26_scaling_cp/
+split_status: pending
+split_protocol: official_scaling_indices_5fold_seed42
+status: available
+datasets:
+- dataset_id: md5000_alternating_cp
+  n_rows: 27802
+  train_sizes:
+  - 300
+  - 1000
+  - 3000
+  - 10000
+  canonical_source: PSMILES/MD_5000/Cp/alternating_Cp.csv
+  official_indices_path: Datasets/scaling_indices/MD_5000/Cp/alternating_Cp/seed_42
+- dataset_id: md5000_homopolymer_cp
+  n_rows: 1800
+  train_sizes:
+  - 300
+  - 1000
+  canonical_source: PSMILES/MD_5000/Cp/homopolymer_Cp.csv
+  official_indices_path: Datasets/scaling_indices/MD_5000/Cp/homopolymer_Cp/seed_42
+notes: 只承担 H2（κ）。拟合矩阵（档位 × 折 × 臂）由 C-3 的 configs/experiments/scaling.yaml 定义，本文件只管任务身份。homopolymer 没有 3000 档是事实不是失败（官方 README）。

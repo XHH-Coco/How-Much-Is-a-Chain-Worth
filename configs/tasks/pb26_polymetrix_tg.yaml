@@ -1,0 +1,37 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb26_polymetrix_tg
+dataset_name: PolyMetriX Tg
+benchmark: polybench26
+role: main
+tier: null
+tier_basis: 不适用：Proposal §3.1 表 B 的 PolyBench26 任务不带 PolyBench 三层划分
+property: 玻璃化转变温度 Tg（PolyMetriX，实验）
+target_column: Tg_K
+target_unit: K
+unit_status: verified
+unit_evidence: 源表列名 `Tg_K`（DATA_PROVENANCE 记其取自 `labels.Exp_Tg(K)`）；实测 134.15~768.15 K、0 缺失——**已是开尔文，不得再加 273.15**（D-18）
+source_kind: experimental
+n_labels: 7367
+n_source: 官方 manifest.json 的 n_rows=7367（datasets[].official_indices_path，2026-11-12 本地核对）
+data_ref: data/raw/polybench26/Datasets/PSMILES/PolyMetriX/Tg/Tg.csv
+eval_unit: official 5 folds x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench26/pb26_polymetrix_tg/seed_42/manifest.json
+split_status: pending
+split_protocol: official_scaling_indices_5fold_seed42
+status: available
+datasets:
+- dataset_id: polymetrix_tg
+  n_rows: 7367
+  train_sizes:
+  - 300
+  - 1000
+  - 3000
+  canonical_source: PSMILES/PolyMetriX/Tg/Tg.csv
+  official_indices_path: Datasets/scaling_indices/PolyMetriX/Tg/Tg/seed_42
+notes: 第 7 行：与第 1 行同物理量、换发布版本，是“Λ 是材料的属性还是数据集的属性”最便宜的检验；兼作 H2 的锚点（档位 300/1000/3000）。

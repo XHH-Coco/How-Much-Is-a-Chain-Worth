@@ -1,0 +1,28 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb_t1_bandgap_chain
+dataset_name: bandgap chain_Egc
+benchmark: polybench
+role: reserve
+tier: 1
+tier_basis: Proposal §3.1 表 E 的层列（替换第 1 或第 2 行）
+property: 带隙（链段）bandgap_chain
+target_column: null
+target_unit: null
+unit_status: unverified
+unit_evidence: 表头 `bandgap_chain` 未声明单位；按“不许猜”红线整任务弃用（D-16）
+source_kind: experimental
+n_labels: 0
+n_source: 0 可用：原始 3,380 行全部不进产出（D-16）
+data_ref: null
+eval_unit: official 70/30 x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench/pb_t1_bandgap_chain/official_70_30.json
+split_status: pending
+split_protocol: official_70_30
+status: unavailable
+status_note: 整任务弃用：数值 0.0205~9.863 只在 eV 口径下说得通，但“唯一说得通”仍是推断。解锁条件=拿到该数据集的单位声明并新增一条决策（D-16）。

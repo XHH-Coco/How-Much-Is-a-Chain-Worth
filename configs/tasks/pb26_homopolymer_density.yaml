@@ -1,0 +1,36 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb26_homopolymer_density
+dataset_name: homopolymer density (MD_5000)
+benchmark: polybench26
+role: main
+tier: null
+tier_basis: 不适用：Proposal §3.1 表 B 的 PolyBench26 任务不带 PolyBench 三层划分
+property: 密度（MD_5000 均聚物）
+target_column: density
+target_unit: null
+unit_status: unverified
+unit_evidence: 官方 README / DATA_PROVENANCE / SCALING_EXPERIMENTS_METHODS 三处均未声明密度单位，源 jsonl 的 outputs.density 只有数值；无证据故不写单位（D-19）
+source_kind: md
+n_labels: 1800
+n_source: 官方 manifest.json 的 n_rows=1800（datasets[].official_indices_path，2026-11-12 本地核对）
+data_ref: data/raw/polybench26/Datasets/PSMILES/MD_5000/density/homopolymer_density.csv
+eval_unit: official 5 folds x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench26/pb26_homopolymer_density/seed_42/manifest.json
+split_status: pending
+split_protocol: official_scaling_indices_5fold_seed42
+status: available
+datasets:
+- dataset_id: md5000_homopolymer_density
+  n_rows: 1800
+  train_sizes:
+  - 300
+  - 1000
+  canonical_source: PSMILES/MD_5000/density/homopolymer_density.csv
+  official_indices_path: Datasets/scaling_indices/MD_5000/density/homopolymer_density/seed_42
+notes: 第 8 行：MD 标签几乎无噪声，与第 7 行构成 H4 需要的“同样 n、不同标签噪声”对照。canonical CSV 是官方生成物（坑六），本地未生成；报告时必须标“官方未声明单位”。

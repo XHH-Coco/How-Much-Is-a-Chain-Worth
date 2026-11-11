@@ -123,6 +123,12 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-4 · 任务清单冻结 + 附录快照（2.0 pH｜关键）
 
+> **状态：已交付 2026-11-12**（仓库所有者代做）。**18 份配置**落 `configs/tasks/`：8 主表（PolyBench 每层 2 个 + PolyBench26 2 个）+ 5 备用 + 3 OpenPoly 边界 + 2 机制实验；四项验收标准全过（`PYTHONPATH=src python -m chainworth.io.tasks --verify` 退出码 0，`pytest tests/test_task_configs.py` **15 项全绿**，`cd configs/tasks && sha256sum -c SHA256SUMS` 18 个 OK）。快照 [`docs/Task List Snapshot D0.md`](Task%20List%20Snapshot%20D0.md) 冻结于 **2026-11-12T03:48:00+08:00**。凭据见 [`docs/交付_P1_A4_任务清单冻结.md`](交付_P1_A4_任务清单冻结.md)。
+>
+> **三条已验证、会改变后来做法的事实**（细节在该文档 §3–§4）：① **Q-01 结案 = 主表「8 任务 × 5 臂」**（D-17）——按官方评估单元每臂 48 次，§6 的"96 经典 + 48 GNN = 144"只等于 **3 臂**，§7.4 的 150 = 144 + 6 次无出处，所以**拟合次数仍归 Q-02（C 定）**，快照里不写任何"192/240"；② **PolyMetriX Tg 本来就是开尔文**（列名 `Tg_K`、7,367 行 0 缺失、134.15–768.15 K），A-3 文档 §7 第 4 条那句"也必须加 273.15"是预设、已勘误（D-18）；③ **密度单位官方三处文档均未声明**，故 `unit_status: unverified` 且 `target_unit: null`（D-19），机制实验两个任务用第三种状态 `not_required`。
+>
+> **你的下一步（A-5）**：18 行的 `split_ref` 就是 A-5 的落盘清单（PolyBench 11 个 / PB26 2 个 / OpenPoly 3 个 / 机制 2 个，路径逐条写在 YAML 里）。**落盘后把 `split_status` 由 `pending` 改成 `present` 并重出 `SHA256SUMS`**——只改状态不重出指纹，等于冻结物被改而不留痕。
+
 | 项 | 内容 |
 |:--|:--|
 | **拿什么** | A-3 调和后的数据、Proposal §3.1 的 Table A–E |
@@ -194,7 +200,8 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ```
 【入库】
-configs/tasks/*.yaml                            8 主表 + 3 OpenPoly + 2 机制 + 5 备用
+configs/tasks/*.yaml                            8 主表 + 3 OpenPoly + 2 机制 + 5 备用（共 18 份，已冻结 v1）
+configs/tasks/SHA256SUMS                        上面 18 份的指纹（`cd configs/tasks && sha256sum -c`）
 data/manifests/SOURCES.md                       四个资源入口 + 许可（source_url 的唯一来源）
 data/manifests/polybench_download_manifest.csv  39 行，合计 42,169
 data/manifests/polybench26_download_manifest.csv
@@ -301,9 +308,9 @@ data/external/table_s27.csv                     可选验证性转录   （A-8�
 - [ ] `polybench_download_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐；每行 `source_url` 能在 `SOURCES.md` 找到、`version` 非空
 - [ ] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**；`splits/openpoly/` 里已有官方划分快照
 - [ ] canonical PSMILES 表的 sha256 与 `splits/polybench26/*/seed_42/manifest.json` 的 `canonical_sha256` 相等；`manage_scaling_indices.py verify` 通过；`train_pool[:N]` 前缀断言有单独测试且能抓错
-- [ ] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过
+- [ ] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过 ｜ **已过（18 份；`PYTHONPATH=src python -m chainworth.io.tasks --verify`）**
 - [ ] `unit_decisions.csv` 每条都有 `evidence`，行数差能对上
-- [ ] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径（4 还是 5）
+- [ ] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径（4 还是 5）｜ **已过（5 臂，D-17）**
 - [ ] 结构级产物（structures / descriptors）**不入库**，已确认 `python scripts/02_features.py` 能从 `data/interim/` 重建，并在 `#data` 里写明重建命令（不是"已生成"）
 - [ ] OpenPoly 五个数（741 / 3,985 / 443 / 295 / 168）已公布
 - [ ] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/`；有就自己补进 `.gitignore`（README 第五节硬规则 4）

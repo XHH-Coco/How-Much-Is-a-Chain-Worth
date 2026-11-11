@@ -1,0 +1,28 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb_t2_permeability
+dataset_name: Gas permeability coefficient
+benchmark: polybench
+role: main
+tier: 2
+tier_basis: Proposal §3.1 表 A（层号在正文中被点名，不依赖 Table S27）
+property: 气体渗透系数
+target_column: label
+target_unit: cm3(STP)*cm/(cm2*s*Pa)
+unit_status: verified
+unit_evidence: 列名给出完整量纲 `P[cm3(STP)cm/(cm2*s*Pa)]`；A-3 记 identity（不换 Barrer，D-15）
+source_kind: experimental
+n_labels: 711
+n_source: data/manifests/harmonised_manifest.csv 的 n_labels（A-3 本地数出）
+data_ref: data/interim/harmonised/pb_t2_permeability_harmonised.parquet
+eval_unit: official 70/30 x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench/pb_t2_permeability/official_70_30.json
+split_status: pending
+split_protocol: official_70_30
+status: available
+notes: 换 Barrer 后中位 2.7 Barrer，与文献区间自洽；跨来源比单位时须新增一条决策。

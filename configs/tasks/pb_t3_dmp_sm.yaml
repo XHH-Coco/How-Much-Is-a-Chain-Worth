@@ -1,0 +1,28 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb_t3_dmp_sm
+dataset_name: Dynamic mechanical properties storage modulus
+benchmark: polybench
+role: reserve
+tier: 3
+tier_basis: Proposal §3.1 表 E 的层列（替换第 6 行）
+property: DMA 储能模量
+target_column: label
+target_unit: GPa
+unit_status: verified
+unit_evidence: 列名 `DMPSM(GPa)` 带单位；A-3 记 identity
+source_kind: experimental
+n_labels: 387
+n_source: data/manifests/harmonised_manifest.csv 的 n_labels（A-3 本地数出）
+data_ref: data/interim/harmonised/pb_t3_dmp_sm_harmonised.parquet
+eval_unit: official 70/30 x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench/pb_t3_dmp_sm/official_70_30.json
+split_status: pending
+split_protocol: official_70_30
+status: available
+notes: 与第 6 行不同族（力学 vs 降解），替换会削弱降解那条轴，必须在快照里如实标注（表 E 原文）。

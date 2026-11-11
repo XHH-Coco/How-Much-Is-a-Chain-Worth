@@ -1,0 +1,28 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb_t1_td
+dataset_name: Thermal decomposition temperature
+benchmark: polybench
+role: reserve
+tier: 1
+tier_basis: Proposal §3.1 表 E 的层列（替换第 1 或第 2 行）
+property: 热分解温度 Td
+target_column: label
+target_unit: K
+unit_status: verified
+unit_evidence: 列名 `Td(℃)` 声明摄氏；A-3 已按 T[K]=T[℃]+273.15 换算并记入 unit_decisions.csv（D-15）
+source_kind: experimental
+n_labels: 4898
+n_source: data/manifests/harmonised_manifest.csv 的 n_labels（A-3 本地数出）
+data_ref: data/interim/harmonised/pb_t1_td_harmonised.parquet
+eval_unit: official 70/30 x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench/pb_t1_td/official_70_30.json
+split_status: pending
+split_protocol: official_70_30
+status: available
+notes: 同表 `Thermal decomposition weight loss` 是测试条件，另存为条件列。

@@ -100,6 +100,8 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 >
 > 【官方 verify 的真实能力（读了源码）】`manage_scaling_indices.py verify` 用 `rglob("manifest.json")` 遍历，**只校验存在的实验、不要求目录齐全**，所以部分快照也能跑；缺 canonical 源时必须加 `--allow-missing-sources`，否则抛 `FileNotFoundError`。支持 `--indices-root` / `--datasets-root` 指向任意目录，**A-5 可以直接用它校验我们自己的快照**。它检查：schema 版本、canonical sha256（若源存在）、fold 数与逐折 `seed = base + fold`、npz 恰含三个数组、`train_pool ∪ val ∪ test` 无重复且覆盖 `0..n_rows-1`、各 `n_*` 与数组长度一致、`max(train_sizes) ≤ len(train_pool)`。**但注意：它不检查「`train_pool[:N]` 是嵌套前缀」——那个断言只在 `export` 分支里有。所以前缀规则必须由我们自己的 `tests/test_splits.py` 兜，官方 verify 兜不住。**
 
+> 【坑十五】**PolyMetriX Tg 已经是开尔文；MD_5000 的 density 官方没写单位。** 2026-11-12（A-4）核过：`Datasets/PSMILES/PolyMetriX/Tg/Tg.csv` 只有两列 `smiles, Tg_K`，7,367 行 / 0 缺失 / 134.15 ~ 768.15 K，`DATA_PROVENANCE.md` 记它是 `labels.Exp_Tg(K)` 的精确投影——**再加 273.15 就偏 273 K 且不报错**（DECISIONS D-18）。同一批核对里查了 `README.md` / `DATA_PROVENANCE.md` / `SCALING_EXPERIMENTS_METHODS.md` 三处，**密度的单位一次都没写**，源 `Cleaned_OMersBench_v3_final.jsonl` 的 `outputs.density` 只有数值（首条 `1.1222596573`）；按"不许猜"的规矩，`pb26_homopolymer_density` 标 `unit_status: unverified`、`target_unit: null`（D-19）。**报告密度那一列时必须写"官方未声明单位"。**
+
 ### 2.3 OpenPoly（仅边界 · H4）
 
 | 项 | 内容 |

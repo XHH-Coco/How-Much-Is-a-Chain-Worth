@@ -1,0 +1,28 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: pb_t2_tssab
+dataset_name: Tensile stress strength at break
+benchmark: polybench
+role: reserve
+tier: 2
+tier_basis: Proposal §3.1 表 E 的层列（替换第 3 或第 4 行）
+property: 断裂拉伸强度 TSSAB
+target_column: label
+target_unit: GPa
+unit_status: verified
+unit_evidence: 列名 `TSSAB(GPa) `（尾部有空格，需 strip）带单位；A-3 记 identity
+source_kind: experimental
+n_labels: 1034
+n_source: data/manifests/harmonised_manifest.csv 的 n_labels（A-3 本地数出）
+data_ref: data/interim/harmonised/pb_t2_tssab_harmonised.parquet
+eval_unit: official 70/30 x 3 seeds
+arms:
+- a1_floor
+- a2_conventional
+- a3_graph
+- a4_polybert
+- a5_chain
+split_ref: splits/polybench/pb_t2_tssab/official_70_30.json
+split_status: pending
+split_protocol: official_70_30
+status: available
+notes: 若按 MPa 读只有 0.01~0.2 MPa，比工程塑料低两个数量级，故单位只能是 GPa。

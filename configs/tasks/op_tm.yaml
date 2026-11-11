@@ -1,0 +1,25 @@
+# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+task_id: op_tm
+dataset_name: OpenPoly Tm
+benchmark: openpoly
+role: boundary
+tier: null
+tier_basis: 不适用：Proposal §3.1 表 D，OpenPoly 只承担 H4，不进三层排序
+property: 熔点 Tm（OpenPoly）
+target_column: Tm (K)
+target_unit: K
+unit_status: verified
+unit_evidence: 发布列表头自带单位 `Tm (K)`
+source_kind: experimental
+n_labels: 168
+n_source: Proposal §2.3（2026-11-11 直接数发布 CSV）；A-7 复核后若变则追加决策
+data_ref: data/raw/openpoly/data/final_polymer_properties_fromliterature.csv
+eval_unit: n in {30,60,120,240,all} x 5 folds x 3 seeds
+arms:
+- a2_conventional
+- a3_graph
+split_ref: splits/openpoly/op_tm_official.json
+split_status: pending
+split_protocol: official_train_test_code_5fold
+status: available
+notes: 只承担 H4；n 网格 30/60/120/240/全部，n ≤ 443 不外推（Proposal §5 H4）。
