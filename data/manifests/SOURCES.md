@@ -41,6 +41,8 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 >
 > 【坑十】**figshare 从我们这台机器的出口一律 403，不是脚本问题。** 2026-11-12 实测：`figshare.com` / `api.figshare.com` / `ndownloader.figshare.com` 的**全部**路径都返回 `403`，响应头 `Server: awselb/2.0`——拒绝方是 figshare 自己的负载均衡。走代理、不走代理、IPv4、IPv6、`http://`、伪装 UA 与 Referer，结果一致；`doi.org` 能 `302` 落到存档页，随后仍是 `403`。**同一时刻换一条网络路径读同一个 API 是通的**（能列出 39 个文件与各自 `supplied_md5`，`version: 2`、CC BY 4.0、`download_disabled: false`），所以存档没下架、也没改版本。**处理办法只有三条**：换网络重跑 `python scripts/00_download.py --source polybench`；或在能打开存档页的机器上点 *Download all* 把 zip 拷回来解压（39 个 CSV 平铺进 `data/raw/polybench/`）；或登录平台/manual 逐个下，文件名照 `polybench_expected_files.csv` 抄。**不管哪条，收尾都是 `python scripts/00_download.py --verify-only`**：不出网、逐份核官方 md5、39 份全过才写清单（本地已就位也可以让脚本直接跑第一条）。**不许用平台的 `/api/polymers-data` 或 test-download 的 SMILES 表顶替**——那样 sha256 与发布方对不上，A-3 之后每个数都会带一个查不出来的来源。详见 `docs/交付_P1_A2_下载与完整性.md` §5。
 >
+> 【坑十二】**`Isothermal weight loss time.csv` 的表头有一处编码损伤**：列名 `IWLT(â„ƒ)` 是 `℃` 被二次编码，同表的 `IWLT(hour)` 正常。**A-3 做单位判定时不要把这一列当"温度单位证据"**——证据取 `IWLT(hour)` 与文献口径，并在 `unit_decisions.csv` 的 `evidence` 里写明"原始表头存在编码损伤"。其余 38 个文件严格 UTF-8 可解、无乱码特征。
+>
 > 【坑十一】**`*.conda.txt` 那种"一次请求拿全"的思路，在 GitHub 上要靠 tarball。** 实测本机 `raw.githubusercontent.com` 会在传输中途被 TLS 重协商打断（`curl` 退出码 56 / 20 秒断连），而 `codeload.github.com/<repo>/tar.gz/<commit>` 稳定且一个请求就能把整个仓库取回。所以 `scripts/00_download.py` 对两个 GitHub 基准一律走 tarball + 白名单解包，**不改字节、只挑文件**；两个官方公布过 sha256 的文件解出来当场核对，逐位相等才算过。这条不影响可追溯性：清单里的 `source_url` 指向 `github.com/<repo>/blob/<commit>/<path>`，`version` 是 commit 短 sha。
 
 ### 2.2 PolyBench26（承重 · H2 与 H1 架构子句）
@@ -163,4 +165,5 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | 2026-11-11 深夜 | **task4 结构与统计口径闭合**：目标只有 **1 个性质（EA）**；补 VIPEA 生成步骤（`process_Vipea_data.py`）、`--polybert-dictionary` 可省略的说明；新增【坑九】**OOD 折固定、不是独立重复、禁止对五折 OOD RMSE 做 t 检验**，只能五折集成后报一个点值——直接影响 D 的置信区间与 H1 判决 | 读 `task4_architecture_transfer/README.md` 全文 |
 | 2026-11-11 深夜 | §4 四件事全部标为闭合；末尾两条由"悬空项"改为"已定口径的执行提醒"（`splits/polybench26/` 只放 indices 快照、架构迁移不进 `splits/`） | — |
 | 2026-11-12 | **§2.1 最后一条「待确认」闭合**：平台**没有**批量导出/已标注数据接口（只有 *test set, SMILES only* 与展示库），figshare 存档是唯一可脚本化的正规入口；新增【坑十】figshare 对本站出口一律 403（`awselb/2.0`）的证据与三条出路、新增【坑十一】GitHub 走 tarball 而不是 `raw.`（TLS 重协商断连）；**§2.3「待确认」落定**：OpenPoly 用 `data/final_polymer_properties_fromliterature.csv`（741 行 × 32 列），文献计数那张故意不下载 | 执行 A-2：跑 `scripts/00_download.py`、实测 39 个文件清单与平台端点 |
+| 2026-11-12 | **39 个 CSV 到位并验收通过**：人工下载后 `--verify-only` 离线核 md5，39/39 与 `supplied_md5` 相等，清单 39 行 / 42,169 / 与附录 A 逐行对齐；新增【坑十二】`Isothermal weight loss time.csv` 表头编码损伤（`IWLT(â„ƒ)`），A-3 做单位判定时不许拿它当温度证据 | 仓库所有者（代 A 执行 A-2） |
 | 2026-11-12 | **§2.1 新增「39 个文件的标准表」一行**：把 figshare 原始响应冻成快照 + 派生出 39 行 md5 表，作为任何下载路线的唯一验收标准（D-13）；【坑十】的处理办法同步改成"三条路 + 同一个 `--verify-only` 收尾" | 同上 |

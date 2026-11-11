@@ -87,9 +87,9 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-2 · 三基准下载 + 完整性核对（3.0 pH｜关键）
 
-> **状态：部分交付 2026-11-12**（仓库所有者代做）。**3 个基准完成 2 个**：PolyBench26（63 文件 / 66.0 MiB，两个官方 sha256 逐位相等）、OpenPoly（741 行）已落 `data/raw/` 并写出清单；**PolyBench 39 个 CSV 未取到**——figshare 对本机出口一律 `403`（`Server: awselb/2.0`），平台侧也已查清没有批量导出（只有 *test set, SMILES only* 那个口）。证据、三条出路与验收命令见 `docs/交付_P1_A2_下载与完整性.md`。
+> **状态：已交付 2026-11-12**（仓库所有者代做，人工搬运 + 脚本离线验真）。**三个基准全部完成**：PolyBench26（63 文件 / 66.0 MiB，两个官方 sha256 逐位相等）、OpenPoly（741 行）、PolyBench（39 个 CSV / 5,937,499 B，**39/39 与 figshare 公布的 `supplied_md5` 逐个相等**）。`data/manifests/` 下三份清单齐备，PolyBench 那份 **39 行 / 条数合计 42,169 / 与 Proposal 附录 A 逐行对齐**。六条验收标准逐条见 `docs/交付_P1_A2_下载与完整性.md` **§9**。
 >
-> **你的下一步**：找一条能连 figshare 的网络跑 `python scripts/00_download.py --source polybench`，它会自己校验 `supplied_md5`、写 39 行清单、顺手把下面 ①②③ 三条断言过一遍。**在那之前 A-3 不许开工**，也不许拿平台的展示库顶替官方 CSV。
+> **figshare 403 仍未解**：本机出口被 `awselb/2.0` 拦截，39 个 CSV 是人工下载后由 `python scripts/00_download.py --verify-only` 离线核 md5 采纳的（`DECISIONS.md` D-13 / D-14）。**字节可证，传输过程无机器日志**——审计时以 md5 相等为凭。
 
 > **口径**：Proposal §2.1 数的是**承重资源**，不是数据集个数——四个资源里承重的只有 PolyBench 与 PolyBench26，OpenPoly 仅边界，第四个（MoleculeNet / PCQM4Mv2）**不承重**。所以只下**三个**，第四个只在 `SOURCES.md` 登记、不下载、不建 manifest。若将来有人要用它，先改 `SOURCES.md` §3 + 记 `docs/DECISIONS.md`，再动手。
 
@@ -103,6 +103,8 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 > 【红线】 **别把 `n` 抄错**：附录 A 的条数是从平台 `/api/data-counts` 读的，是"记录数"不是"结构数"。两个数字在 PolyBench 里不等（14,717 个重复单元 vs 42,169 条记录），报告里不能说混。
 
 ### A-3 · 标签调和（7.0 pH｜关键，全队最重的单项之一）
+
+> **状态：可开工 2026-11-12**（A-2 已验收，输入就位）。开工前先读 `docs/交付_P1_A2_下载与完整性.md` **§9.3「输入体检」**，六条里有三条会直接影响做法：单位证据在列名里（不必猜）、`Isothermal weight loss time.csv` 有一处表头乱码（`IWLT(â„ƒ)`，别当温度证据用）、**去重键必须是 `(task, SMILES)`**（全库 42,169 行只有 15,728 个唯一 SMILES，26,441 条重复是"同一结构测了不同任务"，全局去重会删掉合法数据）。
 
 这是你最重要的一项，也是最没法被 agent 加速的一项。
 

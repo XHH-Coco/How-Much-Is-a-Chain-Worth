@@ -1,0 +1,40 @@
+task_id,n_rows,sha256,source_url,version,downloaded_at,bytes,n_rows_basis
+Cohesive energy density,307,a75fecf1c3548f86700f140a41a4e0647894490d767095922394fd0a35b8b012,https://ndownloader.figshare.com/files/60551069,figshare:v2,2026-11-12T03:22:48+08:00,29118,csv_data_rows
+Contact angle,255,f572930fb07737309bb024dc442a7b87c36136c020ea92edf77f3aaa9a84dafc,https://ndownloader.figshare.com/files/60551060,figshare:v2,2026-11-12T03:22:48+08:00,28170,csv_data_rows
+Crystallization temperature,456,5648a2a1e2b908a397c2b596d3be41c4bc8d46712732567eedba91df05ca5f19,https://ndownloader.figshare.com/files/60551072,figshare:v2,2026-11-12T03:22:48+08:00,59992,csv_data_rows
+Density,1699,104f1e82aeb548380a4861f50ca491c1de9d84da2a4fab8f883e59aebb2c2584,https://ndownloader.figshare.com/files/60551075,figshare:v2,2026-11-12T03:22:48+08:00,215275,csv_data_rows
+Dielectric Constant_EPS,382,ab466448c550efcb7943777856df7ec048ba15499807b4d83e36545a403934eb,https://ndownloader.figshare.com/files/60551078,figshare:v2,2026-11-12T03:22:48+08:00,11384,csv_data_rows
+Dielectric loss factor,279,35f378cc123667747624cc8352765423f25ccac04318b6b2b0babd1587650414,https://ndownloader.figshare.com/files/60551081,figshare:v2,2026-11-12T03:22:48+08:00,33612,csv_data_rows
+Dielectric loss tangent,238,1086f9910d4d1fdea57a2f0be4de2f18d7af68757f4ad5a07a0c11da6016793c,https://ndownloader.figshare.com/files/60551084,figshare:v2,2026-11-12T03:22:48+08:00,29130,csv_data_rows
+Dynamic mechanical properties loss modulus,193,419bcd99748d78e655ce69f137d2c29263a337fe91fe01519bcf302eb6b8a28b,https://ndownloader.figshare.com/files/60551087,figshare:v2,2026-11-12T03:22:48+08:00,23505,csv_data_rows
+Dynamic mechanical properties loss tangent,300,f6b800f9cbe5f724d6d4816f598983364dd99785d30c5ce79218c73c9b7e69ee,https://ndownloader.figshare.com/files/60551090,figshare:v2,2026-11-12T03:22:48+08:00,40926,csv_data_rows
+Dynamic mechanical properties storage modulus,387,f6721763958b5fd8e0a8f14a5594d7f60b162278f913795a0ea95392c9f60d6a,https://ndownloader.figshare.com/files/60551093,figshare:v2,2026-11-12T03:22:48+08:00,57740,csv_data_rows
+Electric conductivity,982,d476c512da2686740f3fa3731cab3143c4ba2f50de733d52df0e2a5daf613875,https://ndownloader.figshare.com/files/60551096,figshare:v2,2026-11-12T03:22:48+08:00,132822,csv_data_rows
+Electron Affinity_Eea,368,fb76d89d2e542fcb056969c09260e844298bcf838e914f10b342b9e07eb87120,https://ndownloader.figshare.com/files/60551099,figshare:v2,2026-11-12T03:22:48+08:00,11644,csv_data_rows
+Elongation at break,1113,96935dce9fb699af3f68f9e1a4bcd72eeaebdf201a5290448233bb429520bddb,https://ndownloader.figshare.com/files/60551102,figshare:v2,2026-11-12T03:22:48+08:00,223813,csv_data_rows
+Gas diffusion coefficient,433,577ef2b4e8e3b122f650a943fb942588d20a7c045a29af9afb13a7bc263e69bc,https://ndownloader.figshare.com/files/60551105,figshare:v2,2026-11-12T03:22:48+08:00,76342,csv_data_rows
+Gas permeability coefficient,711,8399a4ec09ffa0b4266d0204c9843bc67a87ec9367b886e4f9af8fa114582fc9,https://ndownloader.figshare.com/files/60551108,figshare:v2,2026-11-12T03:22:48+08:00,127956,csv_data_rows
+Gas solubility coefficient,249,13d86861d5b553b90b8cab126d15de7f1debd7d839598bf9b1132c1d8274e59f,https://ndownloader.figshare.com/files/60551111,figshare:v2,2026-11-12T03:22:48+08:00,39221,csv_data_rows
+Glass transition temperature,8055,37ef7d910c7e1e6a0a0ee7a613acb981433c535c026e1ac4da740cb0389fc83d,https://ndownloader.figshare.com/files/60551114,figshare:v2,2026-11-12T03:22:48+08:00,1327077,csv_data_rows
+Heat of fusion mol conversion,213,e7ffe749c058ae3ab2e1198583e1e9e05f6e1819f7377986cbc53fc590a8c0bf,https://ndownloader.figshare.com/files/60551117,figshare:v2,2026-11-12T03:22:48+08:00,22554,csv_data_rows
+Heat of fusion,588,93f14fc412f50510e7dfdd49a10ea53e74f3682eaa32aab625d959d1af565128,https://ndownloader.figshare.com/files/60551120,figshare:v2,2026-11-12T03:22:48+08:00,72077,csv_data_rows
+Intrinsic viscosity,1936,362bb646fbc601e8e3932d83e133ea5047fd40102335799bf7215c55b925610c,https://ndownloader.figshare.com/files/60551123,figshare:v2,2026-11-12T03:22:48+08:00,267956,csv_data_rows
+Ionization Energy_Ei,370,e500cbf89843db925ccb3e72aa54d32d2ae474930fe4db7df17fa01278387d2f,https://ndownloader.figshare.com/files/60551126,figshare:v2,2026-11-12T03:22:48+08:00,11682,csv_data_rows
+Isothermal weight loss time,228,e26b8a8a43cbb7e0251a708d37ecde2d2b2cf3f3ff2aa25ba5cad4a2fb511abf,https://ndownloader.figshare.com/files/60551129,figshare:v2,2026-11-12T03:22:48+08:00,41640,csv_data_rows
+Lc phase transition temperature,941,1c66f9abc32e2c301d2d7084a44cf8e74fd369eb677434563a99d14ec692d0b8,https://ndownloader.figshare.com/files/60551132,figshare:v2,2026-11-12T03:22:48+08:00,158843,csv_data_rows
+Melting temperature,3796,2cbe89b55bbd3f987654b785212326a3bb952666a0b03a9cc11b1879a62faec0,https://ndownloader.figshare.com/files/60551135,figshare:v2,2026-11-12T03:22:48+08:00,453812,csv_data_rows
+PCE_OPV_aug,1203,213e33c745c57a34ca0a4c57627634f65d55e857ea0b41312ca93b8560cbd5cb,https://ndownloader.figshare.com/files/60551138,figshare:v2,2026-11-12T03:22:48+08:00,173004,csv_data_rows
+Refractive Index_Nc,382,6a011e2145b4e07b6c5ece1fce658675309388d008a09e65e00f00fea3e38775,https://ndownloader.figshare.com/files/60551141,figshare:v2,2026-11-12T03:22:48+08:00,12152,csv_data_rows
+Softening temperature,763,b0b7f858e900b87616ea744adf8ebc488ab8ce9c85f4a50bc1a316ed5123c415,https://ndownloader.figshare.com/files/60551144,figshare:v2,2026-11-12T03:22:48+08:00,87862,csv_data_rows
+Solubility parameter,316,6ac29e37f42d5d1eb52d20df363d2ebc2f2e022d1cb7b77a6e91676fff0a1fbc,https://ndownloader.figshare.com/files/60551147,figshare:v2,2026-11-12T03:22:48+08:00,30628,csv_data_rows
+Specific heat capacity,207,bc16c20dca184955ee4c2ae74ee7d5d39b094095572e8e95c6dae97b160ae004,https://ndownloader.figshare.com/files/60551150,figshare:v2,2026-11-12T03:22:48+08:00,15659,csv_data_rows
+Specific volume,1699,f51398160b4b8c86fd5c0a10e6e4ffdaee9a44ca55286f07509a82a27b012ab6,https://ndownloader.figshare.com/files/60551153,figshare:v2,2026-11-12T03:22:48+08:00,216748,csv_data_rows
+Surface tension,346,47eed10680d8da911f743ec5c10b0c6548d36e5f3b7879223ecaca42316b0157,https://ndownloader.figshare.com/files/60551156,figshare:v2,2026-11-12T03:22:48+08:00,34943,csv_data_rows
+Tensile modulus,1034,c0339037da34e5f96fc52f51eb0511521e1b4bdbe3cf0b5eb34836674fda5326,https://ndownloader.figshare.com/files/60551159,figshare:v2,2026-11-12T03:22:48+08:00,215823,csv_data_rows
+Tensile stress strength at break,1034,5d205bc0a95ae876b9ebd8cd93933dcbbeb66f7d4429d735122084c48d449e2a,https://ndownloader.figshare.com/files/60551162,figshare:v2,2026-11-12T03:22:48+08:00,218067,csv_data_rows
+Tensile stress strength at yield,253,a3be81561bf4b2c037ffce2987163b2ad06ac0cf2cbe2e32760efb56f3c4eb70,https://ndownloader.figshare.com/files/60551165,figshare:v2,2026-11-12T03:22:48+08:00,41125,csv_data_rows
+Thermal decomposition temperature,4898,bbbbfc5816865483a8f69da9765784efbb24afc6712379330623c4713b3e1d82,https://ndownloader.figshare.com/files/60551168,figshare:v2,2026-11-12T03:22:48+08:00,959295,csv_data_rows
+Volume resistivity,934,ccc8cc2cbcd6b4e73b7bd7bfc4b6d159a244734270964b3eb9d0ac270fbe7d74,https://ndownloader.figshare.com/files/60551171,figshare:v2,2026-11-12T03:22:48+08:00,129686,csv_data_rows
+Water absorption,680,9bf9c98b0b26965a1e230574144b0d7700bb8bd83e9418e33f6a636523ec1645,https://ndownloader.figshare.com/files/60551174,figshare:v2,2026-11-12T03:22:48+08:00,139502,csv_data_rows
+bandgap bulk_Egb,561,bb60eb92378aa5ed555b318e20573f260a283d6626ffcf4b7b4dd3d05dee4653,https://ndownloader.figshare.com/files/60551066,figshare:v2,2026-11-12T03:22:48+08:00,18491,csv_data_rows
+bandgap chain_Egc,3380,15747f3a60e1267906091f78e16103c4c537bef0c8410b37bc2bdae118604930,https://ndownloader.figshare.com/files/60551063,figshare:v2,2026-11-12T03:22:48+08:00,148223,csv_data_rows

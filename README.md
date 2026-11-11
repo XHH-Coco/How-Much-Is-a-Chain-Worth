@@ -102,7 +102,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **P0 已完成并冻结**（2026-11-11）：三个 conda 环境按声明装好，导出了两层锁与三份指纹，验收凭据在 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。
 
-**P1 进行中**（2026-11-12）：A-2 的三个基准完成两个——PolyBench26（63 文件 / 66.0 MiB，两个官方 sha256 逐位相等）与 OpenPoly（741 行 / 174 KiB）已落 `data/raw/` 并各留一份清单；**PolyBench 39 个 CSV 未取到**，figshare 对本机出口一律 `403`（`Server: awselb/2.0`），平台侧也确认没有批量导出。阶段小结与三条出路见 [`docs/交付_P1_A2_下载与完整性.md`](docs/交付_P1_A2_下载与完整性.md)。
+**P1 完成**（2026-11-12）：A-2 的三个基准全部落地——PolyBench26（63 文件 / 66.0 MiB，两个官方 sha256 逐位相等）、OpenPoly（741 行 / 174 KiB）、PolyBench（39 个 CSV / 5,937,499 B，**39/39 与 figshare 公布的 `supplied_md5` 逐个相等**）。三份清单齐备，PolyBench 那份 39 行、条数合计 42,169、与 Proposal 附录 A 逐行对齐。figshare 对本机出口仍 403，39 个 CSV 由仓库所有者人工下载、脚本离线核 md5 采纳（`DECISIONS.md` D-13/D-14）。验收凭据见 [`docs/交付_P1_A2_下载与完整性.md`](docs/交付_P1_A2_下载与完整性.md) §9。
 
 上一版仓库曾在初始化阶段一次性写入了代码、配置、任务清单与测试。那不是本次初始化的范围，已被整体移除；那些内容保留在提交 `21be74f` 里，需要时按阶段逐项取回，而不是一次全塞进来。
 
@@ -115,7 +115,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 | 阶段 | 做什么 | 产出落在 | 验收标准 | 状态 |
 |---|---|---|---|---|
 | **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` + `lock/` | 每个环境能 import 自己的核心包，版本可复现 | **已交付 2026-11-11**，见 `docs/交付_P0_环境.md` |
-| **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | **◐ 2/3 已交付 2026-11-12**：PolyBench26（63 文件）+ OpenPoly（741 行）完成并留清单；**PolyBench 39 个 CSV 被 figshare 403 拦住，未取到**，见 `docs/交付_P1_A2_下载与完整性.md` |
+| **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | **已交付 2026-11-12**：三份清单齐备；PolyBench 39 行 / 42,169 / 与附录 A 逐行对齐，39/39 核过官方 md5，见 `docs/交付_P1_A2_下载与完整性.md` §9 |
 | **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照 | `data/interim/` + `splits/` | 划分文件带校验，任何人不得改写 | 未开始 |
 | **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | 未开始 |
 | **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
@@ -130,7 +130,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（61 个跟踪文件）
+### 4.1 当前结构（62 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/

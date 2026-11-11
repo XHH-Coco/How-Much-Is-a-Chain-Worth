@@ -961,6 +961,18 @@ def adopt_local_polybench(out_manifest: Path | None = None) -> int:
         LOGGER.info("本地还没有 PolyBench CSV（%s），按\"尚未下载\"处理 / no local CSVs yet", raw_dir)
         return 0
 
+    # 已有清单里的时间戳要沿用：否则每跑一次 --verify-only 就把 downloaded_at 刷成新时间，
+    # 在 git 里表现为"重跑即改动"，看着像有人手改过清单。
+    # Reuse timestamps from an existing manifest: otherwise every --verify-only run rewrites
+    # downloaded_at, which looks like a hand edit in git.
+    target = out_manifest or (MANIFEST_ROOT / "polybench_download_manifest.csv")
+    previous_at: dict[str, str] = {}
+    if target.exists():
+        with target.open("r", encoding="utf-8", newline="") as handle:
+            previous_at = {
+                row["task_id"]: row["downloaded_at"] for row in csv.DictReader(handle)
+            }
+
     problems: list[str] = []
     missing = sorted(set(expected) - set(present))
     unexpected = sorted(set(present) - set(expected))
@@ -989,7 +1001,7 @@ def adopt_local_polybench(out_manifest: Path | None = None) -> int:
                 sha256=_digest(payload, "sha256"),
                 source_url=str(expected[name]["download_url"]),
                 version=POLYBENCH_VERSION,
-                downloaded_at=_now_iso(),
+                downloaded_at=previous_at.get(name.removesuffix(".csv")) or _now_iso(),
                 bytes=len(payload),
                 n_rows_basis="csv_data_rows",
             )
@@ -1001,7 +1013,6 @@ def adopt_local_polybench(out_manifest: Path | None = None) -> int:
             + "\n  - ".join(problems)
         )
 
-    target = out_manifest or (MANIFEST_ROOT / "polybench_download_manifest.csv")
     write_manifest(rows, target)
     LOGGER.info(
         "39 份逐一核过官方 md5，清单已写 / all 39 files matched, manifest written: %s", target
