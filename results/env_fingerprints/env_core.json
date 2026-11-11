@@ -1,11 +1,21 @@
 {
   "driver": {
+    "correction": "D-30：P0（2026-11-11T21:26）记的是「RTX 4070 Laptop GPU / 572.83 / 8188 MiB」，与实测不符——那是另一块卡、另一个驱动。包清单与 lock 哈希未动，只重录本块",
+    "driver_version": "591.86",
+    "memory_total_mib": 12282,
+    "name": "NVIDIA GeForce RTX 4070",
     "nvidia_smi": true,
-    "query": "NVIDIA GeForce RTX 4070 Laptop GPU, 572.83, 8188 MiB"
+    "query": "NVIDIA GeForce RTX 4070, 591.86, 12282 MiB",
+    "recorded_at": "2026-11-12T07:57:05+08:00"
   },
   "env": "DSC6020_Project_Core",
   "gpu": {
+    "capability": "8.9",
+    "device": "NVIDIA GeForce RTX 4070",
+    "memory_total_mib": 12282,
+    "multiprocessor_count": 46,
     "note": "torch not installed in this environment",
+    "recorded_at": "2026-11-12T07:57:05+08:00",
     "torch": null
   },
   "key": "core",

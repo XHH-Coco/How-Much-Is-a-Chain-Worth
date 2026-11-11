@@ -137,6 +137,8 @@
 | **验收标准** | ① **D0 24:00 前**单任务单折跑通（硬门，§7.2）；② 每条 run 的实测耗时 ≤ §7.4 预测值的 **1.5×**，超标立即走 triage (i) 而不是等；③ 记录里带 GPU 型号 + 驱动版本 + `torch.version.cuda`；④ 同 seed 两次差异 **< 1e-3**（GPU 非确定性允许，但要开 `cudnn.deterministic` 并记录；不许只写"大致一致"）；⑤ `torch.cuda.set_per_process_memory_fraction(0.9)`，一个进程一张卡 |
 
 > **为什么值得单列 11 pH**：真正花时间的不是 48 次运行，而是把官方图管线调通（featurizer 版本、wPSMILES 权重怎么进图、early stopping 的监控量选哪个）。**48 次运行省不下多少，管线调错一次就是半天。**
+>
+> 【本机】 **一张 `NVIDIA GeForce RTX 4070`，12,282 MiB（12 GB），驱动 591.86，capability 8.9，46 个 SM**（实测于 2026-11-12，D-30；P0 指纹里那张「Laptop 8 GB」录错了，已重录）。所以上一段按 12 GB 写的降级梯**照用不改**：`hidden 300 + batch 64` 先试，OOM 再 `batch 32 + 累积 2`（墙钟 ≈1.2×）。注意 `set_per_process_memory_fraction(0.9)` ≈ 11.0 GB 比实测空闲可用量（10.6 GB）还高，它不是 OOM 保险。
 
 ### B-4 · A4 polyBERT 迁移臂（3.5 pH｜GPU 建议）
 
