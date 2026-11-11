@@ -203,6 +203,13 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-8 · Table S27 转录（**可选，不计入 24 pH 配额**｜3.0 pH｜非关键）
 
+> **状态：已交付 2026-11-12**（仓库所有者代做；可选验证项，**不计入 pH 配额**）。产出 `data/external/table_s27.csv`（**39 行 × 11 列**，一任务一行，**不入库**）+ `src/chainworth/io/table_s27.py`（`python -m chainworth.io.table_s27 --write / --verify [--pdf] / --fetch`）+ `tests/test_table_s27.py`（**26 项**）。三条验收标准：① **39 行齐全**；② Tier **14 / 15 / 10**、合计 **42,169**，与主文正文、S52 页首、S53 页脚、A-2 清单**四处**一致，且 39 个 n **逐条**等于 A-2 的 `n_rows`；③ **未触发**——主表 6 个任务与 S27 **全部一致**，`configs/tasks/` 里 11 个带 tier 的 PolyBench 任务也全部一致，不需要替换任何任务。凭据见 [`docs/交付_P1_A8_S27转录.md`](交付_P1_A8_S27转录.md)。
+>
+> **三条会改变后来做法的事实**：① **SI 已经拿到了**——Proposal §2.3 那句「we do not claim to have read Table S27」描述的是 2026-11-11 的状态；2026-11-12 经 PMC 的 POW 挑战取回**同一份文件**（163,761,754 B、md5 `fc7861f0839a03f601aaba4a6c4ce4a0`，一字节不差），82 页，表在 S52/S53。出版商站仍 403、Europe PMC 仍超时，**能走的是 PMC 的 `/articles/instance/13721469/bin/` 那条**，详见 `SOURCES.md`【坑二十五】。② **唯一分歧 `σy (yield strength)`**（253 行）S27 记 Tier 3、Proposal 附录 A 记 2——而这是**让 14/15/10 成立的唯一解**：按附录 A 口径补齐 16 个 pending 会得到 14/**16**/**9**，只有 σy 记 3 才回到主文的 15/10。所以 S27 的 3 自洽，附录 A 的 2 是把 「tensile properties」整族归 2 的推断。③ 附录 A 那 16 个 `pending S27` 现在都有值了（Tier 1 六个 / Tier 2 八个 / Tier 3 两个），但**没有就地填**——附录 A 是 2026-11-11 的读取快照；进不进主表是 **Q-07**，不是 A 能替 C/D 决定的事。
+>
+> **给 D 的一句话**：图里要标 tier，一律用 `data/external/table_s27.csv` 的 `tier` 列，**不要**再引 Proposal 附录 A 的 `pending S27` 标记——那是旧的读取状态。论文可以写「分层取自 SI 的 Table S27（39 个任务，14/15/10），与主文一致」。
+
+
 | 项 | 内容 |
 |:--|:--|
 | **拿什么** | `ps6c00094_si_001.pdf`（**156 MB**，md5 `fc7861f0839a03f601aaba4a6c4ce4a0`），其中 Table S27 = 39 行"任务 → 分层" |
