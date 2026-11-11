@@ -38,7 +38,7 @@
 |:--|:--|:--|:--|
 | 数据量扫描（scaling） | D 算 κ（H2 的判据） | 5 档 × 5 折 × 2 性质 × 2 臂 = **100 fits** | CPU |
 | OpenPoly 经典臂 | D 求 H4 的交叉点 | 3 性质 × 5 档 × 5 折 × 3 种子 = **225 fits** | CPU |
-| 架构迁移 | §5 的架构排序 | 2 性质 × 2 臂 × 5 折 × 3 种子 = **60 runs** | CPU |
+| 架构迁移 | §5 的架构排序 | 1 性质 × 2 臂 × 5 折 × 3 种子 = **30 runs**（原记 60，见 DECISIONS Q-04） | CPU |
 | 主表汇总 | 全队与汇报 | 8 任务 × 5 臂 | — |
 
 三批全在 CPU 上，用的是**你自己在 A2 里调好的超参**和 A 已经算好的特征，**只换训练集大小或换数据子集**——不许另起一套模型。
@@ -113,10 +113,10 @@
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | PolyBench26 官方 `scaling_splits`（300 / 1000 / 3000 / 10000；homopolymer MD_5000 只有 300 / 1000）；OpenPoly 三性质（Tg 443 / 介电常数 295 / Tm 168）；你的 A2 超参 |
+| **拿什么** | PolyBench26 官方 **`Datasets/scaling_indices/`** 里主表两个实验的 `seed_42/`（**不是** `scaling_splits/`——那份被官方 gitignore，见 `SOURCES.md` §2.2【更正】）；A 快照到 `splits/polybench26/<task>/seed_42/` 之后你直接读它，别自己去 clone。档位 300 / 1000 / 3000 / 10000（homopolymer MD_5000 只有 300 / 1000）；OpenPoly 三性质（Tg 443 / 介电常数 295 / Tm 168）；你的 A2 超参 |
 | **怎么做** | ① **scaling**：5 档 × 5 折 × 2 性质 × 2 臂 = **100 fits**（XGBoost / RF）；② **OpenPoly 经典臂**：3 性质 × 5 个 n 档（30/60/120/240/all）× 5 折 × 3 种子 = **225 fits**。两批都**复用 A2 的 `config_hash`**，只换训练集大小，不许另调超参 |
 | **产出** | `results/aggregate/scaling_cpu.csv`、`results/aggregate/openpoly_cpu.csv` + 每 fit 一条 run 记录 + 预测 |
-| **验收标准** | ① 断言读的是官方 `scaling_splits` 的**文件哈希**，不是自己按行数截的前 n 行（测试卡死）；② 5 档逐档齐全，homopolymer MD_5000 缺 3000 档要写明"这是事实不是失败"；③ OpenPoly 一律 **n ≤ 443**，不许外推；④ 与 A2 的 `config_hash` 除"训练集规模"外逐字段一致（用测试断言，不是肉眼比对）；⑤ 每 fit 都落预测——D 的 κ 区间与 H4 过零点都要用它重采样 |
+| **验收标准** | ① 断言读的是 A 快照里 `seed_42/fold_NN.npz` 的**字节级 sha256**，并且训练集是按官方前缀规则 `train_pool[:N]` 取的，**不是自己按行数截的前 n 行**（测试卡死）；② 5 档逐档齐全，homopolymer MD_5000 缺 3000 档要写明"这是事实不是失败"；③ OpenPoly 一律 **n ≤ 443**，不许外推；④ 与 A2 的 `config_hash` 除"训练集规模"外逐字段一致（用测试断言，不是肉眼比对）；⑤ 每 fit 都落预测——D 的 κ 区间与 H4 过零点都要用它重采样 |
 
 > **口径警告**：官方 scaling 的"档"是**给定的索引文件**，不是"取前 n 行"。自己截前 n 行会让 κ 变成"随机子采样的效应"，而不是"官方 scaling 的效应"，而这两件事在结论里完全不同。
 >
@@ -126,10 +126,16 @@
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | PolyBench26 官方 task 4 的划分（homopolymer → alternating / random / block）；A2 的经典臂配置 |
-| **怎么做** | 2 性质 × 2 臂 × 5 折 × 3 种子 = **60 runs**，经典臂为主。有条件再加 GNN 臂（**可选项，+4–7 GPU-h，由 B 代跑，不计入你的 24 pH**） |
-| **产出** | `configs/experiments/arch_transfer.yaml`、`results/aggregate/arch_transfer.csv` + 60 条 run 记录 + 预测 |
-| **验收标准** | ① 四个架构逐档齐全；② 报告**实际排序**（block > random > alternating > homopolymer 是否成立），而不是只报"通过/不通过"；③ 若排序不成立，直接写入 §5 的证伪条件，**不许重调超参再试**；④ 若加了 GNN 臂，必须与经典臂同 split / 同种子，否则两列不能并排放 |
+| **拿什么** | PolyBench26 官方 `Datasets/task4_architecture_transfer/` 的**物化工作流**（留出集官方不发布，必须本地跑 `create_task4_shared_splits.py` 生成，见 `SOURCES.md`【坑七】）；A2 的经典臂配置。**训练集 canonical 6,478（交替 6,110 + 均聚 368），OOD 36,828（random 18,414 + block 18,414）；目标只有 electron affinity 一个性质** |
+| **怎么做** | **1 性质（EA）× 2 臂 × 5 折 × 3 种子 = 30 runs**，经典臂为主；每个 run 同时产出 ID 评估（交替 / 均聚两档）与 OOD 评估（random / block）。**OOD 必须五折集成后只报一次**，见下方【口径警告】。有条件再加 GNN 臂（**可选项，+4–7 GPU-h，由 B 代跑，不计入你的 24 pH**） |
+| **产出** | `configs/experiments/arch_transfer.yaml`、`results/aggregate/arch_transfer.csv` + 30 条 run 记录 + 全部 5 折的 OOD 预测向量（**这个必须留，集成要用**） |
+| **验收标准** | ① **ID 两档 + OOD 两档分别报**，不许把 ID 与 OOD 混在一张"架构排序"里——它们的可比性不同；② 报告**实际排序**（block > random > alternating > homopolymer 是否成立），而不是只报"通过/不通过"；③ 若排序不成立，直接写入 §5 的证伪条件，**不许重调超参再试**；④ 若加了 GNN 臂，必须与经典臂同 split / 同种子，否则两列不能并排放；⑤ **OOD 那一栏不得给"均值 ± 标准误"，不得对五折 OOD RMSE 做 t 检验**——折固定、不是独立重复 |
+
+> 【口径警告·必读】 官方 README 原话：*The OOD holdout is fixed across folds, so fold metrics are not independent replicates. ... Do not apply a t-test to the five fold-level OOD RMSEs.* **正确做法**：保留 5 折的 OOD 预测向量 → 按聚合物取平均 → 从五折集成算出 random / block / combined 各**一个** RMSE/MAE/MSE。ID（交替 / 均聚）才允许按折汇总均值与总体标准差。这条同时约束 `分工_D` 的置信区间：OOD 那栏给的是集成点值 + 重采样区间，不是"5 个折的均值 ± SE"。做错了不会报错，只会给出一个假显著的结论。
+>
+> 【口径冲突·待会签】 原条目与 Proposal §7.1 写的是"**2 性质** × 2 臂 × 5 折 × 3 种子 = **60 runs**"。官方 task4 **只做 electron affinity 一个性质**，所以 60 这个数按官方结构算不出来，正确的是 30 runs。**已记为 `docs/DECISIONS.md` Q-04，本项 5.0 pH 暂不动**（OOD 加权集成：wPSMILES 组件预测 + molar fractions 合成，是原来没算的工作量，大致补回差额）。等 C 与 D 会签后再决定是降 runs 还是降工时，**在那之前不要按 60 去排期**。
+>
+> 【许可】 这个任务的训练源是 polyVERSE（EA），属 **GTRC General Public Use License**，不是主表那个 CC BY 4.0。结果表须随附 GTRC 全文、免费分发、不得商用，且**不能把 GTRC 的条款套到 PolyBench 的任务头上**。投稿或公开仓库时这一栏要单独标许可。
 
 > **不许"再试一次"**：polymer 的架构排序是预注册的。实测反了就是反了，写进 `docs/DECISIONS.md` 并由 D 在结论里照实说——这是这份 proposal 唯一值钱的地方。
 
@@ -185,7 +191,7 @@ tests/test_run_records.py
 | C-1 A1/A2 | 无 | XGBoost / RF / kNN，8 任务 × 3 种子，约 2–3 h |
 | C-2 A5 | 无 | 同上，多 4 组输入 |
 | C-3 scaling 100 + OpenPoly 225 | 无 | 100 fits 约 1–2 h，225 fits 分两次挂机 |
-| C-4 架构迁移 60 runs | 无 | 经典臂全程 CPU；GNN 臂是可选项，由 B 代跑 |
+| C-4 架构迁移 30 runs | 无 | 经典臂全程 CPU；GNN 臂是可选项，由 B 代跑 |
 | C-5 主表、C-6 审计 | 无 | pandas 级别 |
 
 但你有另一种"被卡"的方式：**B 的 GNN 主扫没跑完，主表就有一半格子是空的**。应对方式：
@@ -200,7 +206,7 @@ tests/test_run_records.py
 
 ## 5. 依赖关系与冻结边界
 
-**你依赖**：A 的 `data/processed/`、`configs/tasks/`、`splits/`、官方 `scaling_splits`；B 的装配函数与 `feature_manifest.csv`（以及 A3 的 `config_hash`，机制实验要复用）。
+**你依赖**：A 的 `data/processed/`、`configs/tasks/`、`splits/`（含 `splits/polybench26/*/seed_42/` 的 indices 快照）；B 的装配函数与 `feature_manifest.csv`（以及 A3 的 `config_hash`，机制实验要复用）。
 
 **依赖你的**：D（主表 → 图 1；你的三批 → κ、H4、架构排序；run 记录 → Λ 与 CI）、B（你审他的 273 条记录）、仓库所有者（主表是汇报的核心素材）。
 
@@ -222,7 +228,7 @@ tests/test_run_records.py
 | **D0 24:00** | A1/A2 在 1 个任务上跑通，第一个基线数出来（用 D 的合成数据管线对拍更好） | 硬门（§7.2） |
 | **D1 12:00** | C-3 的 scaling 100 fits 跑完（只依赖 A 的特征，不等 B 的卡） | H2 能不能判就看这个 |
 | **D1 24:00** | A2 四臂 8 任务跑完 + A5 三组消融 + 打乱对照；主表粗版给 D | D 的图 1 要靠它 |
-| **P2 结束** | OpenPoly 经典臂 225 fits + 架构迁移 60 runs 完成 | H4 与架构排序 |
+| **P2 结束** | OpenPoly 经典臂 225 fits + 架构迁移 30 runs 完成 | H4 与架构排序 |
 | **P3 结束** | 主表定稿（CI 由 D 回填）；C-6 审计全绿，B 的记录该退的已退 | 交付前 |
 
 > **别把 535 次拟合堆到最后一天**：它们是"可并行但总量大"的活。正确姿势是**每跑完一批就落盘一批、汇总一批**，而不是"全部跑完再写汇总脚本"。

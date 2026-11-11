@@ -141,8 +141,9 @@ scaler = StandardScaler().fit(X[train_idx])
 - 反复使用的数字（阈值、档位、种子、最大 n）统一放 `src/chainworth/protocol/constants.py`，**每个常量写一行来源注释**。
 
 ```python
-# 300 / 1000 / 3000 / 10000：官方 scaling_splits 的档位，不是等比切分。
-# 来源：PolyBench26 release, scaling_splits/README（哈希见 data/manifests/）。
+# 300 / 1000 / 3000 / 10000：官方 scaling 档位，不是等比切分。同聚物 MD_5000 只有 300 / 1000。
+# 来源：PolyBench26 `Datasets/scaling_indices/<task>/seed_42/manifest.json` 的 training_sizes
+#       （哈希见 data/manifests/SOURCES.md §2.2）。不要用 scaling_splits——那份被官方 gitignore。
 SCALING_TIERS = (300, 1000, 3000, 10000)
 
 MAX_N = 443          # OpenPoly 的 Tg 标注数，超过就是外推。来源：data/manifests/openpoly_counts.csv

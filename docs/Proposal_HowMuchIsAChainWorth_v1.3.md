@@ -3,7 +3,7 @@
 
 | Item | Content |
 |---|---|
-| Version | **v1.3** — v1.1 added §2.3 and re-scoped H4; v1.2 added §3.1 (candidate task IDs, Appendix A), corrected the PolyBench evaluation protocol (fixed 70/30, not k-fold), and reconciled every run count that followed from it; **v1.3 retitles the proposal from "The Repeat-Unit Ceiling" to "How Much Is a Chain Worth?", brings the filename into line with the content version, and replaces the loose "ceiling" metaphor with the defined quantity of §4; the internal proposal code is dropped from the title and the filename** |
+| Version | **v1.3** — v1.1 added §2.3 and re-scoped H4; v1.2 added §3.1 (candidate task IDs, Appendix A), corrected the PolyBench evaluation protocol (fixed 70/30, not k-fold), and reconciled every run count that followed from it; **v1.3 retitles the proposal from "The Repeat-Unit Ceiling" to "How Much Is a Chain Worth?", brings the filename into line with the content version, and replaces the loose "ceiling" metaphor with the defined quantity of §4; the internal proposal code is dropped from the title and the filename**. **v1.3 erratum (2026-11-11): every mention of "the official `scaling_splits`" is corrected to "the official published split indices `Datasets/scaling_indices/`" — `scaling_splits/` is gitignored upstream and no such artefact exists in the repository, so the indices plus the official prefix rule `train_pool[:N]` are used instead. The criterion itself (official splits only, never self-partitioned) is unchanged. Filename and version number are unchanged because this corrects the name of a published artefact, not the plan** |
 | Date | 2026-11-11 |
 | Course topic | **Self-proposed topic** (per *"YOU ARE MORE THAN ENCOURAGED TO PROPOSE YOUR OWN TOPICS"*), situated next to Topic 1 in the same scientific family |
 | Team size | 4 (roles in §9) |
@@ -58,7 +58,7 @@ The right question is not "how many benchmarks" but **"how many official manipul
 | Benchmark | Carries which hypothesis | Load-bearing? | Why it must be *this* one |
 |---|---|---|---|
 | **PolyBench** | **H1** (tier ordering) | **Yes** | The three provisional interpretation tiers exist only here. No other source publishes per-task tier labels, and H1 is a claim *about those labels* |
-| **PolyBench26** | **H2** (κ ≈ 0); H1's architecture sub-clause | **Yes** | The official `scaling_splits` and the official architecture-transfer task are the only *official* manipulations of data scale and chain architecture. Self-built subsampling or home-made wPSMILES weighting would make the result our artefact, not a property of the field |
+| **PolyBench26** | **H2** (κ ≈ 0); H1's architecture sub-clause | **Yes** | The official published split indices (`Datasets/scaling_indices/`) and the official architecture-transfer task are the only *official* manipulations of data scale and chain architecture. Self-built subsampling or home-made wPSMILES weighting would make the result our artefact, not a property of the field |
 | **OpenPoly** | **H4** (what sets the crossover) | **Boundary only** | 24 of its 28 property columns sit below n = 200, so the sub-200 regime is real — but only three columns carry enough labels to scan *within* (§2.3) |
 | MoleculeNet / PCQM4Mv2 | none | **No** | Cross-hierarchy context in the talk only. PCQM4Mv2's test labels are withheld, so no claim can rest on it |
 
@@ -125,7 +125,7 @@ PolyBench issues no numeric task IDs. The stable identifier is the **exact datas
 **Protocol, verified from the main text — and one correction it forces.**
 
 - **PolyBench**: one **fixed 70/30 train/test split per task**, with version-controlled indices shared across all representations and models. Murcko-grouped cross-validation is used **for hyperparameter search only**. Metrics: R², MAE, RMSE.
-- **PolyBench26**: official **5-fold** files (base seed 42, val/test 10% each) plus the official `scaling_splits`.
+- **PolyBench26**: official **5-fold** files (base seed 42, val/test 10% each) plus the official published split indices (`Datasets/scaling_indices/`).
 - Therefore Λ on a PolyBench task is computed on a **single** official split; its uncertainty comes from a percentile bootstrap over test residuals plus 3 model seeds — not from k-fold. **There is no such thing as "5-fold CV on PolyBench" under the official protocol**, and an earlier draft of this proposal said there was. §6 and §7 have been corrected accordingly.
 
 **Table A — PolyBench main table (6 tasks, 2 per tier).** Every tier below is named in the main text, so none of these picks depends on Table S27.
@@ -226,7 +226,7 @@ Data grows 10×; how much of the gap closes? **κ ≈ 0 is our central claim**: 
 
 **Fairness constraints (enforced in code review, not aspiration)**
 
-1. Official splits only; PolyBench26's scaling experiment **must** use the official `scaling_splits`. A unit test asserts split identity.
+1. Official splits only; PolyBench26's scaling experiment **must** use the official published split indices (`Datasets/scaling_indices/`), expanded with the official prefix rule `train_pool[:N]`. A unit test asserts split identity.
 2. One hyperparameter search space and one budget (≤30 trials) for every arm, with the budget table published.
 3. **The official evaluation unit of each benchmark, then 3 seeds.** PolyBench: its single official 70/30 split (version-controlled indices) × 3 model seeds, with a percentile bootstrap over test residuals. PolyBench26: the official 5-fold files × 3 seeds. **PolyBench does not use k-fold for evaluation** — its Murcko-grouped CV is for hyperparameter search only — so a k-fold number on a PolyBench task would not exist under the official protocol (§3.1). Differences below 2σ are not reported as findings.
 4. Identical preprocessing across arms; log transforms permitted for condition-sensitive tasks only if applied to all arms simultaneously.
@@ -308,7 +308,7 @@ Variant 2 is no longer what makes H4 possible — H4 now sits inside the 8-day s
 | # | Requirement | Threshold |
 |---|---|---|
 | 1 | Main-table tasks | **≥6**, across **≥2 official public benchmarks** |
-| 2 | Splits | Official only; scaling must use official `scaling_splits` |
+| 2 | Splits | Official only; scaling must use the official published split indices (`scaling_indices/`) |
 | 3 | Conventional baselines | **≥3** (Dummy, kNN, XGBoost, RF) |
 | 4 | Strong baseline | **≥1** (official GNN or polyBERT) |
 | 5 | Fairness | Same official split, same budget, same seed set; mean ± std + bootstrap CI |

@@ -33,7 +33,7 @@
 | 谁 | 用你的什么 | 什么时候 |
 |:--|:--|:--|
 | B（GPU 臂） | `data/processed/structures`、`descriptors`、`configs/tasks/*.yaml`、`splits/` | P1 一开工就要 |
-| C（CPU 批量） | 同一批特征 + 超参可复用的任务配置 + 官方 `scaling_splits` 档位 | 跑 100 + 225 + 60 之前 |
+| C（CPU 批量） | 同一批特征 + 超参可复用的任务配置 + 官方 `scaling_indices` 档位 | 跑 100 + 225 + 60 之前 |
 | D（判据与图） | 每个任务的 `n`、单位、`split_ref`、以及"哪条换算规则影响了多少行" | 算 Λ 与 κ 时必须知道分母是什么 |
 | 仓库所有者（写作与汇报，不占分工） | `data/manifests/` 里的条数与 sha256、单位换算决策表 | 被问"你们的数据可信吗"时 |
 
@@ -124,16 +124,20 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | PolyBench 官方 70/30 划分索引（版本控制下发的索引文件）；PolyBench26 官方 5 折（base seed 42，val/test 各 10%）+ 官方 `scaling_splits` |
-| **怎么做** | 把官方索引**原样快照**成只读文件；写 `tests/test_splits.py`：读快照 → 断言 train/test 索引集合与官方逐位一致、无交集、覆盖全量、fold 数与比例正确；再写一条**泄漏测试**：断言任何特征变换只 fit 在 train 上 |
-| **产出** | `splits/polybench/<task>/official_70_30.json`、`splits/polybench26/<task>/fold_*.json`、`splits/polybench26/scaling/*`、`splits/openpoly/<task>_official.json`（**全部入库、只读**）+ `tests/test_splits.py` |
-| **验收标准** | ① `pytest tests/test_splits.py` 全绿；② 划分文件带 sha256 与来源 URL；③ **任何代码不得重算划分**——写测试扫描 `src/` 里有没有 `train_test_split` 或 `KFold` 被用于评估（只允许出现在超参搜索里）；④ PolyBench 上**不出现 k 折评估**（官方只用固定 70/30）；⑤ OpenPoly 那份直接快照仓库 `train_and_test_code/` 的划分结果，test 比例与官方一致，不得自己重切（OpenPoly 的划分随其发布仓库下发，不是平台接口） |
+| **拿什么** | ① PolyBench 官方 70/30 划分索引（版本控制下发的索引文件）；② PolyBench26 的 **`Datasets/scaling_indices/`**（**不是** `scaling_splits/`——那份被官方 gitignore、仓库里没有实体，见 `SOURCES.md` §2.2【更正】）；③ OpenPoly 发布仓库里的 `train_and_test_code/` 划分。**`task3_complexity/` 与 `task4_architecture_transfer/` 不快照**：前者是事后分层不是留出任务，后者官方只发布物化脚本（`SOURCES.md`【坑八】【坑七】） |
+| **怎么做** | **四步，顺序不能换**：<br>① 跑官方 `Datasets/Dataset_construction_scripts/generate_basic_datasets.sh` 生成 **canonical PSMILES 表**——官方不发布这张表，只发布 compact 源（【坑六】）；<br>② 用 `scaling_indices/<实验>/seed_42/manifest.json` 里的 **`canonical_sha256`** 校验这张表，**不通过就停**（行号会指向别的分子，且**不报错**，只会算出一组错的 R²）；<br>③ 把主表两个实验的 `seed_42/`（`manifest.json` + `fold_00..04.npz`）**原样拷**进 `splits/`，跑官方 `manage_scaling_indices.py verify --indices-root splits/polybench26 --datasets-root <canonical 表所在> ` 自检；<br>④ 写 `tests/test_splits.py`：断言索引集合与官方逐位一致、无交集、覆盖全量、fold 数与比例正确、**`train_pool[:N]` 确为嵌套前缀**（官方 verify 不查这条，只写在它的 `export` 分支里），再写一条**泄漏测试**：断言任何特征变换只 fit 在 train 上 |
+| **产出** | `splits/polybench/<task>/official_70_30.json`、`splits/polybench26/<task>/seed_42/{manifest.json, fold_00..04.npz}`（**原样拷贝，不改字节**）、`splits/polybench26/README.md`（记仓库 commit、源文件 sha256、canonical sha256、校验命令）、`splits/openpoly/<task>_official.json`（**全部入库、只读**）+ `tests/test_splits.py`。**`splits/polybench26/arch/` 留空并注明"本地物化、不入库"** |
+| **验收标准** | ① `pytest tests/test_splits.py` 全绿；② 划分文件带 sha256 与来源 URL，且 `splits/polybench26/README.md` 里能追到仓库 commit；③ **任何代码不得重算划分**——写测试扫描 `src/` 里有没有 `train_test_split` 或 `KFold` 被用于评估（只允许出现在超参搜索里）；④ PolyBench 上**不出现 k 折评估**（官方只用固定 70/30）；⑤ OpenPoly 那份直接快照仓库 `train_and_test_code/` 的划分结果，test 比例与官方一致，不得自己重切；⑥ **canonical PSMILES 表的 sha256 与 `manifest.json` 的 `canonical_sha256` 相等**（这条不通过，后面全作废）；⑦ **`train_pool[:N]` 前缀断言**：对每个档位 N 断言 `array_equal(materialized[:N], train_pool[:N])`——这是 B、C 共用的不变量，官方 verify 兜不住；⑧ `manage_scaling_indices.py verify` 在部分快照上跑通（缺 canonical 源时加 `--allow-missing-sources`） |
 
 > 【红线】 这是课程红线。Proposal §7.5 把"agent 自己切数据"列为**头号失败模式**，而这类错误不抛异常。
+>
+> 【红线·发布物更正】 Proposal §2.1 与 §7.5 原文写的是"必须使用官方 `scaling_splits`"，**这条按字面做不到**：`Datasets/scaling_splits/` 被官方 gitignore，只存在于跑过生成脚本的机器上。等价的官方发布物是 **`Datasets/scaling_indices/`**。**判定标准一个字没变**——"划分必须可追到官方发布物，不得由我们的代码决定谁进训练集"；变的只是取哪个文件。这条也解释了为什么 ①（生成 canonical 表）不能省：索引存的是**行号**，行号只在那张表的特定顺序下指向正确分子，换版本不报错、只出错结果。
 >
 > 【接口】 **D 会拿这条测试来复核你**（入口审计归 D，见 `分工_D`）。他复核的方式不是读你的代码，而是往 `src/` 里故意注入一次 `train_test_split`，看你的测试会不会红。所以"测试写了"不够，**得是能抓住真错的测试**。
 >
 > 【工时】 OpenPoly 那份快照**计入本项 4.0 pH，不单列任务项**（约 0.3 pH 的量）：它的划分随发布仓库下发，不需要向平台申请，也不做断言以外的加工。加这一项是因为 README 第九节第 6 行把 `splits/openpoly/` 也算进了"A 的官方划分快照"，而原来只有 PolyBench 与 PolyBench26 两项——目录留着没人填，C 的 OpenPoly 经典臂就没有划分可用。
+>
+> 【工时·新增工序】 上面 ①②⑦ 三步是 2026-11-11 深夜才定下来的（canonical PSMILES 生成、`canonical_sha256` 校验、前缀断言），原条目没有，合计约 **0.5–0.75 pH**。**A-5 仍是 4.0 pH、固定项仍是 21.5**：这笔从你的 **2.5 弹性余量**里出，余量降到 1.75–2.0。不调 A 的总工时，也不动 96 pH 口径——因为这三步不是"新增任务"，是"原来那条工序漏掉的前置条件"，不补就得不出可信划分。
 
 ### A-6 · 表征数据生成：PSMILES / wPSMILES / RDKit 描述符（1.5 pH｜关键）
 
@@ -186,8 +190,9 @@ data/manifests/openpoly_download_manifest.csv
 data/manifests/openpoly_property_counts.csv     741 / 3,985 / 443 / 295 / 168
 data/manifests/unit_decisions.csv               每条换算一行，带 evidence
 splits/polybench/<task>/official_70_30.json     只读
-splits/polybench26/<task>/fold_*.json           只读
-splits/polybench26/scaling/*                    只读
+splits/polybench26/<task>/seed_42/manifest.json 官方原样拷贝，不改字节
+splits/polybench26/<task>/seed_42/fold_0[0-4].npz  官方原样拷贝，不改字节
+splits/polybench26/README.md                    来源 commit + 三组 sha256 + 校验命令
 splits/openpoly/<task>_official.json            只读
 results/env_fingerprints/env_{core,gnn,polybert}.json
 tests/test_splits.py  tests/test_no_leakage.py
@@ -283,6 +288,7 @@ data/external/table_s27.csv                     可选验证性转录   （A-8�
 - [ ] 三个环境指纹已入库，版本与 `lock/` 逐行一致；`cd lock && sha256sum -c SHA256SUMS` 全 OK
 - [ ] `polybench_download_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐；每行 `source_url` 能在 `SOURCES.md` 找到、`version` 非空
 - [ ] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**；`splits/openpoly/` 里已有官方划分快照
+- [ ] canonical PSMILES 表的 sha256 与 `splits/polybench26/*/seed_42/manifest.json` 的 `canonical_sha256` 相等；`manage_scaling_indices.py verify` 通过；`train_pool[:N]` 前缀断言有单独测试且能抓错
 - [ ] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过
 - [ ] `unit_decisions.csv` 每条都有 `evidence`，行数差能对上
 - [ ] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径（4 还是 5）

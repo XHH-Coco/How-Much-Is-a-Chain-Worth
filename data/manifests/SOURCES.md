@@ -56,7 +56,7 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 | 上游源文件 sha256（官方公布，A-2 可直接核对） | `Datasets/Dataset_construction_scripts/files/Cleaned_OMersBench_v3_final.jsonl` = `7e8a17…2c68567e`（全文 `7e8a175866cc7166e589fbca1bb125bdece31c398b654a8848f5410f2c68567e`，82,990 条：交替 65,221 / 无规 10,379 / 均聚 7,390）· `Datasets/PSMILES/PolyMetriX/Tg/Tg.csv` = `b6d2b9f83419c94c5b24200b0288d9a7b53256931d87ffc1533c8884119a09d3`（7,367 条 PSMILES） |
 | `version` 取值 | **git commit 短 sha**（该仓库没有 tag 时以 commit 为准），另记抓取日期 |
 | 核实时点 | URL、规模、任务与档位：2026-11-11 公开检索核实；**许可分层、`scaling_indices/` 目录、5 折参数、上游 sha256：2026-11-11 当晚读 `README.md` / `DATA_PROVENANCE.md` / `SCALING_EXPERIMENTS_METHODS.md` 原文核实** |
-| 待确认 | ① 仓库是否走 Git LFS（API 报的字节数是真实大小、不像 LFS，首次 clone 时确认一次）；② `PSMILES_pBERT_dict.pkl`（224 MB 生成物）是否必需——只有 polyBERT 臂需要，其余臂可绕开；③ **架构迁移是否纳入本次范围**（涉及 GTRC 许可，须 P3 定表时决定）；④ `task3_complexity` 里 legacy test-fold 是否就是官方"重复单元复杂度"任务的正式划分（措辞是 legacy，需读其 README 确认能否当官方用） |
+| 待确认 | ① 仓库是否走 Git LFS（API 报的字节数是真实大小、不像 LFS，首次 clone 时确认一次）；② `PSMILES_pBERT_dict.pkl`（224 MB 生成物）是否必需——只有 polyBERT 臂需要，其余臂可绕开。**③④ 已于 2026-11-11 深夜闭合，见下方【坑八】与【坑七】** |
 
 > 【红线】这是唯一提供**官方**规模操纵与架构操纵的资源。自己造子采样、自己造 wPSMILES 加权，结果就成了我们的产物而不是这个领域的属性（Proposal §2.1）。所以划分**必须**来自官方发布物，不许自行洗牌。
 >
@@ -73,15 +73,19 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 | 官方任务 | 目录 | 是否入库 | 快照可行性 |
 |:--|:--|:--|:--|
 | 数据集规模 scaling | `Datasets/scaling_indices/`（约 2 MB） | ✅ 入库 | **可直接快照** |
-| 重复单元复杂度 | `Datasets/task3_complexity/`（约 3 MB） | ✅ 入库 | 可直接快照（含 legacy test-fold assignments，能否当官方用待确认） |
+| 重复单元复杂度 | `Datasets/task3_complexity/`（README 1.6 KB + `alternating_refractive_index.csv` 3,344,980 B） | ✅ 入库 | **不适用——它不是一个留出任务，是事后分层评估**，见【坑八】。我们不用，A-5 不快照 |
 | 架构迁移 | `Datasets/task4_architecture_transfer/`（约 0.4 MB） | ✅ 入库，但只是**「物化工作流」** | **不能快照留出集本身**，只能快照脚本 + 生成参数 |
 | 分布内预测 | 无独立目录 | — | 由各模型自己的 5 折决定，不走这两个目录 |
 
 > 【坑六】**索引指向的那张表，官方不发布。** `Datasets/README.md` 明确 `PSMILES/MD_300/`、`MD_5000/`、`Vipea/`、`Tg_combined/` 全是 *generated via scripts and excluded from Git*（PSMILES 约 90 MB、wPSMILES 约 206 MB），入库的只有 compact 源（`Dataset_construction_scripts/files/`，约 81 MB）与 `PSMILES/polyVERSE/`、`PSMILES/PolyMetriX/` 这些小的网页源。**所以 A-5 的正确工序是**：先跑官方 `generate_basic_datasets.sh` 生成 canonical PSMILES → 拿 `scaling_indices/<实验>/seed_42/manifest.json` 里的 `canonical_sha256` 校验这张表 → 校验通过后行号才有意义。跳过这步，索引就是一组随机数。
 >
-> 【坑七】**架构迁移走的是 GTRC 数据，不是 CC BY 4.0。** `task4_architecture_transfer/README.md` 写明该任务预测的是 **electron affinity**，训练源为 `PSMILES/polyVERSE/electron_affinity/…` + `wPSMILES/Vipea/EA/alternating_EA.csv`。polyVERSE 属 **GTRC General Public Use License**（见【坑四】）。**若 H1 的架构子句要用这个任务，结果表的许可义务就和主表不一样**——须随附 GTRC 全文、免费分发、不得商用。这条必须在 P3 定表时说清，不能默认「和主表一样」。
+> 【坑七】**架构迁移走的是 GTRC 数据，不是 CC BY 4.0。** `task4_architecture_transfer/README.md` 写明该任务预测的是 **electron affinity**，训练源为 `PSMILES/polyVERSE/electron_affinity/…` + `wPSMILES/Vipea/EA/alternating_EA.csv`。polyVERSE 属 **GTRC General Public Use License**（见【坑四】）。**架构迁移已由 `分工_C` 的 C-4 纳入本次范围（5.0 pH）**，所以这条不是"要不要做"的问题，而是"结果表怎么写"的问题：**须随附 GTRC 全文、免费分发、不得商用**，且 `bandgap` 那类 PolyBench 任务不能跟着一起套用。
 >
-> 【task4 的关键数字（已核实）】canonical 训练集 **6,478** 条（交替 6,110 + 均聚 368）；OOD holdout **36,828** 行（random 18,414 + block 18,414），**固定、永不进入训练或调参**；五折 80/10/10、PSMILES 分组、**seed 42**；物化命令 `create_task4_shared_splits.py --polybert-dictionary Datasets/Dataset_construction_scripts/files/PSMILES_pBERT_dict.pkl`（该 pkl 224 MB，本身是生成物）；输出落在 `generated/shared_splits/`，gitignored。
+> 【task4 的关键数字（已核实）】**目标只有 1 个性质——electron affinity（EA）**，不是两个。canonical 训练集 **6,478** 条（交替 6,110 + 均聚 368）；OOD holdout **36,828** 行（random 18,414 + block 18,414），**固定、永不进入训练或调参**。五折 80/10/10、PSMILES 分组、**seed 42**；物化命令 `create_task4_shared_splits.py --polybert-dictionary Datasets/Dataset_construction_scripts/files/PSMILES_pBERT_dict.pkl`（该 pkl 224 MB，本身是生成物；**省略该参数可先物化 PSMILES / wPSMILES / RDKit 三套，只有 polyBERT 臂才需要它**）；输出落在 `generated/shared_splits/`，gitignored。VIPEA 的 `wPSMILES/Vipea/EA/alternating_EA.csv` 也是生成物，需先跑 `process_Vipea_data.py` 从 tracked 源重建。
+>
+> 【坑八】**"重复单元复杂度"不是留出任务，是事后分层——所以 A-5 没有"复杂度划分"可快照。** `task3_complexity/README.md` 原话：*Task 3 is a post-hoc stratification of the legacy alternating refractive-index test predictions, not a complexity-held-out training task.* 目录里只有两个文件（README + `alternating_refractive_index.csv`，3,344,980 B，git blob `ed085bc1…`）。它的用法是：**用 legacy 交替折射率协议训练 → 评估其留出测试预测 → 按 `original_index` 与本表 join → 按 `n_distinct_monomers`（5–10）分别报 RMSE**。表里的 `legacy_test_fold`（1–5）是 **legacy 协议的折号**，不是 PB26 主表协议的折号，也不是"官方复杂度划分"。另外两条：① 论文的 Task 3 聚合**只用 5 ≤ n_distinct_monomers ≤ 10 的行**，2 或 4 个单元的行只为溯源保留、**不得进聚合**；② 迁移前文件 sha256 = `6d099ee5dd158c52448741859843a7eaa5c8c9ff7d4dc43cdc483bbb7d7d469a`（2026-09-25 从 legacy OpenPolymerBench Task 3 准备产物迁入）。**结论：我们主表没有 refractive_index、机制实验也不碰复杂度分层，所以这个任务不进 A-5，也不占工时。** 将来若要做，它要的是"按折号分组报 RMSE"，不是"切一份新划分"。
+>
+> 【坑九】**架构迁移的 OOD 折不是独立重复，不能做 t 检验。** 官方 README 原话：*The OOD holdout is fixed across folds, so fold metrics are not independent replicates. ... Do not apply a t-test to the five fold-level OOD RMSEs.* 正确做法：**保留全部 5 折的 OOD 预测向量 → 按聚合物取平均 → 从五折集成算出 random / block / combined 各一个 RMSE/MAE/MSE**。这条直接影响 `分工_D` 的置信区间与 H1 判决：**OOD 那一栏不能给"均值 ± 标准误"**，只能给一个集成点值 + 由 5 个预测向量重采样得到的区间。ID（交替 / 均聚两档）才允许按折汇总均值与总体标准差。**若 C-4 或 D 把 OOD 的 5 个折值当 5 个独立样本算显著性，结论就是假的，且不会有任何报错。**
 >
 > 【官方 verify 的真实能力（读了源码）】`manage_scaling_indices.py verify` 用 `rglob("manifest.json")` 遍历，**只校验存在的实验、不要求目录齐全**，所以部分快照也能跑；缺 canonical 源时必须加 `--allow-missing-sources`，否则抛 `FileNotFoundError`。支持 `--indices-root` / `--datasets-root` 指向任意目录，**A-5 可以直接用它校验我们自己的快照**。它检查：schema 版本、canonical sha256（若源存在）、fold 数与逐折 `seed = base + fold`、npz 恰含三个数组、`train_pool ∪ val ∪ test` 无重复且覆盖 `0..n_rows-1`、各 `n_*` 与数组长度一致、`max(train_sizes) ≤ len(train_pool)`。**但注意：它不检查「`train_pool[:N]` 是嵌套前缀」——那个断言只在 `export` 分支里有。所以前缀规则必须由我们自己的 `tests/test_splits.py` 兜，官方 verify 兜不住。**
 
@@ -128,11 +132,14 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | # | 事项 | 状态 | 还需要谁做什么 |
 |:--|:--|:--|:--|
 | 1 | PolyBench 平台要不要账号 / `/api/data-counts` 能不能复读 | ✅ **已闭合** | 平台**无需登录**即可 GET `http://202.98.16.11/api/data-counts`；2026-11-11 20:58 实测 39 条、合计 **42,169**，与附录 A 逐行 0 差异。原始响应已入库（见 §2.1）。**剩下的是 CSV 批量下载方式**，属 A-2 执行细节 |
-| 2 | PolyBench26 的官方索引在哪 | ✅ **四个任务全部定位** | scaling → `scaling_indices/`（直接快照）；复杂度 → `task3_complexity/`（legacy，待确认能否当官方）；架构迁移 → `task4_architecture_transfer/`（**只发布物化脚本，不快照留出集**）；分布内 → 各模型 5 折。**A-5 工序需按 §2.2【更正】与【坑六】改** |
-| 3 | 许可是否足以支撑入库派生表 | ✅ **已解决，但多一条边** | 主表两个 PB26 任务均 CC BY 4.0，`data/manifests/` 与 `splits/` 可入库，**须随表带署名**；**架构迁移任务走 polyVERSE，属 GTRC**（见【坑七】），若纳入范围则许可义务不同 |
+| 2 | PolyBench26 的官方索引在哪 | ✅ **四个任务全部定位，且"能不能用"也已判完** | scaling → `scaling_indices/`（**A-5 快照它**）；复杂度 → `task3_complexity/`（**不是留出任务，是事后分层，我们不用**，见【坑八】）；架构迁移 → `task4_architecture_transfer/`（**只发布物化脚本，不快照留出集**，只登记参数，见【坑七】）；分布内 → 各模型 5 折。**A-5 工序已按 §2.2【更正】与【坑六】改完，见 `分工_A`** |
+| 3 | 许可是否足以支撑入库派生表 | ✅ **已解决，但多一条边** | 主表两个 PB26 任务均 CC BY 4.0，`data/manifests/` 与 `splits/` 可入库，**须随表带署名**；**架构迁移已纳入（C-4），走 polyVERSE = GTRC**（见【坑七】），结果表须随附 GTRC 全文、不得商用 |
 | 4 | 磁盘 | ✅ **已实测** | 本机 D 盘 489 GB 可用，而**我们只需 < 200 MB**（jsonl 63.8 MiB + Tg.csv 0.53 MiB + indices 约 2 MB 的子集）。官方要的 ~15 GB 是完整复现口径，**不要照那个准备** |
 
-**仍然悬空的三件事（都不影响 A-2）**：① `task3_complexity` 的 legacy test-fold 能否当官方划分用；② **架构迁移是否纳入本次范围**（GTRC 许可问题，需 P3 定表决定）；③ **A-5 工序改法待批**。在①③落地前，`splits/polybench26/` 除 scaling 外的子目录保持为空，**不要用 `sklearn` 现造划分顶上**。
+**四件事全部闭合，A-2 / A-5 无阻塞项。** 剩下两条不是"待确认事实"，而是**已定口径的执行提醒**：
+
+1. **`splits/polybench26/` 只放两类东西**：`<task>/seed_42/` 下从 `scaling_indices/` 原样拷来的 `manifest.json` + `fold_00..04.npz`；以及 A-5 自己写的 `README.md`（记来源 commit、源文件 sha256、校验命令）。**不要用 `sklearn` 现造任何划分顶上**——那是红线拦的东西。
+2. **架构迁移不进 `splits/`**：它的留出集官方不发布，只发布物化脚本。`splits/polybench26/arch/` 保持为空并在 README 里注明"由 `create_task4_shared_splits.py` 本地物化，不入库"，C-4 用的时候自己生成、自己记 commit。
 
 ---
 
@@ -147,3 +154,6 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | 2026-11-11 当晚 | `scaling_indices/` 细化到文件级：布局 `<族>/<性质>/<实验>/seed_42/{manifest.json, fold_NN.npz}`，主表两条路径已核实；补磁盘量级（我们 <200 MB vs 官方 ~15 GB 完整复现）、官方校验命令 `manage_scaling_indices.py verify`；新增"架构迁移划分未定位"这条缺口 | 读 `Datasets/scaling_indices/README.md` 与 GitHub contents API |
 | 2026-11-11 当晚 | **figshare 存档解析完成**：`v2`、39 文件、合计 5,937,499 B、全部 text/csv、`supplied_md5 == computed_md5`、**免登录且未禁用下载**、下载地址形态 `ndownloader.figshare.com/files/<id>`；§2.1「待确认」收敛为只剩"平台批量下载方式" | 调 figshare API v2 `/articles/30917717` |
 | 2026-11-11 当晚 | **四个官方任务的落点全部定位**：新增任务目录表、【坑六】canonical PSMILES 需脚本生成（索引指向的表官方不发布）、【坑七】架构迁移走 polyVERSE = GTRC、task4 关键数字（6,478 / 36,828 / seed 42 / 5 折 80-10-10）、官方 verify 的真实能力（部分目录可跑、需 `--allow-missing-sources`、**不检查前缀规则**）；§4 悬空项改为三条 | 读 `Datasets/README.md`、`task4_architecture_transfer/README.md`、`manage_scaling_indices.py` 源码、GitHub contents API |
+| 2026-11-11 深夜 | **task3 定性闭合**：读 `task3_complexity/README.md` 原文，确认它是 *post-hoc stratification*、**不是复杂度留出任务**，`legacy_test_fold` 是 legacy 协议折号而非官方划分；新增【坑八】并把它移出 A-5；任务目录表该行由"待确认"改为"不适用" | 读 `task3_complexity/README.md` 原文 + GitHub contents API（目录仅 2 文件，CSV 3,344,980 B） |
+| 2026-11-11 深夜 | **task4 结构与统计口径闭合**：目标只有 **1 个性质（EA）**；补 VIPEA 生成步骤（`process_Vipea_data.py`）、`--polybert-dictionary` 可省略的说明；新增【坑九】**OOD 折固定、不是独立重复、禁止对五折 OOD RMSE 做 t 检验**，只能五折集成后报一个点值——直接影响 D 的置信区间与 H1 判决 | 读 `task4_architecture_transfer/README.md` 全文 |
+| 2026-11-11 深夜 | §4 四件事全部标为闭合；末尾两条由"悬空项"改为"已定口径的执行提醒"（`splits/polybench26/` 只放 indices 快照、架构迁移不进 `splits/`） | — |

@@ -217,7 +217,7 @@ How-Much-Is-a-Chain-Worth/
 | `data/processed/` | 一个任务一张最终表 `<task_id>.parquet`；特征放 `features/<task_id>.npz` | 原始文件 |
 | `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
 | `data/manifests/` | 清单与校验：`SOURCES.md`（入口、许可、版本钉法，**唯一权威**）、`polybench_api_data_counts_20261111.json`（`/api/data-counts` 原始响应，39 条 / 42,169 的引证）、`*_download_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
-| `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引 `<task_id>_<fold>.json`，**只读** | 生成脚本的临时输出 |
+| `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引，**只读**：PolyBench / OpenPoly 是 `*_official*.json`；PolyBench26 是官方 `scaling_indices/` 的**原样拷贝** `<task>/seed_42/{manifest.json, fold_00..04.npz}`（不改字节），外加一份 `README.md` 记来源 commit 与三组 sha256。`splits/polybench26/arch/` 留空（本地物化、不入库） | 生成脚本的临时输出、自己切的划分 |
 | `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录） | 业务逻辑、硬编码路径 |
 | `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |
 | `src/chainworth/arms/` | 一臂一文件：`floor.py`、`conventional.py`、`graph.py`、`polybert.py`、`chain_info.py` | 训练循环（`train.py`） |
@@ -366,7 +366,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 | 3 | 任务清单与条数 | `data/manifests/tasks_*.csv` | P1 | 条数与官方发布逐行对齐 + sha256 | 未冻结（待 P1） |
 | 4 | 单位换算决策 | `data/manifests/unit_decisions.csv` | P2 | 只能追加、不能覆盖；每行带 evidence | 未冻结（待 P2） |
 | 5 | 清洗后的规范表 | `data/interim/`、`data/processed/` | P2 | 行数/列数断言 + `MANIFEST.sha256` | 未冻结（待 P2） |
-| 6 | 官方划分快照 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | P2 | 每份 json 的 sha256，`tests/test_splits.py` 断言 | 未冻结（待 P2） |
+| 6 | 官方划分快照 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | P2 | 每份文件的 sha256（json 与 npz 都算），`tests/test_splits.py` 断言；PolyBench26 另需 `canonical_sha256` 与 `train_pool[:N]` 前缀断言 | 未冻结（待 P2） |
 | 7 | 任务配置 | `configs/tasks/*.yaml` | P3 | 每次 run 记录里的 `config_hash` 必须对得上 | 未冻结（待 P3） |
 | 8 | 臂的超参数 | `configs/arms/*.yaml` | P3 | 同上 | 未冻结（待 P3） |
 
