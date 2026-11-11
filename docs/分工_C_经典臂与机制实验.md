@@ -151,7 +151,7 @@
 | 项 | 内容 |
 |:--|:--|
 | **拿什么** | 全队落在 `results/raw_runs/*.json` 与 `results/aggregate/predictions/*.parquet` 的东西（B 的 273 条 + 你自己的 535 条） |
-| **怎么做** | 写 `tests/test_run_records.py`，六条断言：① 每条记录字段齐全（`run_id, task, arm, seed, split_version, config_hash, env_fingerprint, device, wall_clock_s, metrics`）；② 每个 run 有对应预测文件；③ 预测行数 = 该 split 测试集行数；④ 同一 `run_id` 不出现两次；⑤ `--limit` 试跑产物不得出现在全量目录；⑥ `device` 与 `env_fingerprint` 对得上（`cuda` ↔ `gnn.json`，`cpu` ↔ `core.json`） |
+| **怎么做** | 写 `tests/test_run_records.py`，六条断言：① 每条记录字段齐全（`run_id, task, arm, seed, split_version, config_hash, env_fingerprint, device, wall_clock_s, metrics`）；② 每个 run 有对应预测文件；③ 预测行数 = 该 split 测试集行数；④ 同一 `run_id` 不出现两次；⑤ `--limit` 试跑产物不得出现在全量目录；⑥ `device` 与 `env_fingerprint` 对得上（`cuda` ↔ `env_gnn.json`，`cpu` ↔ `env_core.json`） |
 | **产出** | `tests/test_run_records.py` + `docs/Audit Log.md` 的运行侧章节 |
 | **验收标准** | ① 故意删掉一条记录的 `split_version`，测试必须红；② 故意把一份 `--limit 200` 的试跑产物改名当全量，测试必须红；③ 每次批量结束跑一遍，并记下条数（273 + 535），缺哪条说清是哪条、为什么 |
 

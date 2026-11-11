@@ -70,16 +70,18 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-1 · 三套 conda 环境装包并留指纹（3.0 pH｜关键）
 
+> **状态：已交付 2026-11-11**（仓库所有者代做）。凭据见 `docs/交付_P0_环境.md`。你的活变成"读一遍它、在本机把三条验收命令跑通"，不是重装。
+
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | `environment/core.yml`、`environment/gnn.yml`、`environment/polybert.yml`（已写好版本，别改版本号） |
-| **怎么做** | 逐个 `conda env create -f`；装完在各自环境里跑 `pip freeze`、记录 `python -V`、`nvidia-smi` 的驱动与 CUDA 版本、GPU 型号 |
-| **产出** | `results/env_fingerprints/core.json` / `gnn.json` / `polybert.json`（**要入库**） |
-| **验收标准** | ① 三个环境各自能 `import` 自己的核心包（core：`rdkit` `xgboost` `pysmiles`；gnn：`torch` `torch_geometric` `chemprop`；polybert：`transformers`）；② 指纹里版本号与 `.yml` 逐行一致；③ 旁人按 `.yml` 重建，`pip freeze` 与本机 diff 只剩平台相关包 |
+| **拿什么** | `environment/core.yml`、`environment/gnn.yml`、`environment/polybert.yml`（已冻结 v1，别改版本号）+ `lock/` 下六个锁文件 |
+| **怎么做** | 装就按 `lock/`：`conda create -n <env> --file lock/<env>.conda.txt` 再 `pip install -r lock/<env>.pip.txt`；装完跑 `pip freeze`、`python -V`，与 `results/env_fingerprints/` 里那份对比 |
+| **产出** | `results/env_fingerprints/env_core.json` / `env_gnn.json` / `env_polybert.json`（**已入库**） |
+| **验收标准** | ① 三个环境各自能 `import` 自己的核心包（core：`rdkit` `xgboost` `pysmiles` `yaml`；gnn：`torch` `torch_geometric` `chemprop`；polybert：`transformers`）；② 指纹里版本号与 `lock/` 逐行一致；③ `cd lock && sha256sum -c SHA256SUMS` 全 OK；④ 若你重装过，`pip freeze` 与指纹的 diff 只剩平台相关包 |
 
 > 【注意】 **为什么要留指纹**：同一份 `.yml` 在不同机器上装出来可能差几个传递依赖。结论要能复现，就得知道当时到底装了什么。这也是被问"你们的实验能重跑吗"时的证据。
 >
-> 【注意】 **装包时补一行**：配置与产物用 YAML（`configs/**/*.yaml`），但 `environment/core.yml` 目前**没有列 `pyyaml`**。装包时顺手加 `pyyaml==6.0.1`，并同步更新三个 `.yml` 里被它牵动的传递依赖；否则 P3 写配置的那一刻才会发现读不了 YAML。
+> 【注意】 **PyYAML 已补**：Core 原来漏了它（P3 读 `configs/**/*.yaml` 会当场失败），现在三个环境统一 `PyYAML==6.0.3`，已写进 `lock/core.pip.txt`。你若发现 `import yaml` 报错，说明装的是旧锁。
 
 ### A-2 · 四基准下载 + 完整性核对（3.0 pH｜关键）
 
@@ -179,7 +181,7 @@ data/processed/descriptors/<task>.parquet
 splits/polybench/<task>/official_70_30.json      只读
 splits/polybench26/<task>/fold_*.json            只读
 splits/polybench26/scaling/*                     只读
-results/env_fingerprints/{core,gnn,polybert}.json
+results/env_fingerprints/env_{core,gnn,polybert}.json
 tests/test_splits.py  tests/test_no_leakage.py
 docs/Task List Snapshot D0.md
 ```
@@ -215,7 +217,7 @@ docs/Task List Snapshot D0.md
 | 官方划分索引 | `splits/`（只读） | 谁都不能改；要换划分就出 `v2` 文件 |
 | 任务清单（8 主表 + 备用） | `configs/tasks/` + `docs/Task List Snapshot D0.md` | 只有触发"任务 QA 不合格"才能按备用名单替换，且必须记时间戳+理由 |
 | 单位换算规则 | `data/manifests/unit_decisions.csv` | 只能追加，不能覆盖；覆盖等于毁证据 |
-| 三套环境版本 | `environment/*.yml` + `results/env_fingerprints/` | 只能升版本并全表重跑，不能"我这儿装了新版" |
+| 三套环境版本 | `environment/*.yml` + `lock/` + `results/env_fingerprints/` | **已冻结 v1（2026-11-11）**；只能升版本并全表重跑，不能"我这儿装了新版" |
 
 > **全队只有一张冻结登记表**：`README` 第九节（版本号、冻结日期、怎么验、当前状态）。本节只列与你直接相关的那几项；口径冲突时以 README 为准。冻结物被改动 = 该阶段重做，不是"改一下就好"。
 
@@ -225,7 +227,7 @@ docs/Task List Snapshot D0.md
 
 | 时间 | 你要交的 | 卡点 |
 |:--|:--|:--|
-| **D0 18:00** | 三套环境装好 + A-2 下载完成 + A-6 数据生成**启动并抽检过**（不是"正在下"） | 硬门 |
+| **D0 18:00** | 三套环境装好 + A-2 下载完成 + A-6 数据生成**启动并抽检过**（不是"正在下"） | 硬门（环境这半已于 11-11 提前交付） |
 | **D0 24:00** | A-5 划分快照 + `test_splits.py` 全绿；A-3 至少 2 个任务调和完 | 硬门 |
 | **D1 12:00** | 8 个主表任务全部调和完 + `configs/tasks/` 冻结 + 快照落盘 | 主表能不能开工就看这个 |
 | **D1 24:00** | A-4、A-6 全部完成；结构级产物交 B | — |
@@ -263,7 +265,7 @@ docs/Task List Snapshot D0.md
 ## 8. 交接前自检（逐条打勾再 push）
 
 - [ ] `git status` 里没有 `data/raw/`、没有大文件、没有 `.ipynb_checkpoints`
-- [ ] 三个环境指纹已入库，版本与 `.yml` 一致
+- [ ] 三个环境指纹已入库，版本与 `lock/` 逐行一致；`cd lock && sha256sum -c SHA256SUMS` 全 OK
 - [ ] `polybench_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐
 - [ ] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**
 - [ ] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过

@@ -1,0 +1,38 @@
+# P0 lock | pip layer | frozen 2026-11-11 | pairs with environment/polybert.yml
+# env: DSC6020_Project_Polybert | python 3.10.14 | pip 24.3.1 | platform win-amd64 | 28 packages
+# 用法：先按 polybert.conda.txt 建 conda 层，再 pip install -r lock/polybert.pip.txt
+# 只列由 pip 安装的包；conda 管理的（python / setuptools 等）在 conda 层，不在此重复。
+# 例外：pip 自身两层都写——conda 层给一个能用的 pip，本层第一行把它钉回 24.3.1。
+# 索引（必须原样带上，否则 torch 会静默装成 CPU 版）：
+#   --index-url https://download.pytorch.org/whl/cu121
+#   --extra-index-url https://pypi.org/simple
+--index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://pypi.org/simple
+certifi==2026.10.23
+charset-normalizer==3.5.2
+colorama==0.4.6
+filelock==4.1.0
+fsspec==2026.9.0
+huggingface-hub==0.23.4
+idna==3.20
+intel-openmp==2021.4.0
+Jinja2==3.1.6
+MarkupSafe==3.0.4
+mkl==2021.4.0
+mpmath==1.3.0
+networkx==3.4.2
+numpy==1.26.4
+pip==24.3.1
+PyYAML==6.0.3
+regex==2026.9.29
+requests==2.34.2
+safetensors==0.4.3
+sentencepiece==0.2.0
+sympy==1.14.0
+tbb==2021.13.1
+tokenizers==0.19.1
+torch==2.3.1+cu121
+tqdm==4.70.1
+transformers==4.41.2
+typing_extensions==4.16.0
+urllib3==2.8.0

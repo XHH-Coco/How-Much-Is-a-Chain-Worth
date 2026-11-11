@@ -1,3 +1,5 @@
+# FROZEN v1 | 2026-11-11 | lock/core.pip.txt sha256=f67dec4a853e | 全量校验 lock/SHA256SUMS
+#
 # Phase P0 declaration. Installed on 2026-11-11 (Python 3.10.14).
 # Reinstall with: conda env update -n DSC6020_Project_Core -f environment/core.yml --prune
 # Every package below is pinned on purpose; bumping one means rerunning the full table.
@@ -17,4 +19,6 @@ dependencies:
       - pysmiles==1.1.2
       - statsmodels==0.14.2
       - matplotlib==3.9.0
+      # 读 configs/**/*.yaml 用；与 GNN / Polybert 环境同版本，避免 YAML 1.1 行为差异。
+      - PyYAML==6.0.3
       - pytest==8.2.2

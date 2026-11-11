@@ -1,3 +1,5 @@
+# FROZEN v1 | 2026-11-11 | lock/gnn.pip.txt sha256=90e3560567ca | 全量校验 lock/SHA256SUMS
+#
 # Phase P0 declaration. Installed on 2026-11-11 (RTX 4070 Laptop, driver 572.83).
 # Reinstall with: conda env update -n DSC6020_Project_GNN -f environment/gnn.yml --prune
 #

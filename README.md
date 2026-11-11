@@ -2,7 +2,7 @@
 
 > 把一条高分子链压缩成一个重复单元之后，还有多少性质方差解释不了？这个比例会随着数据量增加十倍而缩小吗？
 
-`status: 空骨架` · 代码 MIT · 仓库内不含任何基准数据
+`status: P0 已完成（环境已冻结）` · 代码 MIT · 仓库内不含任何基准数据
 
 ---
 
@@ -23,7 +23,7 @@ python -V                                      # Core/Polybert 3.10.x；GNN 3.11
 - **Python 版本：Core / Polybert 用 3.10.14，GNN 用 3.11.18。** 不是随手混的：`chemprop 2.x` 强制要求 ≥3.11（PyPI 上 2.0.0–2.3.1 全部如此），而 1.x 只支持 <3.9，所以 **3.10 上不存在任何可安装的 chemprop**，而 A3 臂正是建立在它上面。三套包版本各自按对应 Python 的 wheel 兼容性钉死；谁单独升大版本，别人拿到的 `lock` 就对他失效。（3.10 已于 2026-10-31 EOL，目前是已知取舍，记在 `environment/*.yml` 的头注释里。）
 - **三个环境不许互相 install。** 把 RDKit 塞进 GNN 环境，`libgomp` 会让训练半路崩，而且报错与化学库毫无关系，极难查。
 - **不要往系统 Python 里装，也不要新建 `requirements.txt`。** 本仓库只有 conda 一套声明。
-- P0 验收后以 `lock/*.lock.yml` 为准（`environment/*.yml` 只是声明）。两者不一致时找分工 A，不要自己改。
+- **P0 已验收，现在以 `lock/*.conda.txt` + `lock/*.pip.txt` 为准**（`environment/*.yml` 是声明，`lock/` 是从装好的环境反向导出的精确版本表）。两者不一致时找分工 A，不要自己改——`environment/` 三份文件已冻结（第九节第 1 行）。装法、验收命令与已知局限见 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。
 
 ### 2. 按这个顺序读文档
 
@@ -83,14 +83,17 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 ## 二、仓库现在是什么状态
 
-**只有骨架。**
+**骨架 + 已冻结的环境。**
 
-| 有什么 | 没有什么 |
+| 有什么 | 还没有什么 |
 |---|---|
-| 目录约定（25 个空目录，各放一个 `.gitkeep`） | 没有实现代码 |
+| 目录约定（空目录各放一个 `.gitkeep`） | 没有实现代码 |
 | 元数据：`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` | 没有配置文件（任务、实验一个都没写） |
-| 三个环境声明：`environment/{core,gnn,polybert}.yml` | 没有数据、没有划分索引、没有结果 |
-| 文档：两份 Proposal、四份分工任务书、代码规范、运行请求单 | 没有测试 |
+| 三份环境声明 + **两层锁**：`environment/*.yml`、`lock/*.{conda,pip}.txt`、`lock/SHA256SUMS` | 没有数据、没有划分索引、没有运行结果 |
+| **三份环境指纹**：`results/env_fingerprints/env_{core,gnn,polybert}.json` | 没有测试 |
+| 文档：两份 Proposal、四份分工任务书、代码规范、运行请求单、P0 交付记录 | — |
+
+**P0 已完成并冻结**（2026-11-11）：三个 conda 环境按声明装好，导出了两层锁与三份指纹，验收凭据在 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md)。下一阶段是 P1 获取数据。
 
 上一版仓库曾在初始化阶段一次性写入了代码、配置、任务清单与测试。那不是本次初始化的范围，已被整体移除；那些内容保留在提交 `21be74f` 里，需要时按阶段逐项取回，而不是一次全塞进来。
 
@@ -100,15 +103,15 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 ## 三、阶段计划
 
-| 阶段 | 做什么 | 产出落在 | 验收标准 |
-|---|---|---|---|
-| **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` | 每个环境能 import 自己的核心包，版本可复现 |
-| **P1 获取数据** | 下载四个基准，算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致，每个文件有 sha256 |
-| **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照 | `data/interim/` + `splits/` | 划分文件带校验，任何人不得改写 |
-| **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 |
-| **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 |
-| **P5 运行** | 按配置跑，逐次落记录 | `results/raw_runs/` | 每个数字都能追到某一次运行 |
-| **P6 图表与文档** | 出图、写方法与结论 | `results/figures/` + `docs/` | 图能由脚本一键重画 |
+| 阶段 | 做什么 | 产出落在 | 验收标准 | 状态 |
+|---|---|---|---|---|
+| **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` + `lock/` | 每个环境能 import 自己的核心包，版本可复现 | **已交付 2026-11-11**，见 `docs/交付_P0_环境.md` |
+| **P1 获取数据** | 下载四个基准，算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致，每个文件有 sha256 | ← 下一个 |
+| **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照 | `data/interim/` + `splits/` | 划分文件带校验，任何人不得改写 | 未开始 |
+| **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | 未开始 |
+| **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
+| **P5 运行** | 按配置跑，逐次落记录 | `results/raw_runs/` | 每个数字都能追到某一次运行 | 未开始 |
+| **P6 图表与文档** | 出图、写方法与结论 | `results/figures/` + `docs/` | 图能由脚本一键重画 | 未开始 |
 
 阶段之间不并行。上一阶段没验收，下一阶段不开工。
 
@@ -118,7 +121,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（41 个跟踪文件）
+### 4.1 当前结构（52 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -128,10 +131,19 @@ How-Much-Is-a-Chain-Worth/
 ├── .gitignore           入库 / 不入库的分界线
 ├── .gitattributes       换行符与语言统计
 │
-├── environment/         三套环境的「声明」；P0 装包，P0 之后多出 lock/
+├── environment/         三套环境的「声明」（已冻结 v1，精确版本见 lock/）
 │   ├── core.yml
 │   ├── gnn.yml
 │   └── polybert.yml
+│
+├── lock/                ← P0 已填：两层锁，复现环境的权威依据
+│   ├── core.conda.txt   conda 层：包 URL + 构建号
+│   ├── core.pip.txt     pip 层：== 精确版本 + 索引地址
+│   ├── gnn.conda.txt
+│   ├── gnn.pip.txt
+│   ├── polybert.conda.txt
+│   ├── polybert.pip.txt
+│   └── SHA256SUMS       上面 6 个文件的校验和
 │
 ├── configs/             ← P3 填：配置文件
 │   ├── tasks/           一个任务一份
@@ -162,11 +174,14 @@ How-Much-Is-a-Chain-Worth/
 ├── scripts/             ← P1 起填：阶段入口 00–07（入库，必须可重跑）
 ├── tests/               ← P4 起填
 │
-├── results/             ← P5 起填
+├── results/             ← P5 起填（P0 已先落三份环境指纹）
 │   ├── raw_runs/        一次运行一份 JSON（入库）
 │   ├── aggregate/       汇总表与预测（入库）
 │   ├── figures/         图（可由脚本重画）
-│   └── env_fingerprints/ 一次运行一份环境指纹（入库）
+│   └── env_fingerprints/ 指纹（入库）：P0 三份，P5 起每次运行一份
+│       ├── env_core.json
+│       ├── env_gnn.json
+│       └── env_polybert.json
 │
 └── docs/
     ├── Proposal_HowMuchIsAChainWorth_v1.3.md        英文版，判据以此为准
@@ -176,7 +191,8 @@ How-Much-Is-a-Chain-Worth/
     ├── 分工_C_经典臂与机制实验.md
     ├── 分工_D_评测与图表.md
     ├── CODE_STYLE.md      代码怎么写
-    └── RUN_REQUESTS.md    没有 GPU 时怎么请求代跑
+    ├── RUN_REQUESTS.md    没有 GPU 时怎么请求代跑
+    └── 交付_P0_环境.md     P0 交付记录：装了什么、怎么验、哪些没做到
 ```
 
 **每个空目录里有一个 `.gitkeep`。** git 不记录空目录，删掉它，别人克隆下来这个目录就消失了。`← Pn 填` 的意思是：在这个阶段之前，该目录应该是空的；谁提前往里塞东西，就是越阶段。
@@ -185,8 +201,8 @@ How-Much-Is-a-Chain-Worth/
 
 | 目录 | 放哪些文件（命名规则 / 例子） | 明确不放 |
 |---|---|---|
-| `environment/` | 一个环境一份声明：`core.yml`、`gnn.yml`、`polybert.yml` | 锁文件（P0 后放 `lock/`）、装包产物 |
-| `lock/`（P0 后出现） | `conda-lock` 产出：`<env>.lock.yml` | 手改的 yml、`pip freeze` 文本 |
+| `environment/` | 一个环境一份声明，首行带 `# FROZEN v1`：`core.yml`、`gnn.yml`、`polybert.yml` | 锁文件（放 `lock/`）、装包产物 |
+| `lock/` | 一律成对：`<env>.conda.txt`（conda 层，URL+构建号）+ `<env>.pip.txt`（pip 层，`==` 版本）+ `SHA256SUMS` | 手改的锁；`conda-lock` 的 `.lock.yml`（本项目不用，原因见 `docs/交付_P0_环境.md` §4） |
 | `configs/tasks/` | 一个任务一份 `<dataset>_t<n>_<property>.yaml`，如 `pb_t1_tg.yaml` | 实验编排、超参数 |
 | `configs/arms/` | 一个臂一份 `<arm>.yaml`：`a1_floor`…`a5_chain` | 任务定义、种子列表 |
 | `configs/experiments/` | 一次实验一份，写清跑哪些任务 × 哪些臂 × 几个种子：`main_table.yaml`、`scaling.yaml`、`arch_transfer.yaml`、`openpoly_scan.yaml` | 单任务字段（放 `tasks/`） |
@@ -208,8 +224,8 @@ How-Much-Is-a-Chain-Worth/
 | `results/raw_runs/` | 一次运行一份 `<run_id>.json` | 手写或手改的数字 |
 | `results/aggregate/` | 汇总 `<name>.csv`（`main_table` / `scaling` / `arch_transfer` / `openpoly_scan`）+ `predictions/<run_id>.parquet` | 手改的数字 |
 | `results/figures/` | 脚本导出的图 `<figN>_<name>.pdf` / `.png` | 截图、从 PPT 里抠出来的图 |
-| `results/env_fingerprints/` | 一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
-| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`；后续还会有 `DECISIONS.md`（决策记录）、`Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
+| `results/env_fingerprints/` | P0 已填 `env_core.json`、`env_gnn.json`、`env_polybert.json`；P5 起一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
+| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`）；后续还会有 `DECISIONS.md`（决策记录）、`Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
 | 仓库根目录 | 只允许 `README.md`、`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` 五个文件 + 上面九个目录 | 散落文件（`test.py`、`tmp.csv`、`notes.md`、`新建文本文档.txt`） |
 
 ### 4.3 不入库的东西
@@ -256,7 +272,11 @@ conda env update -n DSC6020_Project_GNN     -f environment/gnn.yml     --prune
 conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 ```
 
-装法与三条禁忌见第一节第 1 步。`lock/` 还没生成（`conda-lock` 是 P0 的另一半），所以现在只能说"按 yml 装得出同样版本"，还不能说"逐字节可复现"。
+装法与三条禁忌见第一节第 1 步。
+
+**P0 已完成并冻结（2026-11-11）**：`lock/` 里每个环境两份锁——`<env>.conda.txt` 是 conda 层（包 URL + 构建号，可 `conda create --file` 直接重建），`<env>.pip.txt` 是 pip 层（`==` 精确版本 + 索引地址，可 `pip install -r`）。`lock/SHA256SUMS` 给这 6 个文件做校验。三份指纹在 `results/env_fingerprints/`。
+
+**能力边界要说清**：这套锁能复现到**版本级**（同平台、同 Python 版本，装出来版本号逐个相同），不能复现到**哈希级**（pip 层没有 wheel 的 sha256；补哈希要下载全部 wheel，torch 单包 2.4 GB）。为什么没用 `conda-lock`、以及其余四条已知局限，写在 [`docs/交付_P0_环境.md`](docs/交付_P0_环境.md) 第 4、5 节。
 
 ---
 
@@ -291,7 +311,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 
 1. 冻结发生在**阶段验收那一刻**，由该阶段负责人在下表登记：版本号、冻结日期、校验方式。只写"已冻结"不算。
 2. 冻结物必须**能验**：带 sha256、带条数、带版本号。验不了的不叫冻结，叫"大概定了"。
-3. 能写注释的文件（`.yml`、`.py`、`.md`），第一行加标记：`# FROZEN v1 | 2026-11-15 | sha256=<前 12 位>`。
+3. 能写注释的文件（`.yml`、`.py`、`.md`），第一行加标记：`# FROZEN v1 | 2026-11-15 | sha256=<前 12 位>`。**自指的情况**（对文件自己算哈希，加完这行哈希就变了）改为登记**它所配套的、可独立校验的那个文件**的哈希——例如 `environment/core.yml` 登记 `lock/core.pip.txt` 的哈希。
 4. 不能写注释的（`.json`、`.csv`、`.parquet`），在同目录 `MANIFEST.sha256` 里登记，一行一个文件。
 5. 冻结后**本表就是唯一权威副本**。分工文档 §5 只列"与你直接相关的那几项"，口径冲突时以本表为准。
 
@@ -299,7 +319,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 
 | # | 冻结点 | 位置 | 冻结于 | 怎么验 | 状态 |
 |---:|---|---|---|---|---|
-| 1 | 三套环境版本 | `environment/*.yml` + `lock/*.lock.yml` | P0 | 每次 run 落 `results/env_fingerprints/{run_id}.json`，双向断言 | 未冻结（待 P0） |
+| 1 | 三套环境版本 | `environment/*.yml`（声明）+ `lock/*.{conda,pip}.txt`（精确） | **P0 · 2026-11-11** | `lock/SHA256SUMS`（6 个文件）+ 三份 `results/env_fingerprints/env_*.json`；重建时 `pip install -r --dry-run` 应全部 `already satisfied` | **已冻结 v1（`f67dec4a853e` / `90e3560567ca` / `e6b7bbcc639b`）** |
 | 2 | 原始下载文件 | `data/raw/` | P1 | `data/manifests/*.sha256`，一个文件一行 | 未冻结（待 P1） |
 | 3 | 任务清单与条数 | `data/manifests/tasks_*.csv` | P1 | 条数与官方发布逐行对齐 + sha256 | 未冻结（待 P1） |
 | 4 | 单位换算决策 | `data/manifests/unit_decisions.csv` | P2 | 只能追加、不能覆盖；每行带 evidence | 未冻结（待 P2） |

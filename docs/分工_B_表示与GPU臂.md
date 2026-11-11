@@ -44,7 +44,7 @@
   "n_train": 5638, "n_test": 2417,
   "metrics": {"r2": 0.812, "mae": 21.4, "rmse": 33.9},
   "wall_clock_s": 96, "device": "cuda:0",
-  "env_fingerprint": "results/env_fingerprints/gnn.json"
+  "env_fingerprint": "results/env_fingerprints/env_gnn.json"
 }
 ```
 
@@ -202,7 +202,7 @@ docs/RUN_REQUESTS.md（没有卡时才需要填）
 代跑完成后，run 记录会回到 `results/raw_runs/`。**你仍然负责验收**：
 
 - [ ] 条数对不对（273 条 = 48 + 225，缺一条都要说清是哪条、为什么）
-- [ ] 每条记录里 `device` 是 `cuda`、`env_fingerprint` 指向 `gnn.json`
+- [ ] 每条记录里 `device` 是 `cuda`、`env_fingerprint` 指向 `env_gnn.json`
 - [ ] 预测文件行数与 split 测试集行数一致
 - [ ] 随机抽 3 条，用同一命令在 CPU 上 `--limit` 重跑，指标量级合理（不要求相同，只要求不是明显坏掉）
 - [ ] **发现异常就报，不要"帮忙"改数**

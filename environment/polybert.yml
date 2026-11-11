@@ -1,3 +1,5 @@
+# FROZEN v1 | 2026-11-11 | lock/polybert.pip.txt sha256=e6b7bbcc639b | 全量校验 lock/SHA256SUMS
+#
 # Phase P0 declaration. Installed on 2026-11-11 (Python 3.10.14).
 # Reinstall with: conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 # Separate environment only because the polyBERT weights (~7 GB) must be deletable on their own.
