@@ -114,26 +114,120 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 ---
 
-## 四、目录约定
+## 四、文件结构与目录约定
 
-| 路径 | 放什么 | 明确不放什么 |
+**这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
+
+### 4.1 当前结构（41 个跟踪文件）
+
+```text
+How-Much-Is-a-Chain-Worth/
+├── README.md            本文件：结构、规则、冻结清单的唯一权威
+├── LICENSE              MIT
+├── CITATION.cff         引用信息
+├── .gitignore           入库 / 不入库的分界线
+├── .gitattributes       换行符与语言统计
+│
+├── environment/         三套环境的「声明」；P0 装包，P0 之后多出 lock/
+│   ├── core.yml
+│   ├── gnn.yml
+│   └── polybert.yml
+│
+├── configs/             ← P3 填：配置文件
+│   ├── tasks/           一个任务一份
+│   ├── experiments/     一次实验一份
+│   └── arms/            一个臂一份
+│
+├── data/                ← P1–P2 填：数据本体不入库，只留清单
+│   ├── raw/             原样下载，只读
+│   ├── interim/         中间产物，可重建
+│   ├── processed/       喂模型前的最终表
+│   ├── external/        基准之外的补充数据
+│   └── manifests/       清单、条数、sha256（入库）
+│
+├── splits/              ← P2 填：划分索引，只读（入库）
+│   ├── polybench/
+│   ├── polybench26/
+│   └── openpoly/
+│
+├── src/chainworth/      ← P4 填：包代码
+│   ├── io/              数据与配置的唯一出入口
+│   ├── chem/            结构解析、描述符、分子图
+│   ├── arms/            五个臂各一个模块
+│   ├── metrics/         指标与 bootstrap
+│   ├── analysis/        Λ、κ、假设检验
+│   ├── figures/         五张图
+│   └── protocol/        种子、常量、划分校验
+│
+├── scripts/             ← P1 起填：阶段入口 00–07（入库，必须可重跑）
+├── tests/               ← P4 起填
+│
+├── results/             ← P5 起填
+│   ├── raw_runs/        一次运行一份 JSON（入库）
+│   ├── aggregate/       汇总表与预测（入库）
+│   ├── figures/         图（可由脚本重画）
+│   └── env_fingerprints/ 一次运行一份环境指纹（入库）
+│
+└── docs/
+    ├── Proposal_HowMuchIsAChainWorth_v1.3.md        英文版，判据以此为准
+    ├── Proposal_HowMuchIsAChainWorth_中文版_v1.3.md  逐节对照
+    ├── 分工_A_数据与合规.md
+    ├── 分工_B_表示与GPU臂.md
+    ├── 分工_C_经典臂与机制实验.md
+    ├── 分工_D_评测与图表.md
+    ├── CODE_STYLE.md      代码怎么写
+    └── RUN_REQUESTS.md    没有 GPU 时怎么请求代跑
+```
+
+**每个空目录里有一个 `.gitkeep`。** git 不记录空目录，删掉它，别人克隆下来这个目录就消失了。`← Pn 填` 的意思是：在这个阶段之前，该目录应该是空的；谁提前往里塞东西，就是越阶段。
+
+### 4.2 每个目录放哪些文件
+
+| 目录 | 放哪些文件（命名规则 / 例子） | 明确不放 |
 |---|---|---|
-| `configs/tasks/` | 单个任务的配置（数据集、目标性质、划分引用） | 权重、运行结果 |
-| `configs/experiments/` | 一次实验要跑哪些任务、哪些模型、几个种子 | 任务本身的定义（那在 `tasks/`） |
-| `data/raw/` | 原样下载的文件，只读 | 任何清洗后的数据 |
-| `data/interim/` | 中间产物，可重建 | 唯一副本 |
-| `data/processed/` | 喂给模型前的最终表 | 原始文件 |
-| `data/manifests/` | 文件清单、条数、sha256（**要入库**） | 数据本体 |
-| `splits/` | 划分索引，**只读**（要入库） | 生成脚本的临时输出 |
-| `src/chainworth/` | 包代码，按职责分层 | 一次性脚本 |
-| `scripts/` | 阶段入口脚本（`00`–`07` 编号，**要入库，必须可重跑**） | 临时/一次性脚本（放 `scripts/_scratch/`，已忽略） |
-| `results/raw_runs/` | 每次运行一个记录文件（**要入库**） | 模型权重 |
-| `results/aggregate/` | 汇总表（要入库） | 手改的数字 |
-| `results/figures/` | 图（可由脚本重画） | 截图 |
-| `tests/` | 单元测试与小型合成样例 | 真实数据副本 |
-| `docs/` | 方法、决策记录、操作手册、分工任务书、代码规范 | 与 README 重复的内容 |
+| `environment/` | 一个环境一份声明：`core.yml`、`gnn.yml`、`polybert.yml` | 锁文件（P0 后放 `lock/`）、装包产物 |
+| `lock/`（P0 后出现） | `conda-lock` 产出：`<env>.lock.yml` | 手改的 yml、`pip freeze` 文本 |
+| `configs/tasks/` | 一个任务一份 `<dataset>_t<n>_<property>.yaml`，如 `pb_t1_tg.yaml` | 实验编排、超参数 |
+| `configs/arms/` | 一个臂一份 `<arm>.yaml`：`a1_floor`…`a5_chain` | 任务定义、种子列表 |
+| `configs/experiments/` | 一次实验一份，写清跑哪些任务 × 哪些臂 × 几个种子：`main_table.yaml`、`scaling.yaml`、`arch_transfer.yaml`、`openpoly_scan.yaml` | 单任务字段（放 `tasks/`） |
+| `data/raw/` | 原样下载，**保留发布方原文件名** | 清洗、改名、合并、补列 |
+| `data/interim/` | 中间产物，文件名带中间步骤：`*_harmonised.parquet` | 唯一副本 |
+| `data/processed/` | 一个任务一张最终表 `<task_id>.parquet`；特征放 `features/<task_id>.npz` | 原始文件 |
+| `data/external/` | 基准之外补充的数据：`table_s27.csv` | 主基准（那在 `raw/`） |
+| `data/manifests/` | 清单与校验：`*_manifest.csv`、`*.sha256`、`unit_decisions.csv` | 数据本体 |
+| `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | 划分索引 `<task_id>_<fold>.json`，**只读** | 生成脚本的临时输出 |
+| `src/chainworth/io/` | `loaders.py`（读数据与配置）、`writers.py`（写 run 记录） | 业务逻辑、硬编码路径 |
+| `src/chainworth/chem/` | `features.py`（描述符）、`graph.py`（分子图构建） | 模型定义 |
+| `src/chainworth/arms/` | 一臂一文件：`floor.py`、`conventional.py`、`graph.py`、`polybert.py`、`chain_info.py` | 训练循环（`train.py`） |
+| `src/chainworth/metrics/` | `regression.py`（R²、Spearman）、`bootstrap.py`（残差重采样） | 图、表格 |
+| `src/chainworth/analysis/` | `lambda_.py`、`kappa.py`、`hypotheses.py` | 画图 |
+| `src/chainworth/figures/` | 一图一文件：`fig1_*.py`…`fig5_*.py` | 硬编码数字、截图 |
+| `src/chainworth/protocol/` | `seeds.py`、`constants.py`、`splits.py`（划分校验） | 实验结果 |
+| `scripts/` | 阶段入口 `00_download.py`…`07_figures.py`，必须支持 `--dry-run` / `--limit` | 临时脚本（`scripts/_scratch/`，已忽略）、可复用库代码（放 `src/`） |
+| `tests/` | `test_<模块>.py`；小型合成样例放 `fixtures/` | 真实数据副本、必须 GPU 才能跑的测试 |
+| `results/raw_runs/` | 一次运行一份 `<run_id>.json` | 手写或手改的数字 |
+| `results/aggregate/` | 汇总 `<name>.csv`（`main_table` / `scaling` / `arch_transfer` / `openpoly_scan`）+ `predictions/<run_id>.parquet` | 手改的数字 |
+| `results/figures/` | 脚本导出的图 `<figN>_<name>.pdf` / `.png` | 截图、从 PPT 里抠出来的图 |
+| `results/env_fingerprints/` | 一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
+| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`；后续还会有 `DECISIONS.md`（决策记录）、`Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
+| 仓库根目录 | 只允许 `README.md`、`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` 五个文件 + 上面九个目录 | 散落文件（`test.py`、`tmp.csv`、`notes.md`、`新建文本文档.txt`） |
 
-**不入库的东西**：数据本体、权重、日志、运行缓存、`scripts/_scratch/`、以及一切 agent 自建目录（`.workbuddy/`、`.tools/`、`.claude/` 等）。完整规则见 `.gitignore`。
+### 4.3 不入库的东西
+
+数据本体（`data/raw|interim|processed` 里的内容）、模型权重与缓存、日志、`scripts/_scratch/`、agent 自建目录（`.workbuddy/`、`.tools/` 等）、`__pycache__` 与各类缓存。
+
+完整规则见 `.gitignore`。判断标准就是硬规则 4 那一句：**别人克隆之后拿不到它，也不影响复现——那它就不该入库。**
+
+### 4.4 改结构的时候怎么办
+
+1. 目录增、删、改名，或根目录加文件 → **同一次提交**里改本节两处：4.1 的树、4.2 的表。
+2. 提交信息加一行「结构变更：加了什么、为什么」。
+3. 树用 `git ls-files` 重新生成，**不要手抄**；手抄的树一周之内就会错。
+4. 新目录必须带 `.gitkeep`。若该目录内容被忽略（如 `data/raw/`），同时在 `.gitignore` 里加 `!<dir>/.gitkeep`，否则克隆后目录消失。
+5. 结构改动会牵动别的文档（分工书里的 `scripts/00_download.py`、Proposal 的目录描述）→ 同一提交内一并改；漏改按"提交未完成"处理，不能"下次再说"。
+6. 一次提交只做一类结构变更。别把"加目录"和"挪数据"混在同一个 commit 里，否则回退时两件事都退不掉。
+
+> 为什么这么较真：四个人的项目里，"我按老结构去找文件、找不到"是最常见的浪费。README 是唯一权威，结构一旦漂移，就没人敢信它写的任何东西。
 
 ---
 
@@ -215,6 +309,8 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 一个阶段一个提交。提交信息必须写清三件事：**做了什么、没做什么、下一步是什么**。跨阶段的改动拆开提交，便于回退到任意阶段边界。
 
 冻结内容、`.gitignore` 的改动、配置改动必须在"做了什么"里单独点名。
+
+**结构变更必须同一次提交内同步第四节。** 增删目录、改目录名、在根目录加文件，都要在同一个 commit 里更新 4.1 的树与 4.2 的表，并在提交信息里单列一行「结构变更：加了什么、为什么」。**结构变了而 README 没变，这次提交不算完成**，不要等"下次一起改"——下周没人记得改过什么。
 
 ---
 
