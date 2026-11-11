@@ -1,8 +1,9 @@
-# P0 lock | pip layer | frozen 2026-11-11 | pairs with environment/gnn.yml
-# env: DSC6020_Project_GNN | python 3.11.18 | pip 24.3.1 | platform win-amd64 | 69 packages
+# P0 lock v2 | pip layer | frozen 2026-11-11 | pairs with environment/gnn.yml
+# env: DSC6020_Project_GNN | python 3.11.18 | pip 24.3.1 | platform win-amd64 | 70 packages
 # 用法：先按 gnn.conda.txt 建 conda 层，再 pip install -r lock/gnn.pip.txt
 # 只列由 pip 安装的包；conda 管理的（python / setuptools 等）在 conda 层，不在此重复。
 # 例外：pip 自身两层都写——conda 层给一个能用的 pip，本层第一行把它钉回 24.3.1。
+# v2 (2026-11-11): 增 pyarrow==17.0.0 —— pandas 2.2.2 不自带 parquet 引擎，写 data/interim、data/processed、predictions/*.parquet 会 ImportError。conda 层字节未变。
 # 索引（必须原样带上，否则 torch 会静默装成 CPU 版）：
 #   --index-url https://download.pytorch.org/whl/cu121
 #   --extra-index-url https://pypi.org/simple
@@ -51,6 +52,7 @@ pillow==13.0.0
 pip==24.3.1
 propcache==0.5.4
 psutil==7.2.2
+pyarrow==17.0.0
 Pygments==2.21.0
 pyparsing==3.3.3
 python-dateutil==4.0.0

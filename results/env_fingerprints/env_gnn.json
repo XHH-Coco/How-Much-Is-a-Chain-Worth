@@ -19,11 +19,11 @@
     },
     "pip": {
       "file": "lock/gnn.pip.txt",
-      "sha256": "90e3560567ca11bdec58fe7d73a87c56c4e527dcb63a2dad86028493fa8528e3"
+      "sha256": "a91f0654a8675b7089a1491dac8736e05868ebed4a758b3074ebcc4378a6d1db"
     }
   },
   "machine": "AMD64",
-  "package_count": 71,
+  "package_count": 72,
   "packages": {
     "ConfigArgParse": "1.9.0",
     "Jinja2": "3.1.6",
@@ -69,6 +69,7 @@
     "pip": "24.3.1",
     "propcache": "0.5.4",
     "psutil": "7.2.2",
+    "pyarrow": "17.0.0",
     "pyparsing": "3.3.3",
     "python-dateutil": "4.0.0",
     "pytorch-lightning": "2.3.0",
@@ -102,5 +103,5 @@
   "prefix": "D:\\Miniconda3\\envs\\DSC6020_Project_GNN",
   "python": "3.11.18",
   "python_full": "3.11.18 | packaged by Anaconda, Inc. | (main, Oct 26 2026, 18:13:29) [MSC v.1942 64 bit (AMD64)]",
-  "recorded_at": "2026-11-11T20:16:28+08:00"
+  "recorded_at": "2026-11-11T21:26:16+08:00"
 }

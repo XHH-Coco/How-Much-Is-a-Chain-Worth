@@ -16,11 +16,11 @@
     },
     "pip": {
       "file": "lock/core.pip.txt",
-      "sha256": "f67dec4a853e9b65f321f9f819aa3ef2fa2e450ba0f984232ca8f37349863b89"
+      "sha256": "280f60506e9e001ba1042f545a62f287eb13ee853c55a515cc46920ba6626f91"
     }
   },
   "machine": "AMD64",
-  "package_count": 37,
+  "package_count": 38,
   "packages": {
     "PyYAML": "6.0.3",
     "cloudpickle": "3.1.2",
@@ -42,6 +42,7 @@
     "pillow": "12.3.0",
     "pip": "24.3.1",
     "pluggy": "1.7.0",
+    "pyarrow": "17.0.0",
     "pyparsing": "3.3.3",
     "pysmiles": "1.1.2",
     "pytest": "8.2.2",
@@ -65,5 +66,5 @@
   "prefix": "D:\\Miniconda3\\envs\\DSC6020_Project_Core",
   "python": "3.10.14",
   "python_full": "3.10.14 | packaged by Anaconda, Inc. | (main, May  6 2024, 19:44:50) [MSC v.1916 64 bit (AMD64)]",
-  "recorded_at": "2026-11-11T20:17:35+08:00"
+  "recorded_at": "2026-11-11T21:26:16+08:00"
 }

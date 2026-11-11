@@ -1,4 +1,7 @@
-# FROZEN v1 | 2026-11-11 | lock/polybert.pip.txt sha256=e6b7bbcc639b | 全量校验 lock/SHA256SUMS
+# FROZEN v2 | 2026-11-11 | lock/polybert.pip.txt sha256=f636dab33d98 | 全量校验 lock/SHA256SUMS
+# v2 = v1 + pyarrow==17.0.0（写 polybert/index.parquet 用）。v1 的 pip 锁 sha256 前缀 e6b7bbcc639b。
+# 注意：本环境**没有 pandas**（只做编码，不做建模）；如需 DataFrame 级读写，用 pyarrow 直接构造 Table，
+# 或者把下游训练放回 core 环境——不要在这里 pip install，那会让 lock 对别人失效。
 #
 # Phase P0 declaration. Installed on 2026-11-11 (Python 3.10.14).
 # Reinstall with: conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
@@ -16,6 +19,8 @@ dependencies:
       - --extra-index-url https://pypi.org/simple
       - torch==2.3.1
       - numpy==1.26.4
+      # parquet 引擎：embeddings 索引 index.parquet 要写。本环境无 pandas，用 pyarrow.Table 直接构造。
+      - pyarrow==17.0.0
       - transformers==4.41.2
       - tokenizers==0.19.1
       - safetensors==0.4.3

@@ -19,11 +19,11 @@
     },
     "pip": {
       "file": "lock/polybert.pip.txt",
-      "sha256": "e6b7bbcc639b032fe9c0aaed0e00671035c63f48dcd8425ec3f97850b3a879ba"
+      "sha256": "f636dab33d9853680917a839825cf9628a0976ca7a0ced27f851572b835f5c6f"
     }
   },
   "machine": "AMD64",
-  "package_count": 31,
+  "package_count": 32,
   "packages": {
     "Jinja2": "3.1.6",
     "MarkupSafe": "3.0.4",
@@ -42,6 +42,7 @@
     "numpy": "1.26.4",
     "packaging": "26.3",
     "pip": "24.3.1",
+    "pyarrow": "17.0.0",
     "regex": "2026.9.29",
     "requests": "2.34.2",
     "safetensors": "0.4.3",
@@ -62,5 +63,5 @@
   "prefix": "D:\\Miniconda3\\envs\\DSC6020_Project_Polybert",
   "python": "3.10.14",
   "python_full": "3.10.14 | packaged by Anaconda, Inc. | (main, May  6 2024, 19:44:50) [MSC v.1916 64 bit (AMD64)]",
-  "recorded_at": "2026-11-11T20:16:31+08:00"
+  "recorded_at": "2026-11-11T21:26:16+08:00"
 }

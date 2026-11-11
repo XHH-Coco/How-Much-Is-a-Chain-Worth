@@ -74,14 +74,16 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | `environment/core.yml`、`environment/gnn.yml`、`environment/polybert.yml`（已冻结 v1，别改版本号）+ `lock/` 下六个锁文件 |
+| **拿什么** | `environment/core.yml`、`environment/gnn.yml`、`environment/polybert.yml`（已冻结 v2，别改版本号）+ `lock/` 下六个锁文件 |
 | **怎么做** | 装就按 `lock/`：`conda create -n <env> --file lock/<env>.conda.txt` 再 `pip install -r lock/<env>.pip.txt`；装完跑 `pip freeze`、`python -V`，与 `results/env_fingerprints/` 里那份对比 |
 | **产出** | `results/env_fingerprints/env_core.json` / `env_gnn.json` / `env_polybert.json`（**已入库**） |
-| **验收标准** | ① 三个环境各自能 `import` 自己的核心包（core：`rdkit` `xgboost` `pysmiles` `yaml`；gnn：`torch` `torch_geometric` `chemprop`；polybert：`transformers`）；② 指纹里版本号与 `lock/` 逐行一致；③ `cd lock && sha256sum -c SHA256SUMS` 全 OK；④ 若你重装过，`pip freeze` 与指纹的 diff 只剩平台相关包 |
+| **验收标准** | ① 三个环境各自能 `import` 自己的核心包（core：`rdkit` `xgboost` `pysmiles` `yaml` `pyarrow`；gnn：`torch` `torch_geometric` `chemprop`；polybert：`transformers`）；② 指纹里版本号与 `lock/` 逐行一致；③ `cd lock && sha256sum -c SHA256SUMS` 全 OK；④ 若你重装过，`pip freeze` 与指纹的 diff 只剩平台相关包 |
 
 > 【注意】 **为什么要留指纹**：同一份 `.yml` 在不同机器上装出来可能差几个传递依赖。结论要能复现，就得知道当时到底装了什么。这也是被问"你们的实验能重跑吗"时的证据。
 >
 > 【注意】 **PyYAML 已补**：Core 原来漏了它（P3 读 `configs/**/*.yaml` 会当场失败），现在三个环境统一 `PyYAML==6.0.3`，已写进 `lock/core.pip.txt`。你若发现 `import yaml` 报错，说明装的是旧锁。
+>
+> 【注意】 **parquet 引擎已补（v2）**：三个环境都有 `pyarrow==17.0.0`。若 `to_parquet()` 报 `ImportError: Unable to find a usable engine`，说明装的是 v1 的锁，按 v2 重装即可——**不要就地 `pip install`**，那会让你手里的锁对别人失效。polybert 环境没有 pandas（只做编码），写 `index.parquet` 用 `pyarrow.Table` 直接构造。
 
 ### A-2 · 三基准下载 + 完整性核对（3.0 pH｜关键）
 
@@ -237,7 +239,7 @@ data/external/table_s27.csv                     可选验证性转录   （A-8�
 | 官方划分索引 | `splits/`（只读） | 谁都不能改；要换划分就出 `v2` 文件 |
 | 任务清单（8 主表 + 备用） | `configs/tasks/` + `docs/Task List Snapshot D0.md` | 只有触发"任务 QA 不合格"才能按备用名单替换，且必须记时间戳+理由 |
 | 单位换算规则 | `data/manifests/unit_decisions.csv` | 只能追加，不能覆盖；覆盖等于毁证据 |
-| 三套环境版本 | `environment/*.yml` + `lock/` + `results/env_fingerprints/` | **已冻结 v1（2026-11-11）**；只能升版本并全表重跑，不能"我这儿装了新版" |
+| 三套环境版本 | `environment/*.yml` + `lock/` + `results/env_fingerprints/` | **已冻结 v2（2026-11-11，v2 = v1 + pyarrow）**；只能升版本并全表重跑，不能"我这儿装了新版" |
 
 > **全队只有一张冻结登记表**：`README` 第九节（版本号、冻结日期、怎么验、当前状态）。本节只列与你直接相关的那几项；口径冲突时以 README 为准。冻结物被改动 = 该阶段重做，不是"改一下就好"。
 

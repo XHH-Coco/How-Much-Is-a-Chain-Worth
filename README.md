@@ -21,7 +21,7 @@ sha256sum -c lock/SHA256SUMS                                    # 3) 校验锁�
 python -V                                                       # Core/Polybert 3.10.x；GNN 3.11.x（见下）
 ```
 
-- **为什么不用 `environment/*.yml` 装。** `.yml` 只写直接依赖（`gnn.yml` 12 条），`lock/` 连间接依赖一起写（`gnn` 环境 = 18 个 conda 构建产物 + 69 个 pip 包）。按 `.yml` 装，conda 求解器会**现场重算一遍**，间接依赖（`torchmetrics`、`sympy`、`filelock` 这些）跟着当时的索引走，结果是"能跑，但和别人不是同一套版本"，后面主表的数字就对不上。
+- **为什么不用 `environment/*.yml` 装。** `.yml` 只写直接依赖（`gnn.yml` 13 条），`lock/` 连间接依赖一起写（`gnn` 环境 = 18 个 conda 构建产物 + 70 个 pip 包）。按 `.yml` 装，conda 求解器会**现场重算一遍**，间接依赖（`torchmetrics`、`sympy`、`filelock` 这些）跟着当时的索引走，结果是"能跑，但和别人不是同一套版本"，后面主表的数字就对不上。
 - **`.yml` 的用途是读，不是装。** 它头部注释解释了每条钉版的原因：为什么 GNN 是 3.11、为什么必须 `setuptools==75.8.0`、为什么索引只能用 `--index-url cu121`。要动版本之前先读那里。
 - **重放有两个前提**：① 同操作系统——`lock/*.conda.txt` 头部写死 `platform: win-64`，换成 Linux/Mac 第 1 步就会失败；② 网络能到 `mirrors.tuna.tsinghua.edu.cn`，conda 锁里 18 个 URL 全指这个镜像。
 - **退路只有一条**：`lock/` 重放失败时才退回 `conda env update -n <env> -f environment/<env>.yml --prune`。这条路装出来的环境**不保证与锁一致**，装完必须重新导出锁（`conda list --explicit` + `pip freeze`）并告知分工 A 登记，否则你和别人就不是同一套版本了。
@@ -136,7 +136,7 @@ How-Much-Is-a-Chain-Worth/
 ├── .gitignore           入库 / 不入库的分界线
 ├── .gitattributes       换行符与语言统计
 │
-├── environment/         三套环境的「声明」（已冻结 v1，精确版本见 lock/）
+├── environment/         三套环境的「声明」（已冻结 v2，精确版本见 lock/）
 │   ├── core.yml
 │   ├── gnn.yml
 │   └── polybert.yml
@@ -207,7 +207,7 @@ How-Much-Is-a-Chain-Worth/
 
 | 目录 | 放哪些文件（命名规则 / 例子） | 明确不放 |
 |---|---|---|
-| `environment/` | 一个环境一份声明，首行带 `# FROZEN v1`：`core.yml`、`gnn.yml`、`polybert.yml` | 锁文件（放 `lock/`）、装包产物 |
+| `environment/` | 一个环境一份声明，首行带 `# FROZEN v2`：`core.yml`、`gnn.yml`、`polybert.yml` | 锁文件（放 `lock/`）、装包产物 |
 | `lock/` | 一律成对：`<env>.conda.txt`（conda 层，URL+构建号）+ `<env>.pip.txt`（pip 层，`==` 版本）+ `SHA256SUMS` | 手改的锁；`conda-lock` 的 `.lock.yml`（本项目不用，原因见 `docs/交付_P0_环境.md` §4） |
 | `configs/tasks/` | 一个任务一份 `<dataset>_t<n>_<property>.yaml`，如 `pb_t1_tg.yaml` | 实验编排、超参数 |
 | `configs/arms/` | 一个臂一份 `<arm>.yaml`：`a1_floor`…`a5_chain` | 任务定义、种子列表 |
@@ -353,7 +353,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 
 1. 冻结发生在**阶段验收那一刻**，由该阶段负责人在下表登记：版本号、冻结日期、校验方式。只写"已冻结"不算。
 2. 冻结物必须**能验**：带 sha256、带条数、带版本号。验不了的不叫冻结，叫"大概定了"。
-3. 能写注释的文件（`.yml`、`.py`、`.md`），第一行加标记：`# FROZEN v1 | 2026-11-15 | sha256=<前 12 位>`。**自指的情况**（对文件自己算哈希，加完这行哈希就变了）改为登记**它所配套的、可独立校验的那个文件**的哈希——例如 `environment/core.yml` 登记 `lock/core.pip.txt` 的哈希。
+3. 能写注释的文件（`.yml`、`.py`、`.md`），第一行加标记：`# FROZEN v<n> | <日期> | sha256=<前 12 位>`。**自指的情况**（对文件自己算哈希，加完这行哈希就变了）改为登记**它所配套的、可独立校验的那个文件**的哈希——例如 `environment/core.yml` 登记 `lock/core.pip.txt` 的哈希。
 4. 不能写注释的（`.json`、`.csv`、`.parquet`），在同目录 `MANIFEST.sha256` 里登记，一行一个文件。
 5. 冻结后**本表就是唯一权威副本**。分工文档 §5 只列"与你直接相关的那几项"，口径冲突时以本表为准。
 
@@ -361,7 +361,7 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 
 | # | 冻结点 | 位置 | 冻结于 | 怎么验 | 状态 |
 |---:|---|---|---|---|---|
-| 1 | 三套环境版本 | `environment/*.yml`（声明）+ `lock/*.{conda,pip}.txt`（精确） | **P0 · 2026-11-11** | `lock/SHA256SUMS`（6 个文件）+ 三份 `results/env_fingerprints/env_*.json`；重建时 `pip install -r --dry-run` 应全部 `already satisfied` | **已冻结 v1（`f67dec4a853e` / `90e3560567ca` / `e6b7bbcc639b`）** |
+| 1 | 三套环境版本 | `environment/*.yml`（声明）+ `lock/*.{conda,pip}.txt`（精确） | **P0 · 2026-11-11** | `lock/SHA256SUMS`（6 个文件）+ 三份 `results/env_fingerprints/env_*.json`；重建时 `pip install -r --dry-run` 应全部 `already satisfied` | **已冻结 v2（2026-11-11 21:26，`280f60506e9e` / `a91f0654a867` / `f636dab33d98`；v1 为 `f67dec4a853e` / `90e3560567ca` / `e6b7bbcc639b`）。v2 = v1 + `pyarrow==17.0.0`（parquet 引擎），conda 层字节未变** |
 | 2 | 原始下载文件 | `data/raw/` | P1 | `data/manifests/*.sha256`，一个文件一行 | 未冻结（待 P1） |
 | 3 | 任务清单与条数 | `data/manifests/tasks_*.csv` | P1 | 条数与官方发布逐行对齐 + sha256 | 未冻结（待 P1） |
 | 4 | 单位换算决策 | `data/manifests/unit_decisions.csv` | P2 | 只能追加、不能覆盖；每行带 evidence | 未冻结（待 P2） |

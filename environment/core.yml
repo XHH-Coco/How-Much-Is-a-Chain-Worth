@@ -1,4 +1,5 @@
-# FROZEN v1 | 2026-11-11 | lock/core.pip.txt sha256=f67dec4a853e | 全量校验 lock/SHA256SUMS
+# FROZEN v2 | 2026-11-11 | lock/core.pip.txt sha256=280f60506e9e | 全量校验 lock/SHA256SUMS
+# v2 = v1 + pyarrow==17.0.0（pandas 2.2.2 不自带 parquet 引擎）。v1 的 pip 锁 sha256 前缀 f67dec4a853e。
 #
 # Phase P0 declaration. Installed on 2026-11-11 (Python 3.10.14).
 # Reinstall with: conda env update -n DSC6020_Project_Core -f environment/core.yml --prune
@@ -12,6 +13,9 @@ dependencies:
   - pip:
       - numpy==1.26.4
       - pandas==2.2.2
+      # parquet 引擎：pandas 2.2.2 不自带，缺它写 data/interim/harmonised、
+      # data/processed/{structures,descriptors}、predictions/*.parquet 一律 ImportError。
+      - pyarrow==17.0.0
       - scipy==1.13.1
       - scikit-learn==1.4.2
       - xgboost==2.0.3

@@ -1,4 +1,5 @@
-# FROZEN v1 | 2026-11-11 | lock/gnn.pip.txt sha256=90e3560567ca | 全量校验 lock/SHA256SUMS
+# FROZEN v2 | 2026-11-11 | lock/gnn.pip.txt sha256=a91f0654a867 | 全量校验 lock/SHA256SUMS
+# v2 = v1 + pyarrow==17.0.0（B 的 GNN 臂要写 predictions/*.parquet）。v1 的 pip 锁 sha256 前缀 90e3560567ca。
 #
 # Phase P0 declaration. Installed on 2026-11-11 (RTX 4070 Laptop, driver 572.83).
 # Reinstall with: conda env update -n DSC6020_Project_GNN -f environment/gnn.yml --prune
@@ -25,6 +26,8 @@ dependencies:
       - torch==2.3.1
       - numpy==1.26.4
       - pandas==2.2.2
+      # parquet 引擎：predictions/<run_id>.parquet 由本环境的 GNN 臂写出，缺它 ImportError。
+      - pyarrow==17.0.0
       - scipy==1.13.1
       - scikit-learn==1.4.2
       - rdkit==2024.3.5

@@ -1,8 +1,9 @@
-# P0 lock checksums | 2026-11-11 | SHA256SUMS 格式：<hash>  <file>
+# P0 lock checksums v2 | 2026-11-11 | SHA256SUMS 格式：<hash>  <file>
 # 验：cd lock && sha256sum -c SHA256SUMS
+# v2 只改了三个 *.pip.txt（+pyarrow）；三个 *.conda.txt 的 hash 与 v1 相同，就是"conda 层字节未变"的证明。
 b7837eb510fe32f08c1b52b24a7b337f1f5328b3145983b3c620993db2eb4ae4  core.conda.txt
-f67dec4a853e9b65f321f9f819aa3ef2fa2e450ba0f984232ca8f37349863b89  core.pip.txt
+280f60506e9e001ba1042f545a62f287eb13ee853c55a515cc46920ba6626f91  core.pip.txt
 0cb8787e0d86ffbc6d290c9e94afdb9c9615fd26abc7e0f9afa3af6ccc500a85  gnn.conda.txt
-90e3560567ca11bdec58fe7d73a87c56c4e527dcb63a2dad86028493fa8528e3  gnn.pip.txt
+a91f0654a8675b7089a1491dac8736e05868ebed4a758b3074ebcc4378a6d1db  gnn.pip.txt
 9270154adbfae8641e0123a5d74a297c853dbda74f03e5c721d9847b93ca13e8  polybert.conda.txt
-e6b7bbcc639b032fe9c0aaed0e00671035c63f48dcd8425ec3f97850b3a879ba  polybert.pip.txt
+f636dab33d9853680917a839825cf9628a0976ca7a0ced27f851572b835f5c6f  polybert.pip.txt
