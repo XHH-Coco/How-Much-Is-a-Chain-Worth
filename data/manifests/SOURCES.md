@@ -31,10 +31,10 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 | 规模 | 39 个任务 / **42,169 条记录** / 14,717 个重复单元 / 7 类表征 / 30 个基线模型 |
 | 计数接口（**已复读**） | `http://202.98.16.11/api/data-counts`，**无需登录即可 GET**，返回 `{"data_counts":[{"Dataset":…, "Count":…}, …]}`。2026-11-11 20:58 实测：**39 条，`Count` 相加 = 42,169**；与 Proposal 附录 A 的 39 行**逐行比对 0 处不一致**（名字与条数全对，集合双向差集均为空）。原始响应已入库：`data/manifests/polybench_api_data_counts_20261111.json`（1,978 字节，sha256 `bae4eb5c32c4ff9786e22c8db9dd63e0cdb215b858b3f0618982dc0e9d9be766`）。**这份响应就是附录 A 的引证**——不要重跑覆盖它，要更新就另存新文件并在本表登记 |
 | 论文 | *PolyBench: A Reproducible Open Benchmark Platform for Repeat-Unit-Based Polymer Property Prediction*，Polym. Sci. Technol. **2026**, 2(10), 836–854，DOI `10.1021/polymscitech.6c00094`，2026-08-31 上线（开放获取） |
-| 存档 | figshare，DOI `10.6084/m9.figshare.30917717`，**CC BY 4.0**；39 个 CSV 的文件名 = 数据集名（PolyBench 不发数字任务 ID） |
-| `version` 取值 | figshare 存档版本号（`v1`/`v2`…）；若从平台直取，记抓取日期 + 平台页脚版本串 |
-| 核实时点 | URL、规模、论文元数据：**2026-11-11 公开检索核实**。figshare DOI：转录自 Proposal §2，**本次未重新解析** |
-| 待确认（A 在 D0 前做） | ① **39 个 CSV 的批量获取方式**——平台有导出按钮/接口，还是只能逐个点；② **figshare 存档能否匿名取**（DOI `10.6084/m9.figshare.30917717`），版本号是 `v1` 还是更高；③ 存档里 39 个文件名与平台提示名是否逐一对应。**账号与接口这两条已闭合**，不要再当未解决问题 |
+| 存档（**已解析，v2**） | figshare，DOI `10.6084/m9.figshare.30917717`，**实际版本 `v2`**（`doi` 字段为 `.v2`），CC BY 4.0（`license.value=1`），公开、**无需登录、未禁用下载**（`download_disabled: false`、`is_embargoed: false`）。**39 个文件**，合计 **5,937,499 B ≈ 5.66 MiB**，全部 `mimetype: text/csv`，`folder_structure` 均为 `SMILES`。文件名 = 数据集名 + `.csv`（含空格原样），**39 个与 `/api/data-counts` 的 39 条、附录 A 的 39 行三方对齐**。每个文件自带 `supplied_md5` 且与 `computed_md5` **全部相同**，可直接用于二次校验。下载地址形态：`https://ndownloader.figshare.com/files/<file_id>`，清单从 `GET https://api.figshare.com/v2/articles/30917717` 取 |
+| `version` 取值 | 存档取 **`v2`**（写进 manifest 的 `version` 列，形如 `figshare:v2`）；若从平台直取，记抓取日期 + 平台页脚版本串 |
+| 核实时点 | URL、规模、论文元数据：2026-11-11 公开检索核实；**figshare 版本号、39 文件清单、总字节、md5、免登录：2026-11-11 当晚调 figshare API v2 核实** |
+| 待确认（A 在 D0 前做） | **只剩一条**：平台的**批量获取方式**——是导出按钮、有 API，还是只能逐个点。这条不影响 figshare 路线，因为 figshare 已可直接下载；它决定的是"平台 vs 存档"哪个当 `source_url`。**账号、接口、版本号、文件名对应四条均已闭合**，不要再当未解决问题 |
 
 > 【坑】42,169 是**记录数**，14,717 是**重复单元数**。两者在 PolyBench 里不相等，报告里不能说混（Proposal 附录 A 已按记录数给）。
 
@@ -56,7 +56,7 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 | 上游源文件 sha256（官方公布，A-2 可直接核对） | `Datasets/Dataset_construction_scripts/files/Cleaned_OMersBench_v3_final.jsonl` = `7e8a17…2c68567e`（全文 `7e8a175866cc7166e589fbca1bb125bdece31c398b654a8848f5410f2c68567e`，82,990 条：交替 65,221 / 无规 10,379 / 均聚 7,390）· `Datasets/PSMILES/PolyMetriX/Tg/Tg.csv` = `b6d2b9f83419c94c5b24200b0288d9a7b53256931d87ffc1533c8884119a09d3`（7,367 条 PSMILES） |
 | `version` 取值 | **git commit 短 sha**（该仓库没有 tag 时以 commit 为准），另记抓取日期 |
 | 核实时点 | URL、规模、任务与档位：2026-11-11 公开检索核实；**许可分层、`scaling_indices/` 目录、5 折参数、上游 sha256：2026-11-11 当晚读 `README.md` / `DATA_PROVENANCE.md` / `SCALING_EXPERIMENTS_METHODS.md` 原文核实** |
-| 待确认 | ① `manage_scaling_indices.py verify` 在"只取部分文件"时能否跑通（它可能要求完整目录树）；② 仓库是否走 Git LFS——API 报的 jsonl 是 66.9 MB 实际字节数、不像 LFS，但**首次 clone 时确认一次**；③ **架构迁移任务（H1 架构子句）的官方划分在哪**——`scaling_indices/` 只覆盖数据集规模实验，架构留出集的文件位置本次未定位，这是 A-5 的第二块缺口 |
+| 待确认 | ① 仓库是否走 Git LFS（API 报的字节数是真实大小、不像 LFS，首次 clone 时确认一次）；② `PSMILES_pBERT_dict.pkl`（224 MB 生成物）是否必需——只有 polyBERT 臂需要，其余臂可绕开；③ **架构迁移是否纳入本次范围**（涉及 GTRC 许可，须 P3 定表时决定）；④ `task3_complexity` 里 legacy test-fold 是否就是官方"重复单元复杂度"任务的正式划分（措辞是 legacy，需读其 README 确认能否当官方用） |
 
 > 【红线】这是唯一提供**官方**规模操纵与架构操纵的资源。自己造子采样、自己造 wPSMILES 加权，结果就成了我们的产物而不是这个领域的属性（Proposal §2.1）。所以划分**必须**来自官方发布物，不许自行洗牌。
 >
@@ -67,6 +67,23 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 > 【注意·别串】PolyBench（平台那 39 个任务）里也有 `bandgap`、`Ionization Energy_Ei` 这些名字，但它们属于**另一个数据集**、走 PolyBench 自己的 CC BY 4.0。不要把 PolyBench26 的 polyVERSE 许可套到 PolyBench 的任务头上，反之亦然。
 >
 > 【坑五】**索引是行号，行号没有独立意义。** `scaling_indices/` 存的是整数下标，它绑定的是"官方脚本从 tracked 源文件生成 PSMILES 表时的那个顺序"。换了源文件版本、换了生成脚本，同样的行号指向的就是别的分子，而且**不会报错**——只会安静地算出一组错的 R²。所以快照索引时必须同时钉住三样：① 仓库 commit sha；② `Cleaned_OMersBench_v3_final.jsonl` 与 `Tg.csv` 的 sha256（官方已公布，见上表，A-2 下载后直接核对）；③ `generate_basic_datasets.sh` 的 commit。三者缺一，快照就是不可复现的。
+
+**四个官方任务各自落在哪个目录。** `Datasets/README.md` 把「入库」与「生成」分得很清，这张表决定 A-5 能快照什么：
+
+| 官方任务 | 目录 | 是否入库 | 快照可行性 |
+|:--|:--|:--|:--|
+| 数据集规模 scaling | `Datasets/scaling_indices/`（约 2 MB） | ✅ 入库 | **可直接快照** |
+| 重复单元复杂度 | `Datasets/task3_complexity/`（约 3 MB） | ✅ 入库 | 可直接快照（含 legacy test-fold assignments，能否当官方用待确认） |
+| 架构迁移 | `Datasets/task4_architecture_transfer/`（约 0.4 MB） | ✅ 入库，但只是**「物化工作流」** | **不能快照留出集本身**，只能快照脚本 + 生成参数 |
+| 分布内预测 | 无独立目录 | — | 由各模型自己的 5 折决定，不走这两个目录 |
+
+> 【坑六】**索引指向的那张表，官方不发布。** `Datasets/README.md` 明确 `PSMILES/MD_300/`、`MD_5000/`、`Vipea/`、`Tg_combined/` 全是 *generated via scripts and excluded from Git*（PSMILES 约 90 MB、wPSMILES 约 206 MB），入库的只有 compact 源（`Dataset_construction_scripts/files/`，约 81 MB）与 `PSMILES/polyVERSE/`、`PSMILES/PolyMetriX/` 这些小的网页源。**所以 A-5 的正确工序是**：先跑官方 `generate_basic_datasets.sh` 生成 canonical PSMILES → 拿 `scaling_indices/<实验>/seed_42/manifest.json` 里的 `canonical_sha256` 校验这张表 → 校验通过后行号才有意义。跳过这步，索引就是一组随机数。
+>
+> 【坑七】**架构迁移走的是 GTRC 数据，不是 CC BY 4.0。** `task4_architecture_transfer/README.md` 写明该任务预测的是 **electron affinity**，训练源为 `PSMILES/polyVERSE/electron_affinity/…` + `wPSMILES/Vipea/EA/alternating_EA.csv`。polyVERSE 属 **GTRC General Public Use License**（见【坑四】）。**若 H1 的架构子句要用这个任务，结果表的许可义务就和主表不一样**——须随附 GTRC 全文、免费分发、不得商用。这条必须在 P3 定表时说清，不能默认「和主表一样」。
+>
+> 【task4 的关键数字（已核实）】canonical 训练集 **6,478** 条（交替 6,110 + 均聚 368）；OOD holdout **36,828** 行（random 18,414 + block 18,414），**固定、永不进入训练或调参**；五折 80/10/10、PSMILES 分组、**seed 42**；物化命令 `create_task4_shared_splits.py --polybert-dictionary Datasets/Dataset_construction_scripts/files/PSMILES_pBERT_dict.pkl`（该 pkl 224 MB，本身是生成物）；输出落在 `generated/shared_splits/`，gitignored。
+>
+> 【官方 verify 的真实能力（读了源码）】`manage_scaling_indices.py verify` 用 `rglob("manifest.json")` 遍历，**只校验存在的实验、不要求目录齐全**，所以部分快照也能跑；缺 canonical 源时必须加 `--allow-missing-sources`，否则抛 `FileNotFoundError`。支持 `--indices-root` / `--datasets-root` 指向任意目录，**A-5 可以直接用它校验我们自己的快照**。它检查：schema 版本、canonical sha256（若源存在）、fold 数与逐折 `seed = base + fold`、npz 恰含三个数组、`train_pool ∪ val ∪ test` 无重复且覆盖 `0..n_rows-1`、各 `n_*` 与数组长度一致、`max(train_sizes) ≤ len(train_pool)`。**但注意：它不检查「`train_pool[:N]` 是嵌套前缀」——那个断言只在 `export` 分支里有。所以前缀规则必须由我们自己的 `tests/test_splits.py` 兜，官方 verify 兜不住。**
 
 ### 2.3 OpenPoly（仅边界 · H4）
 
@@ -111,11 +128,11 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | # | 事项 | 状态 | 还需要谁做什么 |
 |:--|:--|:--|:--|
 | 1 | PolyBench 平台要不要账号 / `/api/data-counts` 能不能复读 | ✅ **已闭合** | 平台**无需登录**即可 GET `http://202.98.16.11/api/data-counts`；2026-11-11 20:58 实测 39 条、合计 **42,169**，与附录 A 逐行 0 差异。原始响应已入库（见 §2.1）。**剩下的是 CSV 批量下载方式**，属 A-2 执行细节 |
-| 2 | PolyBench26 的官方索引在哪 | ✅ **已定位到文件级** | 取 `Datasets/scaling_indices/<族>/<性质>/<实验>/seed_42/{manifest.json, fold_NN.npz}`；主表两条路径见 §2.2。**A-5 工序需按 §2.2【更正】改**，改法见该条 |
-| 3 | 许可是否足以支撑入库派生表 | ✅ **已解决** | 主表两个 PB26 任务均 CC BY 4.0，`data/manifests/` 与 `splits/` 可入库，**须随表带署名与许可声明**；避开 polyVERSE（GTRC）与 PoLyInfo（不可分发） |
-| 4 | 磁盘 | ✅ **已实测** | 本机 D 盘 489 GB 可用，而**我们只需 < 200 MB**（jsonl 63.8 MiB + Tg.csv 0.53 MiB + indices 数十 MB）。官方要的 ~15 GB 是完整复现口径，**不要照那个准备** |
+| 2 | PolyBench26 的官方索引在哪 | ✅ **四个任务全部定位** | scaling → `scaling_indices/`（直接快照）；复杂度 → `task3_complexity/`（legacy，待确认能否当官方）；架构迁移 → `task4_architecture_transfer/`（**只发布物化脚本，不快照留出集**）；分布内 → 各模型 5 折。**A-5 工序需按 §2.2【更正】与【坑六】改** |
+| 3 | 许可是否足以支撑入库派生表 | ✅ **已解决，但多一条边** | 主表两个 PB26 任务均 CC BY 4.0，`data/manifests/` 与 `splits/` 可入库，**须随表带署名**；**架构迁移任务走 polyVERSE，属 GTRC**（见【坑七】），若纳入范围则许可义务不同 |
+| 4 | 磁盘 | ✅ **已实测** | 本机 D 盘 489 GB 可用，而**我们只需 < 200 MB**（jsonl 63.8 MiB + Tg.csv 0.53 MiB + indices 约 2 MB 的子集）。官方要的 ~15 GB 是完整复现口径，**不要照那个准备** |
 
-**仍然悬空的两件事（不影响 A-2，影响 A-5 的写法）**：① `manage_scaling_indices.py verify` 在部分目录下能否跑通；② **架构迁移任务的官方划分文件位置未定位**。在这两条落地之前，`splits/polybench26/scaling/` 保持为空，**不要用 `sklearn` 现造一个划分顶上**——那正好是红线拦的东西。
+**仍然悬空的三件事（都不影响 A-2）**：① `task3_complexity` 的 legacy test-fold 能否当官方划分用；② **架构迁移是否纳入本次范围**（GTRC 许可问题，需 P3 定表决定）；③ **A-5 工序改法待批**。在①③落地前，`splits/polybench26/` 除 scaling 外的子目录保持为空，**不要用 `sklearn` 现造划分顶上**。
 
 ---
 
@@ -128,3 +145,5 @@ Proposal §2.1 数的是**承重资源**，不是"数据集个数"。四个资�
 | 2026-11-11 当晚 | 官方索引定位到 `Datasets/scaling_indices/`（入库）/ `scaling_splits/`（gitignored）；补 5 折与档位参数、上游源文件 sha256；**更正红线措辞**（"原样取 scaling_splits"按字面做不到），新增【坑五】行号绑定；§4 四件事改状态表 | 读官方 `README.md`、`DATA_PROVENANCE.md`、`SCALING_EXPERIMENTS_METHODS.md` 原文 |
 | 2026-11-11 当晚 | **`/api/data-counts` 复读成功**：39 条、合计 42,169、与附录 A 逐行 0 差异；原始响应入库 `polybench_api_data_counts_20261111.json`。§2.1「待确认」由"要不要账号 / 接口能不能复读"改为只剩"CSV 批量下载方式 + figshare 可否匿名" | 仓库所有者在本机 GET 接口，仓库所有者转交响应 |
 | 2026-11-11 当晚 | `scaling_indices/` 细化到文件级：布局 `<族>/<性质>/<实验>/seed_42/{manifest.json, fold_NN.npz}`，主表两条路径已核实；补磁盘量级（我们 <200 MB vs 官方 ~15 GB 完整复现）、官方校验命令 `manage_scaling_indices.py verify`；新增"架构迁移划分未定位"这条缺口 | 读 `Datasets/scaling_indices/README.md` 与 GitHub contents API |
+| 2026-11-11 当晚 | **figshare 存档解析完成**：`v2`、39 文件、合计 5,937,499 B、全部 text/csv、`supplied_md5 == computed_md5`、**免登录且未禁用下载**、下载地址形态 `ndownloader.figshare.com/files/<id>`；§2.1「待确认」收敛为只剩"平台批量下载方式" | 调 figshare API v2 `/articles/30917717` |
+| 2026-11-11 当晚 | **四个官方任务的落点全部定位**：新增任务目录表、【坑六】canonical PSMILES 需脚本生成（索引指向的表官方不发布）、【坑七】架构迁移走 polyVERSE = GTRC、task4 关键数字（6,478 / 36,828 / seed 42 / 5 折 80-10-10）、官方 verify 的真实能力（部分目录可跑、需 `--allow-missing-sources`、**不检查前缀规则**）；§4 悬空项改为三条 | 读 `Datasets/README.md`、`task4_architecture_transfer/README.md`、`manage_scaling_indices.py` 源码、GitHub contents API |
