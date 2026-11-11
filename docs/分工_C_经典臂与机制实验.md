@@ -211,6 +211,8 @@ tests/test_run_records.py
 | 机制实验的档位与折索引 | `configs/experiments/{scaling,arch_transfer}.yaml` | 档位来自官方文件，不许按行数截；要改就是新版本并全批重跑 |
 | 主表列名 | `results/aggregate/main_table.csv` | 只加不改（D 的对账脚本按列名读） |
 
+> **全队只有一张冻结登记表**：`README` 第九节（版本号、冻结日期、怎么验、当前状态）。本节只列与你直接相关的那几项；口径冲突时以 README 为准。冻结物被改动 = 该阶段重做，不是"改一下就好"。
+
 ---
 
 ## 6. 时间线与里程碑（以 8 个工作日 / 11-19 汇报为准）
@@ -238,6 +240,8 @@ tests/test_run_records.py
 5. **机制实验另起超参**：为了"让曲线好看"换个模型或调个学习率，你的 κ 就和主表不是同一个世界了。
 6. **主表填 0 充缺格**：缺就留灰并标 `blocked_no_gpu`。
 
+**代码怎么写**：P4 起所有提交的代码按 [`docs/CODE_STYLE.md`](CODE_STYLE.md)——中英双语注释，每个函数写清输入输出、数据来源、配置来源，数字必须有来源。审阅时不看风格，只看"能不能从注释追到数据来源"；追不到的退回重写。
+
 **常见坑**
 
 | 坑 | 现象 | 正确做法 |
@@ -264,7 +268,8 @@ tests/test_run_records.py
 - [ ] A5 的 `config_hash` 与 A2 只在输入特征上不同（断言过）
 - [ ] 打乱对照跑过了，数字与一句话结论写进 `scaling_cpu.csv` 旁边的 `scramble_control.csv`
 - [ ] 主表逐格能点回 `run_id`，与排行榜的差异已分类
-- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第七节）
+- [ ] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/`；有就自己补进 `.gitignore`（README 第五节硬规则 4）
+- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第十节）
 
 ---
 

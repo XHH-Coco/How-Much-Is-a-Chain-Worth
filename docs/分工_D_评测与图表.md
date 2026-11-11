@@ -194,7 +194,7 @@ $$\Lambda=\frac{0.70-0.60}{1-0.60}=\frac{0.10}{0.40}=0.25$$
 | **产出** | `results/aggregate/provenance_check.csv`（列：`check, run_id, status, detail`）+ 一条 `make provenance` 入口 |
 | **验收标准** | ① 故意删掉一个预测文件，对账表必须点出那个 `run_id`（不许静默跳过）；② 通过率 100% 才允许出图，出图脚本开头自动跑一次；③ 任何 `unexplained` 的缺口都在这张表里留痕 |
 
-> **这张表是"三条硬规则"第 3 条的机器版**：结论必须对应一条运行记录。人工说"我查过了"不算，脚本能点出 `run_id` 才算。
+> **这张表是"四条硬规则"第 3 条的机器版**：结论必须对应一条运行记录。人工说"我查过了"不算，脚本能点出 `run_id` 才算。
 
 ### D-9 · 入口审计（5.0 pH｜关键）
 
@@ -271,6 +271,8 @@ tests/test_metrics.py  tests/test_lambda.py  tests/test_bootstrap_repro.py  test
 | 图的编号与含义 | `docs/Conclusions.md` | 图号一旦进汇报材料就冻结 |
 | 汇总表列名 | `results/aggregate/*.csv` | 只加不改（C 的主表按列名读） |
 
+> **全队只有一张冻结登记表**：`README` 第九节（版本号、冻结日期、怎么验、当前状态）。本节只列与你直接相关的那几项；口径冲突时以 README 为准。冻结物被改动 = 该阶段重做，不是"改一下就好"。
+
 ---
 
 ## 6. 时间线与里程碑（以 8 个工作日 / 11-19 汇报为准）
@@ -298,6 +300,8 @@ tests/test_metrics.py  tests/test_lambda.py  tests/test_bootstrap_repro.py  test
 5. **图硬编码数字**：图必须从 `results/aggregate/` 生成，手改的图迟早和表对不上。
 6. **假设证伪后重调**：§7.3 第 8 条，重调等于把预注册作废。
 7. **审计只跑绿不抓错**：测试永远通过，等于没写。
+
+**代码怎么写**：P4 起所有提交的代码按 [`docs/CODE_STYLE.md`](CODE_STYLE.md)——中英双语注释，每个函数写清输入输出、数据来源、配置来源，数字必须有来源。审阅时不看风格，只看"能不能从注释追到数据来源"；追不到的退回重写。
 
 **常见坑**
 
@@ -330,7 +334,8 @@ tests/test_metrics.py  tests/test_lambda.py  tests/test_bootstrap_repro.py  test
 - [ ] 出口审计里"打乱预测 → 图必须变"这条测试存在
 - [ ] `docs/Conclusions.md` 三句话各带区间与作废条件
 - [ ] `docs/Audit Log.md` 两节都写清"自查 / 交叉"的性质，不夸大
-- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第七节）
+- [ ] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/`；有就自己补进 `.gitignore`（README 第五节硬规则 4）
+- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第十节）
 
 ---
 

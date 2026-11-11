@@ -217,6 +217,8 @@ docs/Task List Snapshot D0.md
 | 单位换算规则 | `data/manifests/unit_decisions.csv` | 只能追加，不能覆盖；覆盖等于毁证据 |
 | 三套环境版本 | `environment/*.yml` + `results/env_fingerprints/` | 只能升版本并全表重跑，不能"我这儿装了新版" |
 
+> **全队只有一张冻结登记表**：`README` 第九节（版本号、冻结日期、怎么验、当前状态）。本节只列与你直接相关的那几项；口径冲突时以 README 为准。冻结物被改动 = 该阶段重做，不是"改一下就好"。
+
 ---
 
 ## 6. 时间线与里程碑（以 8 个工作日 / 11-19 汇报为准）
@@ -244,6 +246,8 @@ docs/Task List Snapshot D0.md
 4. **靠猜定单位**：没有证据的换算，宁可丢任务。
 5. **手改 manifest**：manifest 只能由脚本重生成，手改等于伪造。
 
+**代码怎么写**：P4 起所有提交的代码按 [`docs/CODE_STYLE.md`](CODE_STYLE.md)——中英双语注释，每个函数写清输入输出、数据来源、配置来源，数字必须有来源。审阅时不看风格，只看"能不能从注释追到数据来源"；追不到的退回重写。
+
 **常见坑（都有人踩过）**
 
 | 坑 | 现象 | 正确做法 |
@@ -267,7 +271,8 @@ docs/Task List Snapshot D0.md
 - [ ] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径（4 还是 5）
 - [ ] 结构级产物（structures / descriptors）已交 B，并在 `#data` 里通知 C 与 D
 - [ ] OpenPoly 五个数（741 / 3,985 / 443 / 295 / 168）已公布
-- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第七节）
+- [ ] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/`；有就自己补进 `.gitignore`（README 第五节硬规则 4）
+- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第十节）
 
 ---
 

@@ -53,6 +53,32 @@ Thumbs.db
 .vscode/
 .idea/
 
+# ---- agent scaffolding ------------------------------------------------
+# Anything a coding agent creates for itself: a tool cache, a session log,
+# a hidden workspace. None of it is reproducible by a teammate who clones
+# this repository, so none of it belongs in the record.
+# 组员若使用 agent，请自行在本节补全由 agent 生成、无需版本控制的内容。
+.workbuddy/
+.tools/
+.agent/
+.agents/
+.claude/
+.codex/
+.cursor/
+.windsurf/
+.serena/
+.continue/
+.aider*
+*.bak
+*.orig
+*.rej
+
+# ---- throwaway scripts ------------------------------------------------
+# scripts/ keeps the reproducible stage entry points (00-07) and IS
+# committed.  scripts/ 只入库阶段入口；临时/一次性脚本放 _scratch/，
+# 永不提交——它们换个机器就复现不了，留着只会让人误以为能跑。
+scripts/_scratch/
+
 # ---- NEVER ignore these (protocol artefacts and evidence) -------------
 # splits/*.json      <- official 70/30 and 5-fold indices
 # data/manifests/*   <- task lists, sha256, counts
