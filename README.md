@@ -126,7 +126,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（53 个跟踪文件）
+### 4.1 当前结构（54 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -197,6 +197,7 @@ How-Much-Is-a-Chain-Worth/
     ├── 分工_D_评测与图表.md
     ├── CODE_STYLE.md      代码怎么写
     ├── RUN_REQUESTS.md    没有 GPU 时怎么请求代跑
+    ├── DECISIONS.md       决策记录（D-xx 已定）与待决问题（Q-xx）
     └── 交付_P0_环境.md     P0 交付记录：装了什么、怎么验、哪些没做到
 ```
 
@@ -230,8 +231,25 @@ How-Much-Is-a-Chain-Worth/
 | `results/aggregate/` | 汇总 `<name>.csv`（`main_table` / `scaling` / `arch_transfer` / `openpoly_scan`）+ `predictions/<run_id>.parquet` | 手改的数字 |
 | `results/figures/` | 脚本导出的图 `<figN>_<name>.pdf` / `.png` | 截图、从 PPT 里抠出来的图 |
 | `results/env_fingerprints/` | P0 已填 `env_core.json`、`env_gnn.json`、`env_polybert.json`；P5 起一次运行一份 `<run_id>.json` | 环境说明文档（写 `docs/`） |
-| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`）；后续还会有 `DECISIONS.md`（决策记录）、`Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
+| `docs/` | Proposal、四份分工书、`CODE_STYLE.md`、`RUN_REQUESTS.md`、`DECISIONS.md`（决策记录 D-xx 与待决问题 Q-xx，**已建**，口径变更必须登记）、`交付_<阶段>_<主题>.md`（已交付 `交付_P0_环境.md`）；后续还会有 `Audit Log.md`（审计日志）、`Conclusions.md`（结论）、`Task List Snapshot D0.md`（任务清单快照）、`Main Table Notes.md`（主表口径） | 与 README 重复的内容、数据、运行结果 |
 | 仓库根目录 | 只允许 `README.md`、`LICENSE`、`CITATION.cff`、`.gitignore`、`.gitattributes` 五个文件 + 上面九个目录 | 散落文件（`test.py`、`tmp.csv`、`notes.md`、`新建文本文档.txt`） |
+
+#### 4.2.1 阶段入口 00–07 归谁（**写代码之前先看这张表**）
+
+`scripts/` 现在只有 `.gitkeep`，下表是**预先约定**，不是现状。编号只表示"流水线第几步"，不表示谁的私产；谁接手别人的编号，先改这张表并到 `docs/DECISIONS.md` 记一条——否则两个人会各自写出一个 `01_*.py`。
+
+| 编号 | 脚本 | 主责 | 输入 | 输出 |
+|:--|:--|:--|:--|:--|
+| 00 | `00_download.py` | A | `data/manifests/SOURCES.md` | `data/raw/**` + `*_download_manifest.csv` |
+| 01 | `01_harmonise.py` | A | `data/raw/**` | `data/interim/harmonised/*.parquet` + `unit_decisions.csv` |
+| 02 | `02_features.py` | A | `data/interim/harmonised/` | `data/processed/structures/`、`descriptors/`（不入库，靠它重建） |
+| 03 | `03_splits.py` | A | 各基准官方划分索引 | `splits/**`（只读快照） |
+| 04 | `04_run_cpu.py` | C | `configs/**` + `splits/` | `results/raw_runs/*.json`（经典臂批量） |
+| 05 | `05_run_gpu.py` | B | `configs/**` + `splits/` | `results/raw_runs/*.json`（GNN / polyBERT 臂） |
+| 06 | `06_aggregate.py` | C | `results/raw_runs/` | `results/aggregate/main_table.csv` 等 |
+| 07 | `07_figures.py` | D | `results/aggregate/` | `results/figures/figN_*.pdf` / `.png` |
+
+两条附加约定：每个入口必须支持 `--dry-run` / `--limit`（第七节第 5 条）；06 → 07 之间不允许出现"手改过的中间表"，图只能从 `results/aggregate/` 里的文件画。
 
 ### 4.3 不入库的东西
 

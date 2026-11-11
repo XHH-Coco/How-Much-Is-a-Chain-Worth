@@ -50,7 +50,7 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 | 阶段 | A（你） | B GPU 臂 | C CPU 批量 | D 判据与图 |
 |:--|:--|:--|:--|:--|
 | **P0 环境** | ● **主责**：三套环境装包锁版本 | ○ 预取 polyBERT 权重（7.3 GB） | ○ 写 A1/A2 的骨架 | ○ 用合成数据写指标单测 |
-| **P1 获取数据** | ● **主责**：四基准下载 + 完整性 | – | ○ 写超参空间与预算表 | ○ 把 Λ/κ 代码写完 |
+| **P1 获取数据** | ● **主责**：三基准下载 + 完整性 | – | ○ 写超参空间与预算表 | ○ 把 Λ/κ 代码写完 |
 | **P2 清洗与划分** | ● **主责**：标签调和 + 官方划分快照 | ○ 等你的 `processed/`，先写装配 | ○ 等你的特征，先写实验入口 | ● **主责**：指标与 Λ 计算器 |
 | **P3 配置** | ● **主责**：`configs/tasks/` 冻结 | ● `configs/arms/{a3,a4}.yaml` | ● `configs/arms/{a1,a2,a5}.yaml` + 两个实验配置 | ○ 定义汇总表与图的数据契约 |
 | **P4 代码** | ○ 写划分/泄漏测试 | ● **主责**：A3 / A4 臂 | ● **主责**：A1 / A2 / A5 + 三批实验入口 | ● **主责**：Λ / κ / CI / 图 |
@@ -126,12 +126,14 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 |:--|:--|
 | **拿什么** | PolyBench 官方 70/30 划分索引（版本控制下发的索引文件）；PolyBench26 官方 5 折（base seed 42，val/test 各 10%）+ 官方 `scaling_splits` |
 | **怎么做** | 把官方索引**原样快照**成只读文件；写 `tests/test_splits.py`：读快照 → 断言 train/test 索引集合与官方逐位一致、无交集、覆盖全量、fold 数与比例正确；再写一条**泄漏测试**：断言任何特征变换只 fit 在 train 上 |
-| **产出** | `splits/polybench/<task>/official_70_30.json`、`splits/polybench26/<task>/fold_*.json`、`splits/polybench26/scaling/*`（**全部入库、只读**）+ `tests/test_splits.py` |
-| **验收标准** | ① `pytest tests/test_splits.py` 全绿；② 划分文件带 sha256 与来源 URL；③ **任何代码不得重算划分**——写测试扫描 `src/` 里有没有 `train_test_split` 或 `KFold` 被用于评估（只允许出现在超参搜索里）；④ PolyBench 上**不出现 k 折评估**（官方只用固定 70/30） |
+| **产出** | `splits/polybench/<task>/official_70_30.json`、`splits/polybench26/<task>/fold_*.json`、`splits/polybench26/scaling/*`、`splits/openpoly/<task>_official.json`（**全部入库、只读**）+ `tests/test_splits.py` |
+| **验收标准** | ① `pytest tests/test_splits.py` 全绿；② 划分文件带 sha256 与来源 URL；③ **任何代码不得重算划分**——写测试扫描 `src/` 里有没有 `train_test_split` 或 `KFold` 被用于评估（只允许出现在超参搜索里）；④ PolyBench 上**不出现 k 折评估**（官方只用固定 70/30）；⑤ OpenPoly 那份直接快照仓库 `train_and_test_code/` 的划分结果，test 比例与官方一致，不得自己重切（OpenPoly 的划分随其发布仓库下发，不是平台接口） |
 
 > 【红线】 这是课程红线。Proposal §7.5 把"agent 自己切数据"列为**头号失败模式**，而这类错误不抛异常。
 >
 > 【接口】 **D 会拿这条测试来复核你**（入口审计归 D，见 `分工_D`）。他复核的方式不是读你的代码，而是往 `src/` 里故意注入一次 `train_test_split`，看你的测试会不会红。所以"测试写了"不够，**得是能抓住真错的测试**。
+>
+> 【工时】 OpenPoly 那份快照**计入本项 4.0 pH，不单列任务项**（约 0.3 pH 的量）：它的划分随发布仓库下发，不需要向平台申请，也不做断言以外的加工。加这一项是因为 README 第九节第 6 行把 `splits/openpoly/` 也算进了"A 的官方划分快照"，而原来只有 PolyBench 与 PolyBench26 两项——目录留着没人填，C 的 OpenPoly 经典臂就没有划分可用。
 
 ### A-6 · 表征数据生成：PSMILES / wPSMILES / RDKit 描述符（1.5 pH｜关键）
 
@@ -139,10 +141,12 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 |:--|:--|
 | **拿什么** | `data/interim/harmonised/` 的结构列（PSMILES）+ `environment/core.yml`（`rdkit`、`pysmiles`） |
 | **怎么做** | 三个产物：① PSMILES 规范化；② wPSMILES（带重复单元权重）；③ RDKit 描述符矩阵 + Morgan 指纹。全部按结构去重后算一次，再 join 回任务表 |
-| **产出** | `data/processed/structures/psmiles.parquet`、`data/processed/descriptors/<task>.parquet` |
+| **产出** | `data/processed/structures/psmiles.parquet`、`data/processed/descriptors/<task>.parquet`（**均不入库**，见下）+ 生成脚本 `scripts/02_features.py` + 一份记录列数与失败结构的 manifest |
 | **验收标准** | ① 每个主表任务一行一结构，join 后无意外行丢失（丢失数写进日志）；② 解析失败的结构**计数并列出 ID**（RDKit 会给 warning，别让它静默吞掉）；③ 描述符列数、指纹位数记录在 manifest；④ 同一结构重复计算结果一致（缓存命中） |
 
 > 【边界】 你只保证"每个结构算对一次"。**"每个任务的每一行对上正确的结构"是 B 的事**（B-1 用 `row_id` join，并断言行序由 split 文件决定）。别替他做装配，否则他的验收标准就没法独立成立了。
+>
+> 【交付方式】 这两个 parquet **不入库**：`.gitignore` 把 `data/processed/*` 整目录忽略，README §4.3 也是这个口径。所以你交的不是数据文件，而是**"能重建它们的脚本 + manifest"**——B 拿到提交后跑一次 `python scripts/02_features.py` 就得到同一批文件。**交付时在 `#data` 里明确写这一句**，不要只说"已生成"，否则 B 会一直等一个永远不会出现在仓库里的文件。
 
 ### A-7 · OpenPoly 三性质复核（1.0 pH）
 
@@ -150,7 +154,7 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 |:--|:--|
 | **拿什么** | OpenPoly 发布 CSV（**741 行 / 741 个不同 PSMILES / 3,985 条结构-性质标注**） |
 | **怎么做** | 直接数，不要读摘要。逐列统计非空数，重点核 Tg、Dielectric Constant Total、Tm |
-| **产出** | `data/manifests/openpoly_manifest.csv`（列：`property, n_nonnull, usable_after_harmonisation`） |
+| **产出** | `data/manifests/openpoly_property_counts.csv`（列：`property, n_nonnull, usable_after_harmonisation`）**——不要叫 `openpoly_manifest.csv`**：那个名字归 A-2 的下载清单（`openpoly_download_manifest.csv`），两份东西列完全不同，同名会互相覆盖 |
 | **验收标准** | ① 741 行、3,985 个标注、Tg **443**、介电常数 **295**、Tm **168** —— 五项与 §2.3 逐个对上；② 明确写下"**不要用** `final_polymer_property_counts_from_literature.csv`（Tg 58,755 是文献计数，不是可用样本）" |
 
 > 【为什么归你】 这不是"顺手数一下"：C 的 OpenPoly 经典臂要在 n ≤ 443 的网格上跑，D 的 H4 要在同一批样本上求过零点。**分母错了，他们俩的数一起错。** 数完在 `#data` 里报一声，别让他们自己去猜。
@@ -161,7 +165,7 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 |:--|:--|
 | **拿什么** | `ps6c00094_si_001.pdf`（**156 MB**，md5 `fc7861f0839a03f601aaba4a6c4ce4a0`），其中 Table S27 = 39 行"任务 → 分层" |
 | **怎么做** | 转录成 CSV；**只做验证，不做设计依据**。主文已给 Tier 大小 14/15/10 |
-| **产出** | `data/manifests/polybench_tiers_s27.csv` |
+| **产出** | `data/external/table_s27.csv`（**不入库**，与 README §4.2 的 `data/external/` 定名一致；它是从 PDF 转录出来的第三方数据，不是我们生成的清单，所以不放 `manifests/`） |
 | **验收标准** | ① 39 行齐全；② Tier 计数与主文 14/15/10 一致；③ **若与主文冲突，以主文为准**，把冲突任务替换为备用任务并记录日期与理由 |
 
 > 【注意】 这一项**故意不放在关键路径上**：Proposal §3.1 只允许"主文点名了 tier 的"任务进主表，所以设计不依赖这份 PDF。你要是有余力就做，做不完不影响主表；但**不许假装读过**（§2.3 已经写明没读到，别在汇报里翻供）。
@@ -173,22 +177,31 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 ## 3. 交付物清单（文件级）
 
 ```
-configs/tasks/*.yaml                    8 主表 + 3 OpenPoly + 2 机制 + 5 备用
-data/manifests/polybench_manifest.csv   39 行，合计 42,169
-data/manifests/openpoly_manifest.csv    741 / 3,985 / 443 / 295 / 168
-data/manifests/unit_decisions.csv       每条换算一行，带 evidence
-data/manifests/polybench_tiers_s27.csv  可选（验证性）
-data/processed/structures/psmiles.parquet
-data/processed/descriptors/<task>.parquet
-splits/polybench/<task>/official_70_30.json      只读
-splits/polybench26/<task>/fold_*.json            只读
-splits/polybench26/scaling/*                     只读
+【入库】
+configs/tasks/*.yaml                            8 主表 + 3 OpenPoly + 2 机制 + 5 备用
+data/manifests/SOURCES.md                       四个资源入口 + 许可（source_url 的唯一来源）
+data/manifests/polybench_download_manifest.csv  39 行，合计 42,169
+data/manifests/polybench26_download_manifest.csv
+data/manifests/openpoly_download_manifest.csv
+data/manifests/openpoly_property_counts.csv     741 / 3,985 / 443 / 295 / 168
+data/manifests/unit_decisions.csv               每条换算一行，带 evidence
+splits/polybench/<task>/official_70_30.json     只读
+splits/polybench26/<task>/fold_*.json           只读
+splits/polybench26/scaling/*                    只读
+splits/openpoly/<task>_official.json            只读
 results/env_fingerprints/env_{core,gnn,polybert}.json
 tests/test_splits.py  tests/test_no_leakage.py
 docs/Task List Snapshot D0.md
+
+【不入库，靠脚本重建——交的是脚本 + manifest，不是文件】
+data/raw/**                                     原样下载        scripts/00_download.py
+data/interim/harmonised/<task>.parquet          标签调和        scripts/01_harmonise.py
+data/processed/structures/psmiles.parquet       结构规范化      scripts/02_features.py
+data/processed/descriptors/<task>.parquet       描述符与指纹    scripts/02_features.py
+data/external/table_s27.csv                     可选验证性转录   （A-8，手工转录）
 ```
 
-**不入库**：`data/raw/`、`data/interim/`、任何原始 CSV（README 硬规则 1：原始数据永不入库，仓库里只有指针）。
+**不入库的理由不是"文件大"，是硬规则 1：数据本体永不入库，仓库里只有指针。** B/C/D 拿到你的提交后跑对应脚本重建——所以脚本必须可重跑（`--dry-run` / `--limit`）、manifest 必须能证明"重出来的和原来一致"（sha256 与条数）。**交付时写清"跑哪条命令重建"，不要只说"已生成"。**
 
 ---
 
@@ -268,12 +281,12 @@ docs/Task List Snapshot D0.md
 
 - [ ] `git status` 里没有 `data/raw/`、没有大文件、没有 `.ipynb_checkpoints`
 - [ ] 三个环境指纹已入库，版本与 `lock/` 逐行一致；`cd lock && sha256sum -c SHA256SUMS` 全 OK
-- [ ] `polybench_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐
-- [ ] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**
+- [ ] `polybench_download_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐；每行 `source_url` 能在 `SOURCES.md` 找到、`version` 非空
+- [ ] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**；`splits/openpoly/` 里已有官方划分快照
 - [ ] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过
 - [ ] `unit_decisions.csv` 每条都有 `evidence`，行数差能对上
 - [ ] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径（4 还是 5）
-- [ ] 结构级产物（structures / descriptors）已交 B，并在 `#data` 里通知 C 与 D
+- [ ] 结构级产物（structures / descriptors）**不入库**，已确认 `python scripts/02_features.py` 能从 `data/interim/` 重建，并在 `#data` 里写明重建命令（不是"已生成"）
 - [ ] OpenPoly 五个数（741 / 3,985 / 443 / 295 / 168）已公布
 - [ ] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/`；有就自己补进 `.gitignore`（README 第五节硬规则 4）
 - [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第十节）
