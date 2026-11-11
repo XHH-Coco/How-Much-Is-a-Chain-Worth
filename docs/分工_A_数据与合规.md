@@ -142,6 +142,8 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 > **状态：已交付 2026-11-12**（仓库所有者代做）。**14 份官方快照 + 30 份 OpenPoly 规则复现划分**落 `splits/`：PolyBench **10 份**行号 JSON（6 主表 + 4 备用）、PolyBench26 **4 份**官方 `seed_42/` 原样拷贝（2 主表 + 机制 Cp 的 2 个数据集）、OpenPoly **3 任务 × 10 种子 = 30 份**（`rule_replicated_seed*.json`）。八条验收标准：**原判 7 通过 + 第 ⑤ 条停住；同日复核后 ⑤ 改判为通过**（形态不同：不是官方快照，是按论文规则复现）。凭据见 [`docs/交付_P1_A5_官方划分快照.md`](交付_P1_A5_官方划分快照.md) §9。
 >
+> **勘误 2026-11-12（D-28）**：`leakage` 里的跨集结构数原按**原始 PSMILES 串**统计（Tg seed 0 记 15 个），而同一根链有两种写法 —— 按 RDKit 规范式实为 **28 个**（Tm 17 个、介电 0 个）。已改为双口径记账并重生成 30 份划分，**划分成员字节未变**，只有 `leakage` 块与文件指纹变了。
+>
 > **四条已验证、会改变后来做法的事实**（细节在该文档 §2–§4）：① **PolyBench 的官方划分只有一份固定的 70/30 测试集，没有 seed 维度**（`&seed=0/1/2` 返回字节完全相同），`eval_unit` 里的"×3"是**模型种子**不是三份划分（D-20）；② **canonical PSMILES 表要本地物化**，且必须写成 LF——Windows 下 pandas 默认 CRLF，官方 `manage_scaling_indices.py verify` 会直接报 checksum mismatch，归一后与官方 `canonical_sha256` 逐位相等（D-21）；③ **OpenPoly 是「规则公布了、结果没发布」**：论文正文写了 8:1:1 + 值域 10 等宽箱分层，缺的只是那一份划分与**随机种子**；因此按规则复现 10 份、公开种子、报区间（D-24，改判 D-22）——`NOT_AVAILABLE.json` 已删除，结论由 `splits/openpoly/PROTOCOL.json` 的 `supersedes` 承接。**仍然不接受「随手按 8:1:1 切一刀」**：复现要引文、公开种子、带箱边界、可逐位重算并明写「不是作者那一份」；④ **划分状态变五态**：`present` / `rule_replicated` / `blocked_upstream` / `deferred` / `pending`（最后一态只允许不可用任务）（D-23 + D-24）。
 >
 > **你的下一步（A-6）**：结构产物（PSMILES / wPSMILES / 描述符）**不入库**，交付的是"能重建它们的脚本 + manifest"。注意 `data/raw/polybench26/Datasets/PSMILES/` 现在有 A-5 物化出来的 canonical 表（49 张），**可以复用它**，但不要把"本地物化"当成"官方发布"——两类文件在 `PROVENANCE` 上不一样。
@@ -330,20 +332,26 @@ data/external/table_s27.csv                     可选验证性转录   （A-8�
 
 ## 8. 交接前自检（逐条打勾再 push）
 
-- [ ] `git status` 里没有 `data/raw/`、没有大文件、没有 `.ipynb_checkpoints`
-- [ ] 三个环境指纹已入库，版本与 `lock/` 逐行一致；`cd lock && sha256sum -c SHA256SUMS` 全 OK
-- [ ] `polybench_download_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐；每行 `source_url` 能在 `SOURCES.md` 找到、`version` 非空
-- [ ] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**；`splits/openpoly/` 里已有官方划分快照
-- [ ] canonical PSMILES 表的 sha256 与 `splits/polybench26/*/seed_42/manifest.json` 的 `canonical_sha256` 相等；`manage_scaling_indices.py verify` 通过；`train_pool[:N]` 前缀断言有单独测试且能抓错
-- [ ] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过 ｜ **已过（18 份；`PYTHONPATH=src python -m chainworth.io.tasks --verify`）**
-- [ ] `unit_decisions.csv` 每条都有 `evidence`，行数差能对上
-- [ ] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径（4 还是 5）｜ **已过（5 臂，D-17）**
-- [ ] 结构级产物（structures / descriptors）**不入库**，已确认 `python scripts/02_features.py` 能从 `data/interim/` 重建，并在 `#data` 里写明重建命令（不是"已生成"）
-- [ ] OpenPoly 五个数（741 / 3,985 / 443 / 295 / 168）已公布
-- [ ] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/`；有就自己补进 `.gitignore`（README 第五节硬规则 4）
-- [ ] 提交信息写清"做了什么 / 没做什么 / 下一步是什么"（README 第十节）
+> **2026-11-12 整体验收：12 条全部复核通过**（命令与输出见 `docs/验收_P1_分工A.md`）。下面每条都写了"怎么验的"，
+> 后来者可以直接重跑，不用信这句话。
 
----
+- [x] `git status` 里没有 `data/raw/`、没有大文件、没有 `.ipynb_checkpoints` —— 干净；`data/raw/` 只有 `.gitkeep` 被跟踪
+- [x] 三个环境指纹已入库，版本与 `lock/` 逐行一致；`cd lock && sha256sum -c SHA256SUMS` 全 OK
+      —— **6/6 OK**；三份指纹 `pip` 锁 0 条版本不符；`import` 实测 core 8 个 / gnn 3 个 / polybert 1 个核心包全通
+- [x] `polybench_download_manifest.csv` 39 行，条数合计 42,169，与附录 A 逐行对齐；每行 `source_url` 能在 `SOURCES.md` 找到、`version` 非空
+      —— 39/39 行名字与条数逐个相等；`source_url` 全部形如 `https://ndownloader.figshare.com/files/<id>`（该形态登记在 `SOURCES.md` §2.1，逐文件 ID 在 `polybench_expected_files.csv`）
+- [x] `pytest tests/test_splits.py tests/test_no_leakage.py` 全绿，且**故意注入错误时会红**；`splits/openpoly/` 里已有官方划分快照
+      —— 两份合跑全绿；`test_splits.py` 里有"注入一次 `train_test_split` 必红"，`test_no_leakage.py` 里有"注入一次全量 `fit` 必红"
+- [x] canonical PSMILES 表的 sha256 与 `splits/polybench26/*/seed_42/manifest.json` 的 `canonical_sha256` 相等；`manage_scaling_indices.py verify` 通过；`train_pool[:N]` 前缀断言有单独测试且能抓错
+      —— `03_splits.py --verify --deep` 通过；官方自检输出 `Verified 4 compact scaling-index packages`；前缀断言 `test_nested_prefix_is_a_prefix_and_nests`
+- [x] 8 个 `configs/tasks/*.yaml` 齐全，2 个/分层，字段校验通过 —— **已过（18 份；`python -m chainworth.io.tasks --verify`）**
+- [x] `unit_decisions.csv` 每条都有 `evidence`，行数差能对上 —— 30 条决策 `evidence` 全非空；10 个调和任务行数差 0 = 决策之和 0，弃用的 3,380 行记在 `exclude_task`
+- [x] `docs/Task List Snapshot D0.md` 有冻结时间戳，且写明了 arm 数量的口径 —— **已过（5 臂，D-17；冻结时刻 2026-11-12T03:48:00+08:00）**
+- [x] 结构级产物（structures / descriptors）**不入库**，已确认 `python scripts/02_features.py` 能从 `data/interim/` 重建，并在 `#data` 里写明重建命令
+      —— `git ls-files data/processed` 为空；`02_features.py --verify` 通过；提交信息与 README §4.2 都写了重建命令
+- [x] OpenPoly 五个数（741 / 3,985 / 443 / 295 / 168）已公布 —— `openpoly_property_counts.csv` + `python -m chainworth.io.openpoly --verify`
+- [x] `git status` 里没有 agent 自建目录（`.workbuddy/`、`.tools/` 等）或 `scripts/_scratch/` —— 三者都在 `.gitignore` 里；`git status --ignored` 可见但未入库
+- [x] 提交信息写清"做了什么 / 没做什么 / 下一步是什么" —— A-1 至 A-8 九次提交逐条核对，均为三段式
 
 ## 9. 工时口径核对（全队共用一张表）
 

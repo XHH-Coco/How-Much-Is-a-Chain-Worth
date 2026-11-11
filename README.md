@@ -130,7 +130,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 |---|---|---|---|---|
 | **P0 环境** | 三个 conda 环境装包、锁版本 | `environment/` + `lock/` | 每个环境能 import 自己的核心包，版本可复现 | **已交付 2026-11-11**，见 `docs/交付_P0_环境.md` |
 | **P1 获取数据** | 下载**三个**基准（第四个 MoleculeNet/PCQM4Mv2 只登记不复现，见 `docs/DECISIONS.md` D-02），算摘要 | `data/raw/` + `data/manifests/` | 条数与官方发布一致（PolyBench 必须 39 条、合计 42,169），每个文件有 sha256 | **已交付 2026-11-12**：三份清单齐备；PolyBench 39 行 / 42,169 / 与附录 A 逐行对齐，39/39 核过官方 md5，见 `docs/交付_P1_A2_下载与完整性.md` §9 |
-| **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照；结构级特征算一次 | `data/interim/` + `data/processed/`（结构级，不入库）+ `splits/` | 划分文件带校验，任何人不得改写；特征文件带 sha256 与列序字典 | **◐ 标签调和已交付 2026-11-12**（A-3：10 个任务调和入库、4 条验收标准全过，见 `docs/交付_P1_A3_标签调和.md` §5）；**官方划分快照已交付 2026-11-12**（A-5：14 份官方快照 + 30 份 OpenPoly 规则复现划分，8 条验收全过——⑤ 条由「停住」改判为「规则复现」，D-24，见 `docs/交付_P1_A5_官方划分快照.md` §9）；**结构级表征已交付 2026-11-12**（A-6：11,494 个结构 × 205 描述符 + 2048 位指纹，116 个结构拒绝 wPSMILES，见 `docs/交付_P1_A6_结构表征.md`）；**OpenPoly 分母已复核 2026-11-12**（A-7：741 / 3,985 / 443 / 295 / 168 五个靶子全对，但 741 行只有 585 个规范结构、Tg 443 行只有 304 个结构且重复标签全部矛盾，D-26 / Q-06，见 `docs/交付_P1_A7_OpenPoly复核.md`）；**Table S27 已转录 2026-11-12**（A-8：39 行 14/15/10、合计 42,169 四处一致；主表 6 任务与 SI 全部一致故替换条款未触发；唯一分歧 σy 是让计数成立的唯一解，D-27 / Q-07，见 `docs/交付_P1_A8_S27转录.md`） |
+| **P2 清洗与划分** | 统一记录格式；官方划分做成只读快照；结构级特征算一次 | `data/interim/` + `data/processed/`（结构级，不入库）+ `splits/` | 划分文件带校验，任何人不得改写；特征文件带 sha256 与列序字典 | **已交付 2026-11-12**（A-3 / A-5 / A-6 三件主体，A-7 复核与 A-8 转录同日补做；整体验收见 `docs/验收_P1_分工A.md`）（A-3：10 个任务调和入库、4 条验收标准全过，见 `docs/交付_P1_A3_标签调和.md` §5）；**官方划分快照已交付 2026-11-12**（A-5：14 份官方快照 + 30 份 OpenPoly 规则复现划分，8 条验收全过——⑤ 条由「停住」改判为「规则复现」，D-24，见 `docs/交付_P1_A5_官方划分快照.md` §9）；**结构级表征已交付 2026-11-12**（A-6：11,494 个结构 × 205 描述符 + 2048 位指纹，116 个结构拒绝 wPSMILES，见 `docs/交付_P1_A6_结构表征.md`）；**OpenPoly 分母已复核 2026-11-12**（A-7：741 / 3,985 / 443 / 295 / 168 五个靶子全对，但 741 行只有 585 个规范结构、Tg 443 行只有 304 个结构且重复标签全部矛盾，D-26 / Q-06，见 `docs/交付_P1_A7_OpenPoly复核.md`）；**Table S27 已转录 2026-11-12**（A-8：39 行 14/15/10、合计 42,169 四处一致；主表 6 任务与 SI 全部一致故替换条款未触发；唯一分歧 σy 是让计数成立的唯一解，D-27 / Q-07，见 `docs/交付_P1_A8_S27转录.md`） |
 | **P3 配置** | 任务、实验、处理的配置文件 | `configs/` | 每个配置能被读取并校验，错配即报错 | **◐ 任务清单已冻结 2026-11-12**（A-4：18 份 `configs/tasks/*.yaml` + 快照，见 `docs/交付_P1_A4_任务清单冻结.md`）；`configs/arms/`、`configs/experiments/` 未开始 |
 | **P4 代码** | 按分层实现 | `src/chainworth/` | 单元测试通过，同 seed 两次结果逐位相同 | 未开始 |
 | **P5 运行** | 按配置跑，逐次落记录 | `results/raw_runs/` | 每个数字都能追到某一次运行 | 未开始 |
@@ -144,7 +144,7 @@ git remote -v          # 必须是 XHH-Coco/How-Much-Is-a-Chain-Worth
 
 **这一节是结构说明书，和磁盘必须一致。** 树的唯一来源是 `git ls-files`（不是手写记忆）。**改了结构却不在同一次提交里改本节，这次提交就算没做完**（见第十节）。
 
-### 4.1 当前结构（191 个跟踪文件）
+### 4.1 当前结构（193 个跟踪文件）
 
 ```text
 How-Much-Is-a-Chain-Worth/
@@ -205,7 +205,7 @@ How-Much-Is-a-Chain-Worth/
 │
 ├── scripts/             ← P1 起填：阶段入口 00–07（入库，必须可重跑）
 │                        ← 已填 `00_download.py`（A-2）、`01_harmonise.py`（A-3）、`02_features.py`（A-6：结构表征 + `--verify --deep`）、`03_splits.py`（A-5）
-├── tests/               ← P4 起填（A-3 已先落 `test_harmonise.py`：17 项；A-4 落 `test_task_configs.py`：15 项；A-5 落 `test_splits.py`：28 项；A-6 落 `test_features.py`：35 项，其中 deep 那项要 `CHAINWORTH_SLOW=1`；A-7 落 `test_openpoly_counts.py`：16 项；A-8 落 `test_table_s27.py`：26 项，其中 PDF 回查 2 项要 SI 原件 + `pypdf`）
+├── tests/               ← P4 起填（A-3 已先落 `test_harmonise.py`：17 项；A-4 落 `test_task_configs.py`：15 项；A-5 落 `test_splits.py`：41 个用例（23 个函数，含参数化）；A-6 落 `test_features.py`：35 项，其中 deep 那项要 `CHAINWORTH_SLOW=1`；A-7 落 `test_openpoly_counts.py`：16 项；A-8 落 `test_table_s27.py`：26 项，其中 PDF 回查 2 项要 SI 原件 + `pypdf`；整体验收补 `test_no_leakage.py`：10 项，含「`src/` 里出现全量 `fit` 即红」与「OpenPoly 泄漏数按规范式重算」）
 │
 ├── results/             ← P5 起填（P0 已先落三份环境指纹）
 │   ├── raw_runs/        一次运行一份 JSON（入库）
@@ -234,6 +234,7 @@ How-Much-Is-a-Chain-Worth/
     ├── 交付_P1_A6_结构表征.md      A-6 交付记录：11,494 个结构怎么算出来的、116 个为什么没有 wPSMILES、四条验收怎么过的
     ├── 交付_P1_A7_OpenPoly复核.md  A-7 交付记录：五个分母怎么数的、741 行为什么不是 741 种材料、counts 文件为什么不能用
     ├── 交付_P1_A8_S27转录.md      A-8 交付记录：156 MB SI 怎么拿到的（PMC 的 POW 挑战）、39 行 14/15/10、σy 那一处分歧为什么反而证明转录是对的
+    ├── 验收_P1_分工A.md            **A-1→A-8 整体验收记录**：怎么验的、八项结论、改了哪三处（含缺失的 `test_no_leakage.py` 与泄漏口径勘误 D-28）
     └── Task List Snapshot D0.md   **任务清单快照（冻结物）**：冻结时刻、清单表、替换登记
 ```
 
@@ -398,8 +399,8 @@ conda env update -n DSC6020_Project_Polybert -f environment/polybert.yml --prune
 | # | 冻结点 | 位置 | 冻结于 | 怎么验 | 状态 |
 |---:|---|---|---|---|---|
 | 1 | 三套环境版本 | `environment/*.yml`（声明）+ `lock/*.{conda,pip}.txt`（精确） | **P0 · 2026-11-11** | `lock/SHA256SUMS`（6 个文件）+ 三份 `results/env_fingerprints/env_*.json`；重建时 `pip install -r --dry-run` 应全部 `already satisfied` | **已冻结 v2（2026-11-11 21:26，`280f60506e9e` / `a91f0654a867` / `f636dab33d98`；v1 为 `f67dec4a853e` / `90e3560567ca` / `e6b7bbcc639b`）。v2 = v1 + `pyarrow==17.0.0`（parquet 引擎），conda 层字节未变** |
-| 2 | 原始下载文件 | `data/raw/` | P1 | `data/manifests/*.sha256`，一个文件一行 | 未冻结（待 P1） |
-| 3 | 任务清单与条数 | `data/manifests/tasks_*.csv` | P1 | 条数与官方发布逐行对齐 + sha256 | 未冻结（待 P1） |
+| 2 | 原始下载文件 | `data/raw/`（**不入库**，只有 `.gitkeep`） | **P1 · 2026-11-12** | 三份下载清单的 `sha256` 列（`polybench` 39 行 / `polybench26` 69 行 / `openpoly` 5 行）+ `python scripts/00_download.py --verify-only`（不出网，逐份核官方 md5 与 sha256） | **A-2 已交（2026-11-12）**：39 份 CSV 逐份对上 figshare `supplied_md5`，清单合计 42,169 与附录 A 逐行一致；字节可证、传输无机器日志（403，D-13 / D-14） |
+| 3 | 任务清单与条数 | `data/manifests/polybench_download_manifest.csv` + `polybench_expected_files.csv` + `openpoly_property_counts.csv` | **P1 · 2026-11-12** | 条数与官方发布逐行对齐 + `sha256`；`python -m chainworth.io.openpoly --verify` 每次重算 741 / 3,985 / 443 / 295 / 168 | **A-2 / A-7 已交（2026-11-12）**：39 行 / 42,169 与附录 A 逐行一致；OpenPoly 五个分母全对，但 741 行只有 585 个规范结构（D-26） |
 | 4 | 单位换算决策 | `data/manifests/unit_decisions.csv` | P2 | 只能追加、不能覆盖；每行带 evidence；`python scripts/01_harmonise.py --verify` 逐条核 | **A-3 已交 v1（2026-11-12，30 行，sha256 见 `git log` 该文件首条提交）**，P2 划分完成后一并冻结 |
 | 5 | 清洗后的规范表 | `data/interim/`、`data/processed/` | P2 | 行数/列数断言 + sha256：A-3 用 `harmonised_manifest.csv` 的 `rows_out` + `parquet_sha256`；A-6 用 `structures_manifest.csv` + `features_manifest.csv` 的行数、205 列列序、`n_nan_cells`，`python scripts/02_features.py --verify` 一跑即知 | **A-3 已交 v1（2026-11-12，10 张表）；A-6 已交 v1（2026-11-12，11,494 结构 / 20,660 行 / 10 份特征表）**，P2 结束后一并冻结 |
 | 6 | 官方划分快照 | `splits/polybench/`、`splits/polybench26/`、`splits/openpoly/` | P2 | 每份文件的 sha256（json 与 npz 都算），`tests/test_splits.py` 断言；PolyBench26 另需 `canonical_sha256` 与 `train_pool[:N]` 前缀断言；OpenPoly 需按种子重算一致（`--deep`） | **A-5 已交 v1（2026-11-12）：14 份官方快照（PolyBench 10 + PolyBench26 4）+ 30 份 OpenPoly 规则复现划分**，指纹表 `data/manifests/splits_manifest.csv`（44 行）与 `openpoly_split_manifest.csv`（30 行），`python scripts/03_splits.py --verify --deep` 通过。注意 OpenPoly 那 30 份是 `rule_replicated`（D-24），**不是官方那一份** |

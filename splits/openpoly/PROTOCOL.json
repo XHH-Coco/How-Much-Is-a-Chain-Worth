@@ -72,12 +72,12 @@
  "known_limitations": [
   "与论文不是同一份划分，绝对 R² 不可逐位对比；H4 的臂间对比（同一划分内）不受影响",
   "8:1:1 下 Tm 的测试集只有约 17 条，单份划分的 R² 方差很大——这正是要报 R 份区间的原因",
-  "741 行只含 656 个不同 PSMILES，官方规则不按结构分组，跨集结构泄漏由 leakage 字段记账"
+  "741 行只含 656 个原始串 / 585 个 RDKit 规范结构（A-7），官方规则不按结构分组；跨集结构泄漏由每份划分文件的 leakage 字段记账，主口径为规范式（n_psmiles_shared_across_splits）"
  ],
  "affected_tasks": [
   "op_tg",
   "op_dielectric_constant_total",
   "op_tm"
  ],
- "generated_at": "2026-11-12T04:46:56+08:00"
+ "generated_at": "2026-11-12T07:11:43+08:00"
 }

@@ -64,15 +64,17 @@
   "n_labels": 443
  },
  "leakage": {
-  "n_psmiles_shared_across_splits": 21,
+  "structure_basis": "rdkit_canonical_smiles",
+  "n_psmiles_shared_across_splits": 35,
+  "n_raw_strings_shared_across_splits": 21,
   "examples": [
-   "CC(C)(C1=CC=C(OC([*])=O)C=C1)C2=CC=C(O[*])C=C2",
-   "N[C@@H]1[C@@H](O)[C@H](O[*])[C@@H](CO)O[C@H]1[*]",
-   "O[C@@H]1[C@H](O)[C@H](O[*])[C@@H](CO)O[C@H]1[*]",
-   "[*]C(C)C(O[*])=O",
-   "[*]C([H])([H])C([H])([H])[*]"
+   "*C/C=C/C*",
+   "*CC(*)(C)C(=O)O",
+   "*CC(*)(C)C(=O)OCCCC",
+   "*CC(*)(C)C(=O)OCCN(C)C",
+   "*CC(*)(F)F"
   ],
-  "note": "官方规则不按结构分组；这里是量出来的既有事实，不是我们引入的偏差"
+  "note": "官方规则不按结构分组；口径为 RDKit 规范式（同一根链的不同写法已合并），另记 n_raw_strings_shared_across_splits 作对照，两者之差就是「换了种写法」的那部分。这是量出来的既有事实，不是我们引入的偏差"
  },
  "source_row": [
   0,

@@ -1418,16 +1418,32 @@ def build_openpoly_split(config: Mapping[str, Any], *, seed: int) -> dict[str, A
     edges = equal_width_edges(values, OPENPOLY_BINS)
     per_bin = [len(members) for members in _bin_members(edges, values)]
 
-    # 结构泄漏：同一 PSMILES 在 741 行里可能重复（656 个不同结构），若同结构跨进训练与测试，
-    # 那是结构级泄漏。官方规则没有去重，我们照规则切、但把这件事**量出来记账**（D-24）。
-    # Structural leakage: the 741 rows hold only 656 distinct PSMILES, so one structure can land
-    # in both train and test. The official rule does not group, so we follow it and *measure* it.
-    structures = subset["PSMILES"].astype(str).to_numpy()
-    seen: dict[str, set[str]] = {}
-    for name, indices in parts.items():
-        for structure in structures[indices]:
-            seen.setdefault(structure, set()).add(name)
-    shared = [structure for structure, names in seen.items() if len(names) > 1]
+    # 结构泄漏：同一根链在 741 行里可能重复（656 个原始串 / 585 个规范式，见 A-7），若同结构跨进
+    # 训练与测试，那是结构级泄漏。官方规则没有去重，我们照规则切、但把这件事**量出来记账**（D-24）。
+    #
+    # 口径必须是**规范化之后**的串：同一根链可以有两种写法（A-7 实测 656 → 585，62 行是"换了种写法的
+    # 同一根链"）。只比原始串会把这部分漏掉，把泄漏数报低将近一半（Tg seed 0：原始串 15、规范式 28，
+    # 见 D-28 勘误）。两个数都写进产物：规范式那个是主口径，原始串那个留作对照，便于和早期版本对账。
+    # The count must be taken on **canonical** SMILES: one chain can be written two ways (A-7 measured
+    # 656 raw strings but only 585 canonical structures). Comparing raw strings under-reports the
+    # leakage by nearly half (Tg seed 0: 15 raw vs 28 canonical, see D-28). Both counts are stored;
+    # canonical is the headline, the raw one is kept for reconciliation with earlier artefacts.
+    raw_structures = subset["PSMILES"].astype(str).to_numpy()
+    canonical_structures = np.array(
+        [canonical_smiles(smiles) or f"<unparsed>{smiles}" for smiles in raw_structures],
+        dtype=object,
+    )
+
+    def _shared_across_splits(structures: np.ndarray) -> list[str]:
+        """返回出现在 ≥2 个划分里的结构（按传入口径）。/ Structures present in >=2 splits."""
+        seen: dict[str, set[str]] = {}
+        for name, indices in parts.items():
+            for structure in structures[indices]:
+                seen.setdefault(str(structure), set()).add(name)
+        return [structure for structure, names in seen.items() if len(names) > 1]
+
+    shared = _shared_across_splits(canonical_structures)
+    shared_raw = _shared_across_splits(raw_structures)
 
     ratios = {name: round(len(indices) / len(values), 6) for name, indices in parts.items()}
     return {
@@ -1465,9 +1481,13 @@ def build_openpoly_split(config: Mapping[str, Any], *, seed: int) -> dict[str, A
             "n_labels": int(len(values)),
         },
         "leakage": {
+            "structure_basis": "rdkit_canonical_smiles",
             "n_psmiles_shared_across_splits": len(shared),
+            "n_raw_strings_shared_across_splits": len(shared_raw),
             "examples": sorted(shared)[:5],
-            "note": "官方规则不按结构分组；这里是量出来的既有事实，不是我们引入的偏差",
+            "note": "官方规则不按结构分组；口径为 RDKit 规范式（同一根链的不同写法已合并），"
+            "另记 n_raw_strings_shared_across_splits 作对照，两者之差就是「换了种写法」的那部分。"
+            "这是量出来的既有事实，不是我们引入的偏差",
         },
         "source_row": [int(value) for value in source_row],
         "train_index": [int(value) for value in parts["train"]],
@@ -1569,7 +1589,9 @@ def write_openpoly_protocol_note(*, dry_run: bool = False) -> dict[str, Any]:
         "known_limitations": [
             "与论文不是同一份划分，绝对 R² 不可逐位对比；H4 的臂间对比（同一划分内）不受影响",
             "8:1:1 下 Tm 的测试集只有约 17 条，单份划分的 R² 方差很大——这正是要报 R 份区间的原因",
-            "741 行只含 656 个不同 PSMILES，官方规则不按结构分组，跨集结构泄漏由 leakage 字段记账",
+            "741 行只含 656 个原始串 / 585 个 RDKit 规范结构（A-7），官方规则不按结构分组；"
+            "跨集结构泄漏由每份划分文件的 leakage 字段记账，主口径为规范式"
+            "（n_psmiles_shared_across_splits）",
         ],
         "affected_tasks": ["op_tg", "op_dielectric_constant_total", "op_tm"],
         "generated_at": _now_iso(),
