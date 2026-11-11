@@ -59,7 +59,9 @@ Proposal §2.1 的结论是「四个资源，其中两个承载结果」。A-2 �
 >
 > 【2026-11-11 当晚更正】红线原文写的是"`scaling_splits` 必须原样取"，**这条按字面做不到**：`Datasets/scaling_splits/` 被官方 gitignore，只存在于跑过 `generate_scaling_datasets.sh` 的本地机器上，仓库里没有可取的实体。可行且等价的解法是取 **`Datasets/scaling_indices/`**——官方入库的紧凑索引（整数行号 + PSMILES sha256），再用官方前缀规则 `train_pool[:N]` 展开。**判定标准不变：划分必须可追到官方发布物，不得由我们的代码决定谁进训练集。** A-5 的产出路径与工序需据此调整，见 §4 第 2 条。
 >
-> 【坑四】**MIT 不等于数据可以随便用。** 仓库 LICENSE 是 MIT，但 README 明说 MIT 只管软件；`DATA_PROVENANCE.md` 逐源列了许可，四档不同：OPoly26/OMersBench 与 PolyMetriX 是 CC BY 4.0（可入库派生，须署名）、VIPEA 是 MIT、**polyVERSE 的 EA/IP 是 GTRC 协议**（须随附 GTRC 全文、免费分发、不得商用——所以 `bandgap`、`Ionization Energy_Ei` 这类来自 polyVERSE 的任务，其结果表能不能公开要先看 GTRC）、**PoLyInfo 完全不得再分发**。我们的三个主表任务都落在 CC BY 4.0 档，入库 `data/manifests/` 与 `splits/` 没有问题，但**署名与许可声明必须随表走**。
+> 【坑四】**MIT 不等于数据可以随便用。** 仓库 LICENSE 是 MIT，但 README 明说 MIT 只管软件；`DATA_PROVENANCE.md` 逐源列了许可，四档不同：OPoly26/OMersBench 与 PolyMetriX 是 CC BY 4.0（可入库派生，须署名）、VIPEA 是 MIT、**polyVERSE 的 EA/IP 是 GTRC 协议**（须随附 GTRC 全文、免费分发、不得商用）、**PoLyInfo 完全不得再分发**。**我们主表选的两个 PolyBench26 任务（PolyMetriX Tg、同聚物 MD density）都落在 CC BY 4.0 档，入库 `data/manifests/` 与 `splits/` 没有问题**，但署名与许可声明必须随表走。落在 GTRC 档的是 PolyBench26 的 EA/IP 两个任务，我们没选；`PoLyInfo` 全程不碰。
+>
+> 【注意·别串】PolyBench（平台那 39 个任务）里也有 `bandgap`、`Ionization Energy_Ei` 这些名字，但它们属于**另一个数据集**、走 PolyBench 自己的 CC BY 4.0。不要把 PolyBench26 的 polyVERSE 许可套到 PolyBench 的任务头上，反之亦然。
 >
 > 【坑五】**索引是行号，行号没有独立意义。** `scaling_indices/` 存的是整数下标，它绑定的是"官方脚本从 tracked 源文件生成 PSMILES 表时的那个顺序"。换了源文件版本、换了生成脚本，同样的行号指向的就是别的分子，而且**不会报错**——只会安静地算出一组错的 R²。所以快照索引时必须同时钉住三样：① 仓库 commit sha；② `Cleaned_OMersBench_v3_final.jsonl` 与 `Tg.csv` 的 sha256（官方已公布，见上表，A-2 下载后直接核对）；③ `generate_basic_datasets.sh` 的 commit。三者缺一，快照就是不可复现的。
 
