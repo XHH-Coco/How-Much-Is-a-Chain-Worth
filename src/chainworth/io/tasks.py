@@ -96,7 +96,7 @@ BENCHMARKS = ("polybench", "polybench26", "openpoly")
 ROLES = ("main", "reserve", "boundary", "mechanism")
 SOURCE_KINDS = ("experimental", "md", "dft", "mixed")
 UNIT_STATUS = ("verified", "unverified", "not_required")
-SPLIT_STATUS = ("pending", "present", "blocked_upstream", "deferred")
+SPLIT_STATUS = ("pending", "present", "blocked_upstream", "deferred", "rule_replicated")
 TASK_STATUS = ("available", "unavailable")
 
 # 臂名与 `configs/arms/<arm>.yaml` 一一对应（README §4.2）；Q-01 结案后主表固定为 5 臂（D-17）。
@@ -167,7 +167,7 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return loaded
 
 
-def load_task_config(path: Path) -> dict[str, Any]:
+def load_task_config(path: Path, *, allow_missing_split: bool = False) -> dict[str, Any]:
     """读取一份任务配置并逐项校验，返回可直接给下游用的 dict。
 
     Load one task config, validate it field by field, and return a downstream-ready dict.
@@ -176,7 +176,10 @@ def load_task_config(path: Path) -> dict[str, Any]:
         用途：本模块的主入口。校验分四层：① 键集合（缺失、拼错）；② 枚举与类型；③ 内部自洽
               （单位状态与单位值、tier 与依据、n 与 datasets 之和、文件名与 task_id）；
               ④ 与上游清单的相等性（见 `cross_check_upstream`）。
-        输入：path —— `configs/tasks/<task_id>.yaml`。
+        输入：path —— `configs/tasks/<task_id>.yaml`；allow_missing_split —— 允许"划分产物
+              还没落盘"（只有阶段入口 03 该用：它就是去生成那些文件的，若加载器先要求文件
+              存在，这个阶段永远起不来。`03_splits.py --verify` 与 `verify_splits()` 会
+              重新查一遍，所以严格性没有丢，只是从加载器挪到了校验器）。
         输出：dict，键集合 = TASK_KEYS_REQUIRED + 实际出现的可选键；`path` 不写进返回值
               （配置内容与它在磁盘上的位置无关，位置由 task_id 决定）。
         数据来源：磁盘上的 yaml。
@@ -189,7 +192,10 @@ def load_task_config(path: Path) -> dict[str, Any]:
         (missing or misspelled); (2) enums and types; (3) internal consistency (unit status vs
         unit value, tier vs basis, n vs sum of datasets, file name vs task_id); (4) equality
         against upstream manifests (see cross_check_upstream).
-        Args: path - one `configs/tasks/<task_id>.yaml`.
+        Args: path - one `configs/tasks/<task_id>.yaml`; allow_missing_split - tolerate a split
+        artefact that is not on disk yet (stage 03 only: it is the thing that creates them, so
+        a loader demanding their existence would make the stage unstartable; `verify_splits()`
+        re-checks, so strictness moves from the loader to the verifier, it is not lost).
         Returns: dict whose keys are TASK_KEYS_REQUIRED plus whatever optional keys appeared.
         Data source: the yaml on disk. Config: the schema constants above.
         Side effects: none. Raises: TaskConfigError listing ALL problems, not only the first.
@@ -286,15 +292,16 @@ def load_task_config(path: Path) -> dict[str, Any]:
                     errors.append(f"n_labels={n_labels} 与 datasets 的 n_rows 之和 {total} 不等")
 
     # ⑦ 划分：声明 present 就必须真有文件；deferred 必须真有"为什么没落盘"的说明；
-    #    blocked_upstream 只允许出现在 OpenPoly（D-22）；pending 只登记不报错。
-    # split declared present must exist; deferred needs its README; blocked_upstream is
-    # OpenPoly-only; pending is only recorded.
+    #    rule_replicated 只允许 OpenPoly，且目录里必须真有 ≥5 份规则复现的划分（D-24）；
+    #    blocked_upstream 只允许出现在 OpenPoly（D-22，若作者回信补发划分则回退到这一态）；pending 只登记不报错。
+    # split declared present must exist; deferred needs its README; rule_replicated is OpenPoly-only
+    # and needs at least five reproduced splits on disk (D-24); blocked_upstream is OpenPoly-only.
     split_ref = raw.get("split_ref")
     split_status = raw.get("split_status")
     if split_status == "present":
         if not isinstance(split_ref, str) or not split_ref.strip():
             errors.append("split_status=present 但 split_ref 为空")
-        elif not (REPO_ROOT / split_ref).exists():
+        elif not allow_missing_split and not (REPO_ROOT / split_ref).exists():
             errors.append(f"split_status=present 但文件不存在：{split_ref}")
     elif split_status == "deferred":
         if not isinstance(split_ref, str) or not split_ref.strip():
@@ -303,8 +310,23 @@ def load_task_config(path: Path) -> dict[str, Any]:
             errors.append(f"split_status=deferred 但说明目录不存在：{split_ref}")
         elif not any((REPO_ROOT / split_ref).iterdir()):
             errors.append(f"split_status=deferred 但 {split_ref} 是空目录（必须有 README 说明）")
+    elif split_status == "rule_replicated":
+        if raw.get("benchmark") != "openpoly":
+            errors.append("rule_replicated 只允许用于 OpenPoly（D-24：官方只发规则、未发划分）")
+        elif not isinstance(split_ref, str) or not split_ref.strip():
+            errors.append("split_status=rule_replicated 但 split_ref 为空")
+        elif allow_missing_split:
+            pass
+        elif not (REPO_ROOT / split_ref).is_dir():
+            errors.append(f"split_status=rule_replicated 但划分目录不存在：{split_ref}")
+        else:
+            seeds = sorted((REPO_ROOT / split_ref).glob("rule_replicated_seed*.json"))
+            if len(seeds) < 5:
+                errors.append(
+                    f"split_status=rule_replicated 但 {split_ref} 只有 {len(seeds)} 份划分（至少 5 折）"
+                )
     elif split_status == "blocked_upstream" and raw.get("benchmark") != "openpoly":
-        errors.append("blocked_upstream 只允许用于 OpenPoly（D-22：官方未发布划分）")
+        errors.append("blocked_upstream 只允许用于 OpenPoly（D-22 / D-24：官方未发布划分结果）")
     if not str(raw.get("split_protocol") or "").strip():
         errors.append("split_protocol 为空（必须写清用的是哪个官方协议）")
 
@@ -363,14 +385,17 @@ def _polybench_dataset_names() -> set[str]:
         return {row["task_id"] for row in csv.DictReader(handle)}
 
 
-def load_all_task_configs(configs_dir: Path | None = None) -> dict[str, dict[str, Any]]:
+def load_all_task_configs(
+    configs_dir: Path | None = None, *, allow_missing_split: bool = False
+) -> dict[str, dict[str, Any]]:
     """读入整目录并按 task_id 建索引。
 
     Load every config in the directory, indexed by task_id.
 
     中文：
         用途：让"目录里有什么"成为一次读取的结果，而不是调用方 glob 出来的猜测。
-        输入：configs_dir —— 目录（默认 `configs/tasks`）。
+        输入：configs_dir —— 目录（默认 `configs/tasks`）；allow_missing_split —— 见
+              `load_task_config()`（只有阶段入口 03 传 True）。
         输出：dict[task_id, config]，按字典序（= 文件名序，输出稳定）。
         数据来源：目录下的 *.yaml。
         配置来源：无。副作用：无。
@@ -389,7 +414,7 @@ def load_all_task_configs(configs_dir: Path | None = None) -> dict[str, dict[str
         raise TaskConfigError(f"{directory} 下没有 yaml 文件")
     configs: dict[str, dict[str, Any]] = {}
     for path in paths:
-        config = load_task_config(path)
+        config = load_task_config(path, allow_missing_split=allow_missing_split)
         configs[config["task_id"]] = config
     return configs
 

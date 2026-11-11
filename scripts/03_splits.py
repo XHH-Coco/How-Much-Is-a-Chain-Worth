@@ -10,7 +10,8 @@ Stage entry 03: snapshot the three benchmarks' official splits and prove nobody 
              写 `splits/polybench/<task>/official_70_30.json`；
           ④ `--source polybench26`：把官方 `seed_42/` 原样拷进 `splits/`，并跑官方
              `manage_scaling_indices.py verify` 自检。
-          `--source openpoly` 只落一份"官方未发布划分"的结论（D-22）。
+          `--source openpoly`：按论文公布的 8:1:1 + 值域 10 等宽箱规则，为三个边界任务各复现
+          10 份划分（D-24）。
     依赖：data/raw/**（00）、data/interim/harmonised/**（01）、configs/tasks/*.yaml（A-4）；
           全部逻辑在 `src/chainworth/protocol/splits.py`，本文件只做参数与日志。
     配置：`configs/tasks/*.yaml` 的 `split_ref` / `split_protocol`，即本阶段的落盘清单。
@@ -25,7 +26,8 @@ English:
     (3) the same run maps those test sets onto harmonised row indices and writes
     `splits/polybench/<task>/official_70_30.json`; (4) `--source polybench26` copies the official
     `seed_42/` directories verbatim and runs the official `manage_scaling_indices.py verify`.
-    `--source openpoly` only records that the official split was never published (D-22).
+    `--source openpoly` reproduces ten splits per boundary task under the paper's published
+    8:1:1 / ten-equal-width-bin rule (D-24).
     Depends on: data/raw (stage 00), data/interim/harmonised (stage 01), configs/tasks (A-4);
     all logic lives in `src/chainworth/protocol/splits.py`; this file only parses and logs.
     Config: `split_ref` / `split_protocol` of configs/tasks, which *is* the to-do list.
@@ -85,6 +87,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "  python scripts/03_splits.py --source canonical      # 先物化 canonical 表\n"
             "  python scripts/03_splits.py --source polybench      # 取测试集 + 落 10 份划分\n"
             "  python scripts/03_splits.py --source polybench26    # 快照索引 + 官方自检\n"
+            "  python scripts/03_splits.py --source openpoly       # 按论文规则复现 10 份划分\n"
             "  python scripts/03_splits.py --verify --deep         # 全量复核（只读）\n"
         ),
     )
@@ -175,7 +178,10 @@ def _verify(args: argparse.Namespace) -> int:
         Data source: splits/, configs/tasks/, splits_manifest.csv.
         Config: the `--deep` flag. Side effects: read-only. Raises: none.
     """
-    configs = load_all_task_configs(S.CONFIGS_DIR)
+    # 阶段 03 就是去"生成"划分的，所以允许产物还没落盘（校验由 verify_splits 负责）。
+    # Stage 03 is the thing that creates the splits, so allow them to be absent here;
+    # existence is re-checked by verify_splits().
+    configs = load_all_task_configs(S.CONFIGS_DIR, allow_missing_split=True)
     problems = S.verify_splits(configs, deep=args.deep)
     problems += _run_official_verify(S.SPLITS_ROOT / "polybench26")
     if problems:
@@ -257,7 +263,10 @@ def main(argv: list[str] | None = None) -> int:
         datefmt="%H:%M:%S",
     )
 
-    configs = load_all_task_configs(S.CONFIGS_DIR)
+    # 阶段 03 就是去"生成"划分的，所以允许产物还没落盘（校验由 verify_splits 负责）。
+    # Stage 03 is the thing that creates the splits, so allow them to be absent here;
+    # existence is re-checked by verify_splits().
+    configs = load_all_task_configs(S.CONFIGS_DIR, allow_missing_split=True)
     if args.verify:
         return _verify(args)
 
@@ -277,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
                 if official:
                     raise S.SplitError("；".join(official))
         if "openpoly" in wanted:
-            S.write_openpoly_blocked_note(dry_run=args.dry_run)
+            S.build_openpoly_splits(configs, limit=args.limit, dry_run=args.dry_run)
     except (S.SplitError, FileNotFoundError) as exc:
         LOGGER.error("失败 / failed：%s", exc)
         return 2
@@ -285,7 +294,10 @@ def main(argv: list[str] | None = None) -> int:
     LOGGER.info("=" * 62)
     LOGGER.info("完成：步骤 %s / done", list(wanted))
     if not args.dry_run:
-        LOGGER.info("下一步：`python scripts/03_splits.py --verify --deep` 复核，再把 18 份 YAML 的 split_status 改成 present")
+        LOGGER.info(
+            "下一步：`python scripts/03_splits.py --verify --deep` 复核，再核对 18 份 YAML 的 "
+            "split_status（PolyBench/PB26 = present，OpenPoly = rule_replicated，架构迁移 = deferred）"
+        )
     return 0
 
 

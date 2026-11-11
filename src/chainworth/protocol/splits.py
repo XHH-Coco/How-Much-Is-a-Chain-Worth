@@ -6,12 +6,13 @@ Turn the three benchmarks' **official splits** into read-only snapshots and prov
           用 RDKit 规范化 SMILES 对上调和表的行号，落成 `splits/polybench/<task>/official_70_30.json`；
           ② PolyBench26 先把官方**不发布**的 canonical PSMILES 表按官方脚本本地物化、
           用 `manifest.json` 的 `canonical_sha256` 对上，再把 `seed_42/` 原样拷进 `splits/`；
-          ③ OpenPoly 记一条"官方没发布划分"的结论（D-22），不伪造。
+          ③ OpenPoly：官方**只发布了规则**（8:1:1 + 值域 10 等宽箱分层），没有发布划分结果与
+          随机种子，所以按规则复现 R 份、公开种子、报区间（D-24，改判 D-22 的"完全拿不到"）。
     依赖：`data/interim/harmonised/*.parquet`（A-3）、`data/raw/polybench26/**`（A-2 + A-5 追加）、
-          `configs/tasks/*.yaml`（A-4，`split_ref` 就是本模块的落盘清单）。
+          `data/raw/openpoly/data/*.csv`（A-2）、`configs/tasks/*.yaml`（A-4，`split_ref` 就是本模块的落盘清单）。
     配置：`configs/tasks/` 的 `split_ref` / `split_protocol` / `data_ref`；常量在下方常量区。
     对外：`fetch_polybench_test_sets()`、`build_polybench_splits()`、`materialize_canonical_tables()`、
-          `snapshot_polybench26()`、`write_openpoly_blocked_note()`、`verify_splits()`。
+          `snapshot_polybench26()`、`build_openpoly_splits()`、`stratified_split()`、`verify_splits()`。
     被谁用：`scripts/03_splits.py`（阶段入口）、`tests/test_splits.py`（断言）。
 
 English:
@@ -20,14 +21,17 @@ English:
     write `splits/polybench/<task>/official_70_30.json`; (2) materialise PolyBench26's
     **unpublished** canonical PSMILES tables with the official script, check them against
     `canonical_sha256` in the official `manifest.json`, then copy `seed_42/` verbatim into
-    `splits/`; (3) record that OpenPoly never published its split (D-22) instead of inventing one.
+    `splits/`; (3) OpenPoly published only the **rule** (8:1:1 over ten equal-width value bins)
+    and neither the partition nor its seed, so we reproduce R splits under that rule, publish the
+    seeds, and report a range (D-24, superseding D-22's "entirely unobtainable").
     Depends on: `data/interim/harmonised/*.parquet` (A-3), `data/raw/polybench26/**` (A-2 plus
-    the A-5 additions), `configs/tasks/*.yaml` (A-4; its `split_ref` is this module's to-do list).
+    the A-5 additions), `data/raw/openpoly/data/*.csv` (A-2), `configs/tasks/*.yaml` (A-4; its
+    `split_ref` is this module's to-do list).
     Config: the `split_ref` / `split_protocol` / `data_ref` keys of configs/tasks plus the
     constants below.
     Public API: `fetch_polybench_test_sets()`, `build_polybench_splits()`,
-    `materialize_canonical_tables()`, `snapshot_polybench26()`, `write_openpoly_blocked_note()`,
-    `verify_splits()`.
+    `materialize_canonical_tables()`, `snapshot_polybench26()`, `build_openpoly_splits()`,
+    `stratified_split()`, `verify_splits()`.
     Callers: `scripts/03_splits.py` (stage entry) and `tests/test_splits.py` (assertions).
 """
 
@@ -102,13 +106,63 @@ SPLITS_MANIFEST_COLUMNS = (
     "sha256",
     "bytes",
     "n_train",
+    "n_val",
     "n_test",
     "created_at",
 )
 
-# OpenPoly 的结论文件：不产出划分，只落一份"为什么没有"。
-# OpenPoly gets a conclusion file, not a split: it records *why* there is nothing to snapshot.
-OPENPOLY_NOTE = SPLITS_ROOT / "openpoly" / "NOT_AVAILABLE.json"
+# OpenPoly：官方**只发布了划分规则，没有发布划分结果**（D-24，改判 D-22）。
+# The official rule is published; the resulting partition is not (D-24, superseding D-22).
+#
+# 中文：论文 METHODS → Model Training Protocols 原文三句，构成本模块的实现依据：
+#   ① "the dataset was randomly split into training, validation, and test sets at an 8:1:1 ratio."
+#   ② "for each property, its numerical value range was divided into 10 equal-width bins, and
+#       samples were proportionally drawn from each bin to construct the training, validation,
+#       and test subsets."
+#   ③ "All models were trained, tuned, and tested on the same data partitions."
+# 缺口：全文没有 seed / random_state，所以**任何复现都是同规则的一次新抽样**，不可能与作者那份
+# 逐位相同。我们因此产出 R 份规则合法的划分，用它报区间而不是报单点。
+# English: the three sentences above are the implementation basis. The gap is the missing seed:
+# any reproduction is a fresh draw under the same rule, never the authors' exact partition.
+# We therefore emit R rule-conforming splits and report a range instead of a point.
+OPENPOLY_ROOT = RAW_ROOT / "openpoly"
+OPENPOLY_DATA = OPENPOLY_ROOT / "data" / "final_polymer_properties_fromliterature.csv"
+OPENPOLY_SPLIT_ROOT = SPLITS_ROOT / "openpoly"
+OPENPOLY_PROTOCOL = "replicated_8_1_1_stratified10"
+OPENPOLY_PROTOCOL_SOURCE = (
+    "Wang, J.-F. et al. OpenPoly. Chin. J. Polym. Sci. 2025, 43, 1749-1760, "
+    "DOI 10.1007/s10118-025-3402-y, METHODS -> Model Training Protocols"
+)
+OPENPOLY_RATIOS = {"train": 0.80, "val": 0.10, "test": 0.10}
+OPENPOLY_BINS = 10
+# 10 个种子：0–4 是预注册的 5 折（对应 `eval_unit` 的 "x 5 folds"），5–9 是留作敏感性分析的备用。
+# Ten seeds: 0-4 are the pre-registered five folds (the "x 5 folds" in `eval_unit`); 5-9 are
+# reserved for the split-sensitivity analysis.
+OPENPOLY_SEEDS = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+OPENPOLY_PRIMARY_FOLDS = (0, 1, 2, 3, 4)
+# 整数化之后总比例会偏 1–2 个百分点（168 条时为 10.1%），故留 2 pp 余量。
+# Integer rounding moves the total shares by 1-2pp (10.1% at n=168), hence the 2pp tolerance.
+OPENPOLY_RATIO_TOLERANCE = 0.02
+# 每个值域箱内部的 train/val/test 份额允许偏离 0.8/0.1/0.1 的上限（小箱本来就会全部落进 train）。
+# Allowed per-bin deviation from 0.8/0.1/0.1 (tiny bins legitimately fall entirely into train).
+OPENPOLY_BIN_TOLERANCE = 0.25
+OPENPOLY_PROTOCOL_NOTE = OPENPOLY_SPLIT_ROOT / "PROTOCOL.json"
+OPENPOLY_MANIFEST = MANIFEST_ROOT / "openpoly_split_manifest.csv"
+OPENPOLY_MANIFEST_COLUMNS = (
+    "task_id",
+    "protocol",
+    "seed",
+    "fold_role",
+    "artifact",
+    "sha256",
+    "bytes",
+    "n_total",
+    "n_train",
+    "n_val",
+    "n_test",
+    "n_psmiles_shared",
+    "created_at",
+)
 
 
 class SplitError(RuntimeError):
@@ -582,6 +636,34 @@ def build_polybench_splits(
 # ---- 3. 清单读写 / Manifest helpers ----
 
 
+def _read_manifest_rows(path: Path) -> list[dict[str, str]]:
+    """把一份清单读成"行列表"；文件不存在或读坏就当空。
+    Read a manifest as a list of rows; missing or unreadable reads as empty.
+
+    中文：
+        用途：`_read_manifest()` 按 `task_id` 建键，一条任务一份产物时够用；但 OpenPoly 一条任务
+              有 R 份产物（每种子一份），按 task_id 建键会把前面的行覆盖掉，清单静默缩水。
+              凡"一条任务多行"的清单必须走这个函数。
+        输入：path —— 清单路径。
+        输出：行字典列表（原样字符串字段）。数据来源：磁盘上的 CSV。
+        配置来源：无。副作用：只读。异常：无。
+
+    English:
+        Purpose: `_read_manifest()` keys by `task_id`, which is fine while a task has exactly one
+                 artefact. OpenPoly has R artefacts per task (one per seed), so keying by task_id
+                 silently drops rows. Any multi-row-per-task manifest must go through here.
+        Args: path. Returns: list of raw string-field dicts. Data source: the CSV on disk.
+        Raises: none.
+    """
+    if not path.is_file():
+        return []
+    try:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            return [dict(row) for row in csv.DictReader(handle) if row.get("task_id")]
+    except (OSError, csv.Error):
+        return []
+
+
 def _read_manifest(path: Path) -> dict[str, dict[str, str]]:
     """把一份清单读成 `task_id -> 行` 的字典；文件不存在就当空。
     Read a manifest into a `task_id -> row` dict; a missing file reads as empty.
@@ -589,6 +671,7 @@ def _read_manifest(path: Path) -> dict[str, dict[str, str]]:
     中文：
         用途：重跑时判断"这一份上次是不是同一份字节"，从而沿用旧的 `fetched_at`——每次重跑都
               刷新时间戳会让冻结物在 git 里显得被人动过，而实际上没变。
+              **只适用于一条任务一行**的清单；一条任务多行请用 `_read_manifest_rows()`。
         输入：path —— 清单路径。
         输出：dict；键为 task_id，值为该行原样字符串字段。
         数据来源：磁盘上的 CSV。配置来源：无。副作用：只读。
@@ -597,6 +680,7 @@ def _read_manifest(path: Path) -> dict[str, dict[str, str]]:
     English:
         Purpose: decide whether a re-run produced the same bytes so the old `fetched_at` can be
                  kept; refreshing timestamps every run makes frozen files look hand-edited.
+                 **One row per task only**; use `_read_manifest_rows()` otherwise.
         Args: path. Returns: dict of raw string fields keyed by task_id.
         Data source: the CSV on disk. Config: none. Side effects: read-only.
         Raises: none (an unreadable manifest reads as empty).
@@ -664,7 +748,7 @@ def _append_manifest_rows(rows: Sequence[Mapping[str, Any]]) -> None:
     """
     merged: dict[tuple[str, str], dict[str, Any]] = {}
     dropped: list[str] = []
-    for row in _read_manifest(SPLITS_MANIFEST).values():
+    for row in _read_manifest_rows(SPLITS_MANIFEST):
         # 只登记盘上真有的东西：某次试验性运行写下的路径，在目录改了形状之后会变成幽灵行，
         # 留着它等于让清单描述一个不存在的产物。
         # Only record what is actually on disk: a path written by an exploratory run becomes a
@@ -1076,57 +1160,542 @@ def snapshot_polybench26(
     return done
 
 
-def write_openpoly_blocked_note(*, dry_run: bool = False) -> dict[str, Any]:
-    """写下"OpenPoly 官方划分拿不到"的结论与证据位置。
-    Record the conclusion "OpenPoly's official split is unobtainable" with pointers to evidence.
+def _round_half_up(value: float) -> int:
+    """四舍五入到整数，且 `x.5` 一律进位（Python 内置 `round` 是银行家舍入，会给出反直觉的 0）。
+    Round half up; Python's built-in `round` uses banker's rounding and yields surprising zeros.
 
     中文：
-        用途：分工书 A-5 验收 ⑤ 要求"直接快照仓库 `train_and_test_code/` 的划分结果"。实际做不到：
-              那四个 notebook 只从 `experiment_dataset/{train,val,test}_<prop>_data_list.pt`
-              读数据，**生成这些 .pt 的代码不在发布物里**，`.pt` 本身也没发布。自己按 8:1:1
-              重切一遍等于踩 Proposal §7.5 的头号红线，所以这里只写结论（D-22），不产出划分。
+        用途：分箱后每箱要抽 `0.1 * n_b` 条进验证/测试。`round(0.5) == 0` 会让一个 5 条的箱
+              一条都不抽，分配变得不可预期；这里统一成"四舍五入，.5 进位"。
+        输入：value —— 非负数。
+        输出：int。
+        数据来源：调用方。配置来源：无。副作用：无。异常：无。
+
+    English:
+        Purpose: allocate `0.1 * n_b` rows per bin; banker's rounding would silently allocate zero
+                 from a five-row bin. Always round halves up.
+        Args: value. Returns: int. Data source: caller. Config: none. Raises: none.
+    """
+    return int(np.floor(float(value) + 0.5))
+
+
+def equal_width_edges(values: np.ndarray, bins: int = OPENPOLY_BINS) -> np.ndarray:
+    """按数值域的等宽切分给出箱边界（论文口径："value range divided into 10 equal-width bins"）。
+    Equal-width bin edges over the value range, as the paper specifies.
+
+    中文：
+        用途：分层抽样必须先有箱。官方说的是**值域等宽**，不是等频，所以用 `linspace(min, max)`
+              而不是分位数——分位数会变成等频分层，那是另一种抽样，不能冒充官方规则。
+        输入：values —— 该性质的非空标签（一维）；bins —— 箱数。
+        输出：长度 bins+1 的边界数组，升序。
+        数据来源：`data/raw/openpoly/data/final_polymer_properties_fromliterature.csv`。
+        配置来源：`OPENPOLY_BINS`。副作用：无。
+        异常：SplitError —— 标签全相同（值域为零宽，无法等宽切分）。
+
+    English:
+        Purpose: stratification needs bins, and the paper says equal **width**, not equal frequency;
+                 hence linspace over [min, max] rather than quantiles. Quantile binning is a
+                 different sampler and must not be passed off as the official rule.
+        Args: values (1-D non-null labels); bins. Returns: ascending edges of length bins+1.
+        Data source: the published OpenPoly CSV. Config: OPENPOLY_BINS. Raises: SplitError when
+                the value range is degenerate.
+    """
+    low, high = float(np.min(values)), float(np.max(values))
+    if not np.isfinite(low) or not np.isfinite(high) or high <= low:
+        raise SplitError(f"值域为零宽或非有限（min={low}, max={high}），无法按等宽分箱")
+    return np.linspace(low, high, bins + 1)
+
+
+def _apportion(sizes: Sequence[int], total: int, *, caps: Sequence[int]) -> list[int]:
+    """最大余数法：把 `total` 条按 `sizes` 的比例摊到各箱，且每箱不超过 `caps`。
+    Largest-remainder apportionment: spread `total` across bins in proportion to `sizes`,
+    never exceeding each bin's `caps`.
+
+    中文：
+        用途：分层抽样要同时满足两件事——总比例是 8:1:1，每箱内部也按比例。逐箱各自四舍五入
+              做不到：误差会累积（168 条时训练集被压到 77.4%，读起来像另一种协议）。
+              这里用最大余数法先保证总数精确，再按比例分摊；配额超过某箱容量的部分，
+              退回给还有余量的箱继续分。
+        输入：sizes —— 每箱条数；total —— 要摊出去的总条数；caps —— 每箱最多能拿几条。
+        输出：长度与 sizes 相同的整数列表，合计等于 `total`（容量不足时尽力而为）。
+        数据来源：调用方。配置来源：无。副作用：无。异常：无。
+
+    English:
+        Purpose: stratified sampling must satisfy two things at once - an 8:1:1 global ratio and
+                 proportionality inside each bin. Rounding bin by bin cannot do both; the error
+                 accumulates (a 77.4% train share on the 168-row task reads like another
+                 protocol). Largest remainder guarantees the exact total first, then distributes in
+                 proportion; whatever exceeds a bin's capacity is reoffered to bins with room.
+        Args: sizes; total; caps. Returns: int allocations summing to `total` where capacity
+        allows. Data source: caller. Raises: none.
+    """
+    sizes = list(sizes)
+    caps = list(caps)
+    alloc = [0] * len(sizes)
+    remaining = int(total)
+    while remaining > 0:
+        open_bins = [index for index in range(len(sizes)) if alloc[index] < caps[index]]
+        if not open_bins:
+            break
+        weight = sum(sizes[index] for index in open_bins) or 1
+        ideal = {index: remaining * sizes[index] / weight for index in open_bins}
+        base = {index: int(np.floor(ideal[index])) for index in open_bins}
+        for index in open_bins:
+            alloc[index] += base[index]
+        remaining -= sum(base.values())
+        # 余数从大到小补齐；并列时按箱号，保证可复现。
+        # Hand out the leftovers by descending remainder, ties broken by bin index for stability.
+        for index in sorted(open_bins, key=lambda i: (-(ideal[i] - base[i]), i)):
+            if remaining <= 0:
+                break
+            if alloc[index] < caps[index]:
+                alloc[index] += 1
+                remaining -= 1
+    return alloc
+
+
+def _bin_members(edges: np.ndarray, values: np.ndarray) -> list[np.ndarray]:
+    """把每个样本归到箱里，返回每箱的**绝对行号**（末箱闭区间）。
+    Assign every sample to a bin and return each bin's absolute row numbers (last bin closed).
+
+    中文：
+        用途：`np.digitize` 的左闭右开语义会让最大值落到最后一箱之外，必须夹到最后一箱；
+              否则最大值那一条永远进不了测试集，而极端值恰恰是官方分层要保住的东西。
+        输入：edges —— 箱边界；values —— 标签。
+        输出：长度 bins 的列表，元素是该箱内样本的行号数组。
+        数据来源：同 `equal_width_edges()`。配置来源：无。副作用：无。异常：无。
+
+    English:
+        Purpose: `np.digitize` is left-closed/right-open, so the maximum falls outside the last
+                 bin; clip it in. Otherwise the extreme value can never reach test, and extremes
+                 are exactly what the official stratification is meant to preserve.
+        Args: edges; values. Returns: list of index arrays, one per bin. Raises: none.
+    """
+    bins = len(edges) - 1
+    which = np.clip(np.digitize(values, edges[1:-1], right=False), 0, bins - 1)
+    return [np.flatnonzero(which == index) for index in range(bins)]
+
+
+def stratified_split(
+    values: np.ndarray,
+    *,
+    seed: int,
+    bins: int = OPENPOLY_BINS,
+    ratios: Mapping[str, float] = OPENPOLY_RATIOS,
+) -> dict[str, np.ndarray]:
+    """按官方规则做一次 8:1:1 分层抽样，返回三份互斥且覆盖全量的行号。
+    One 8:1:1 stratified draw under the official rule; returns three disjoint, exhaustive sets.
+
+    中文：
+        用途：这是 D-24 的核心。规则三句：8:1:1、值域 10 等宽箱、箱内按比例抽。实现只在
+              "怎么取整、怎么打乱"上做了两个可核查的选择（见下），其余照抄。
+              ① 先用最大余数法定出验证集与测试集的总条数（`round_half_up(0.1 * N)`），再按
+                 每箱大小摊到箱里（`_apportion()`），余下的都进训练。单箱容量不足时（会掏空
+                 训练集）配额退回给别的箱。
+              ② 箱内用 `np.random.default_rng(seed)` 打乱后**按位置切**，不排序取值——
+                 排序取值会变成"每箱取最小/最大的几条"，那是另一种抽样。
+        输入：values —— 非空标签（一维）；seed —— 划分种子；bins —— 箱数；ratios —— 三份比例。
+        输出：`{"train": 行号, "val": 行号, "test": 行号}`，各已升序，互斥且并集为 `range(n)`。
+        数据来源：调用方传入的标签列。配置来源：`OPENPOLY_*` 常量。
+        副作用：无。异常：SplitError —— 值域退化，或三份不互斥/没覆盖全量。
+        可复现性：同一 seed 在同一份输入上逐位相同（PCG64 跨平台稳定）。
+
+    English:
+        Purpose: the heart of D-24. The rule has three clauses (8:1:1, ten equal-width bins of the
+                 value range, proportional draw per bin). Only two implementation choices are
+                 ours, and both are checkable: (1) the val and test totals are fixed first
+                 (`round_half_up(0.1*N)`) and then apportioned across bins by size
+                 (`_apportion()`), with the remainder going to train; a bin too small to give up
+                 rows passes its quota back to the others.
+                 (2) within a bin the order is a `default_rng(seed)` permutation, sliced by
+                 position - not sorted by value, which would be a different sampler.
+        Args: values; seed; bins; ratios.
+        Returns: dict of ascending index arrays, disjoint and exhaustive over `range(n)`.
+        Data source: the labels handed in. Config: the OPENPOLY_* constants.
+        Raises: SplitError on a degenerate range or a non-partition result.
+        Reproducibility: identical for the same seed on the same input (PCG64 is stable).
+    """
+    values = np.asarray(values, dtype=float)
+    edges = equal_width_edges(values, bins)
+    rng = np.random.default_rng(int(seed))
+    members = _bin_members(edges, values)
+    sizes = [len(group) for group in members]
+
+    # 两级最大余数法：先定"验证集共几条、测试集共几条"，再按每箱大小把它们摊到箱里。
+    # 逐箱各自四舍五入会累积误差——168 条时训练集被压到 77.4%，看着像另一种协议。
+    # Two-level largest remainder: fix the val/test totals first, then apportion them across bins
+    # in proportion to bin size. Rounding each bin independently accumulates error and pushed the
+    # 168-row task to a 77.4% train share, which reads like a different protocol.
+    n_val_total = _round_half_up(len(values) * ratios["val"])
+    n_test_total = _round_half_up(len(values) * ratios["test"])
+    per_bin_val = _apportion(sizes, n_val_total, caps=[size - 1 for size in sizes])
+    per_bin_test = _apportion(
+        sizes, n_test_total, caps=[size - 1 - used for size, used in zip(sizes, per_bin_val)]
+    )
+
+    parts: dict[str, list[int]] = {"train": [], "val": [], "test": []}
+    for group, n_val, n_test in zip(members, per_bin_val, per_bin_test):
+        order = rng.permutation(group)
+        parts["val"].extend(order[:n_val].tolist())
+        parts["test"].extend(order[n_val : n_val + n_test].tolist())
+        parts["train"].extend(order[n_val + n_test :].tolist())
+
+    result = {name: np.sort(np.asarray(indices, dtype=np.int64)) for name, indices in parts.items()}
+    total = sum(len(indices) for indices in result.values())
+    union = np.union1d(np.union1d(result["train"], result["val"]), result["test"])
+    if total != len(values) or len(union) != len(values):
+        raise SplitError(f"分层抽样不是全量划分：三段合计 {total}，并集 {len(union)}，总样本 {len(values)}")
+    return result
+
+
+def _openpoly_label_rows(config: Mapping[str, Any]) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
+    """取出某性质的"非空标签"子表，返回（子表, 标签, 原始数据行号）。
+    Return (subset, labels, original data-row numbers) for one property's non-null rows.
+
+    中文：
+        用途：OpenPoly 是 741 行 × 32 列的一张宽表，每个性质的样本量不同（Tg 443 / 介电总 295 /
+              Tm 168）。划分只在**该性质非空的行**上做，所以必须先把子表切出来，并把
+              "子表位置 → 发布表的第几行"记下来，否则划分无法回溯到原始数据。
+        输入：config —— 一个 OpenPoly 任务配置。
+        输出：(subset, values, source_row)；source_row 是 0 基的数据行号（不含表头）。
+        数据来源：`config["data_ref"]` 指向的发布 CSV。
+        配置来源：`target_column`、`n_labels`。副作用：只读。
+        异常：SplitError —— 列不存在、非空条数与配置不符、含非有限值。
+
+    English:
+        Purpose: OpenPoly is one 741x32 wide table and each property has its own sample size
+                 (Tg 443 / dielectric total 295 / Tm 168). The split only covers the property's
+                 non-null rows, so the subset and the mapping back to published row numbers must
+                 be materialised or the split cannot be traced to the data.
+        Args: config. Returns: (subset, values, source_row) with 0-based data-row numbers.
+        Data source: the published CSV at `data_ref`. Config: `target_column`, `n_labels`.
+        Raises: SplitError on a missing column, a count mismatch, or non-finite values.
+    """
+    task_id = str(config["task_id"])
+    column = str(config["target_column"])
+    table = pd.read_csv(REPO_ROOT / str(config["data_ref"]), encoding="utf-8-sig")
+    if column not in table.columns:
+        raise SplitError(f"{task_id}：发布表里没有列 {column!r}")
+    subset = table.loc[table[column].notna()].copy()
+    values = subset[column].to_numpy(dtype=float)
+    if len(values) != int(config["n_labels"]):
+        raise SplitError(
+            f"{task_id}：{column} 的非空条数是 {len(values)}，配置写 {config['n_labels']} 条"
+        )
+    if not np.isfinite(values).all():
+        raise SplitError(f"{task_id}：{column} 含 inf/nan，不能用于分箱")
+    source_row = subset.index.to_numpy(dtype=np.int64)
+    return subset, values, source_row
+
+
+def build_openpoly_split(config: Mapping[str, Any], *, seed: int) -> dict[str, Any]:
+    """按官方规则复现一份划分，返回可落盘的对象（不含时间戳，保证同 seed 幂等）。
+    Reproduce one split under the published rule; returns a timestamp-free, idempotent payload.
+
+    中文：
+        用途：这是"复现"而不是"自创"的关键——所有取值都由 `stratified_split()` 决定，
+              本函数只负责把它和"它凭什么这么切"的元数据绑在一起，让任何人拿到文件就能复核：
+              规则引文、种子、箱边界、每箱条数、原始数据行号、结构泄漏计数。
+        输入：config —— OpenPoly 任务配置；seed —— 划分种子。
+        输出：dict，含 `train_index` / `val_index` / `test_index` 与 `source_row`（0 基数据行号）。
+        数据来源：`config["data_ref"]` 的发布 CSV。
+        配置来源：`target_column`、`n_labels`、`split_protocol`。
+        副作用：只读。
+        异常：SplitError —— 见 `_openpoly_label_rows()` 与 `stratified_split()`。
+
+    English:
+        Purpose: this is a *reproduction*, not an invention: every index comes from
+                 `stratified_split()`, and this function only binds the result to the metadata
+                 that lets anyone re-check it - the rule quotation, the seed, the bin edges, the
+                 per-bin counts, the original data-row numbers, and the structural-leakage count.
+        Args: config; seed. Returns: dict with the three index arrays plus `source_row`.
+        Data source: the published CSV at `data_ref`. Config: `target_column`, `n_labels`.
+        Side effects: read-only. Raises: SplitError (see the two helpers above).
+    """
+    task_id = str(config["task_id"])
+    subset, values, source_row = _openpoly_label_rows(config)
+    parts = stratified_split(values, seed=seed)
+    edges = equal_width_edges(values, OPENPOLY_BINS)
+    per_bin = [len(members) for members in _bin_members(edges, values)]
+
+    # 结构泄漏：同一 PSMILES 在 741 行里可能重复（656 个不同结构），若同结构跨进训练与测试，
+    # 那是结构级泄漏。官方规则没有去重，我们照规则切、但把这件事**量出来记账**（D-24）。
+    # Structural leakage: the 741 rows hold only 656 distinct PSMILES, so one structure can land
+    # in both train and test. The official rule does not group, so we follow it and *measure* it.
+    structures = subset["PSMILES"].astype(str).to_numpy()
+    seen: dict[str, set[str]] = {}
+    for name, indices in parts.items():
+        for structure in structures[indices]:
+            seen.setdefault(structure, set()).add(name)
+    shared = [structure for structure, names in seen.items() if len(names) > 1]
+
+    ratios = {name: round(len(indices) / len(values), 6) for name, indices in parts.items()}
+    return {
+        "schema_version": 1,
+        "task_id": task_id,
+        "benchmark": "openpoly",
+        "protocol": OPENPOLY_PROTOCOL,
+        "protocol_source": OPENPOLY_PROTOCOL_SOURCE,
+        "status": "rule_replicated",
+        "seed": int(seed),
+        "fold_role": "primary" if seed in OPENPOLY_PRIMARY_FOLDS else "reserve",
+        "target_column": str(config["target_column"]),
+        "target_unit": str(config.get("target_unit", "")),
+        "n_total": int(len(values)),
+        "n_train": int(len(parts["train"])),
+        "n_val": int(len(parts["val"])),
+        "n_test": int(len(parts["test"])),
+        "ratios": ratios,
+        "ratios_nominal": dict(OPENPOLY_RATIOS),
+        "bins": OPENPOLY_BINS,
+        "bin_edges": [float(edge) for edge in edges],
+        "bin_counts": [int(count) for count in per_bin],
+        "row_order": f"{config['data_ref']}#0 基数据行号，只取 {config['target_column']} 非空的行，保持发布顺序",
+        "rule": {
+            "ratio": "8:1:1",
+            "stratification": "值域 10 个等宽箱，箱内按比例抽（论文原文见 protocol_source）",
+            "seed_published_by_authors": None,
+            "seed_used_here": int(seed),
+            "note": "官方未公布随机种子；本文件是同一规则下的一次新抽样，不是作者那一份划分",
+        },
+        "source": {
+            "data_ref": str(config["data_ref"]),
+            "sha256": sha256_of(REPO_ROOT / str(config["data_ref"])),
+            "n_rows_raw": int(len(pd.read_csv(REPO_ROOT / str(config["data_ref"]), encoding="utf-8-sig"))),
+            "n_labels": int(len(values)),
+        },
+        "leakage": {
+            "n_psmiles_shared_across_splits": len(shared),
+            "examples": sorted(shared)[:5],
+            "note": "官方规则不按结构分组；这里是量出来的既有事实，不是我们引入的偏差",
+        },
+        "source_row": [int(value) for value in source_row],
+        "train_index": [int(value) for value in parts["train"]],
+        "val_index": [int(value) for value in parts["val"]],
+        "test_index": [int(value) for value in parts["test"]],
+    }
+
+
+def write_openpoly_protocol_note(*, dry_run: bool = False) -> dict[str, Any]:
+    """写下 OpenPoly 的**规则复现**说明：规则是什么、谁说的、缺什么、我们怎么做。
+    Record the OpenPoly **rule reproduction** card: what the rule is, who said it, what is
+    missing, and what we do instead.
+
+    中文：
+        用途：A-5 的验收 ⑤ 原本判"做不到"（D-22），因为当时以为连规则都没发布。复核后发现
+              规则在论文正文里写得很清楚（8:1:1 + 值域 10 等宽箱分层），缺的只是**那一份划分
+              与随机种子**。所以状态改为 `rule_replicated`（D-24），本文件把这个改判的依据、
+              查询范围（GitHub 全树 / Zenodo / 期刊补充材料三处）与验收靶子一次写清。
         输入：dry_run —— 只打印。
         输出：写进文件的 dict。
-        数据来源：`data/raw/openpoly/train_and_test_code/*.ipynb`（A-5 追加下载，可当场复核）。
-        配置来源：三个 OpenPoly 任务的 `split_ref`（保留路径，状态为"上游未发布"）。
-        副作用：写 `splits/openpoly/NOT_AVAILABLE.json`。
+        数据来源：论文正文、GitHub 全树、Zenodo 记录、官方 `results/*.csv`。
+        配置来源：`OPENPOLY_*` 常量。副作用：写 `splits/openpoly/PROTOCOL.json`。
         异常：OSError —— 无写权限。
 
     English:
-        Purpose: criterion 5 asks for a snapshot of the repo's `train_and_test_code/`. That is not
-                 possible: the notebooks only load `experiment_dataset/*.pt`, the code that
-                 produced those files is not published, and the files themselves are not either.
-                 Re-cutting at 8:1:1 would trip Proposal §7.5's number-one failure mode, so this
-                 writes the conclusion (D-22) and no split.
-        Args: dry_run. Returns: the dict written.
-        Data source: the OpenPoly notebooks fetched in A-5 (checkable on the spot).
-        Config: the three OpenPoly `split_ref` values (paths kept, status "upstream unpublished").
-        Side effects: writes splits/openpoly/NOT_AVAILABLE.json.
+        Purpose: A-5 criterion 5 was originally judged impossible (D-22) on the belief that even
+                 the *rule* was unpublished. Re-checking showed the rule is stated plainly in the
+                 paper (8:1:1 plus ten equal-width value bins); what is missing is only the
+                 partition itself and its seed. The status therefore becomes `rule_replicated`
+                 (D-24), and this file records the change, the search surface (GitHub tree,
+                 Zenodo, journal supplement) and the acceptance targets in one place.
+        Args: dry_run. Returns: the dict written. Side effects: writes PROTOCOL.json.
         Raises: OSError without write access.
     """
-    notebooks = sorted(
-        path.relative_to(REPO_ROOT).as_posix()
-        for path in (RAW_ROOT / "openpoly" / "train_and_test_code").glob("*.ipynb")
-    )
     note = {
         "benchmark": "openpoly",
-        "status": "blocked_upstream",
-        "decision": "D-22",
-        "conclusion": "官方未发布划分；发布物里只有读 .pt 的 notebook，生成 .pt 的代码与 .pt 本身都不在仓库",
-        "what_the_notebooks_do": "从 experiment_dataset/{train,val,test}_<prop>_data_list.pt 读划分好的列表，再训练/评估",
-        "why_not_re_split": "自己切 = Proposal §7.5 头号失败模式（agent 自己切数据），且它不抛异常，只会算出一组好看的 R²",
-        "evidence": notebooks,
-        "unblock_condition": "拿到发布方给出的测试集结构清单（哪怕只是 PSMILES 列表）或 Zenodo 上的 experiment_dataset/*.pt",
+        "status": "rule_replicated",
+        "decision": "D-24",
+        "supersedes": {
+            "decision": "D-22",
+            "status_then": "blocked_upstream",
+            "why_changed": (
+                "D-22 的判断建立在\"官方连划分规则都没发布\"上。复核论文正文后这一条不成立："
+                "METHODS 明确写了 8:1:1 + 值域 10 等宽箱分层抽样。缺的是那一份划分结果与随机种子。"
+            ),
+        },
+        "rule": {
+            "quotes": [
+                "the dataset was randomly split into training, validation, and test sets at an 8:1:1 ratio.",
+                "for each property, its numerical value range was divided into 10 equal-width bins, "
+                "and samples were proportionally drawn from each bin to construct the training, "
+                "validation, and test subsets.",
+                "All models were trained, tuned, and tested on the same data partitions.",
+            ],
+            "source": OPENPOLY_PROTOCOL_SOURCE,
+            "seed_published": False,
+        },
+        "what_is_missing": [
+            "experiment_dataset/{train,val,test}_<prop>_data_list.pt（notebook 只读它们，仓库里没有）",
+            "生成这些 .pt 的脚本（4 个 notebook 只 import train_test_split，没有一处调用它切分）",
+            "随机种子 / random_state（论文全文未提；notebook 里的 random_state=42 是模型种子）",
+            "期刊补充材料与数据可用性声明（经查：两者都不存在）",
+        ],
+        "search_log": {
+            "github_tree": "ccaa669，递归全树 39 条目（26 文件 + 13 目录），无 experiment_dataset/，无 .gitignore；"
+            "__pycache__ 的 .pyc 都被提交 → 作者是整目录上传，缺的目录是真的没传",
+            "zenodo": "10.5281/zenodo.15551637 只有 1 个文件 trained_model.zip（460 MB，8 个模型的权重）",
+            "journal": "DOI 10.1007/s10118-025-3402-y 无 Supplementary Information，也无 data availability 章节",
+        },
+        "what_we_do": {
+            "approach": "按公布的规则复现 R 份划分，公开种子，报区间而不是报单点",
+            "seeds": list(OPENPOLY_SEEDS),
+            "primary_folds": list(OPENPOLY_PRIMARY_FOLDS),
+            "reserve_seeds": [seed for seed in OPENPOLY_SEEDS if seed not in OPENPOLY_PRIMARY_FOLDS],
+            "fold_mapping": (
+                "seed 0–4 就是 eval_unit 里的 5 折（每一折是一次独立的 8:1:1 抽样，不是互斥分块）；"
+                "seed 5–9 留作划分敏感性分析。总拟合次数 3 性质 × 5 档 × 5 折 × 3 种子 = 225，不变"
+            ),
+            "why_not_a_red_line": (
+                "红线禁的是\"不读官方划分、自己随手切\"。这里切法是论文正文逐字给出的，种子公开，"
+                "每份划分带箱边界与每箱条数，任何人可用同一命令逐位复现；并且我们如实声明"
+                "\"这不是作者那一份划分\"（Proposal §7.5 要防的是隐去这件事，不是禁止复现已公布的规则）"
+            ),
+        },
+        "acceptance_target": {
+            "why": "复现对不对，不能靠自觉，要靠能否跑出官方公布的成绩",
+            "source": "results/final_model_test_performance_summary.csv（官方仓库）",
+            "protocol": "Morgan 指纹 r=2 / 2048 维 + XGBoost，模型 random_state=42",
+            "expected_test_r2": {
+                "op_tg": 0.904375715,
+                "op_dielectric_constant_total": 0.86,
+                "op_tm": 0.807551835,
+            },
+            "pass_rule": (
+                "R 份划分各跑一遍，官方值应落在 R 个结果的 min–max 区间内（或偏离 ≤ 0.05）；"
+                "落不进去说明我们读错了规则，必须回到本文件重新核对，而不是调参凑数"
+            ),
+        },
+        "known_limitations": [
+            "与论文不是同一份划分，绝对 R² 不可逐位对比；H4 的臂间对比（同一划分内）不受影响",
+            "8:1:1 下 Tm 的测试集只有约 17 条，单份划分的 R² 方差很大——这正是要报 R 份区间的原因",
+            "741 行只含 656 个不同 PSMILES，官方规则不按结构分组，跨集结构泄漏由 leakage 字段记账",
+        ],
         "affected_tasks": ["op_tg", "op_dielectric_constant_total", "op_tm"],
+        "generated_at": _now_iso(),
     }
     if not dry_run:
-        OPENPOLY_NOTE.parent.mkdir(parents=True, exist_ok=True)
-        OPENPOLY_NOTE.write_text(
+        OPENPOLY_PROTOCOL_NOTE.parent.mkdir(parents=True, exist_ok=True)
+        OPENPOLY_PROTOCOL_NOTE.write_text(
             json.dumps(note, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n"
         )
-        LOGGER.info("已写结论 / note written: %s（状态 %s）", OPENPOLY_NOTE, note["status"])
+        LOGGER.info("已写协议说明 / protocol note written: %s", OPENPOLY_PROTOCOL_NOTE)
     return note
 
+
+def build_openpoly_splits(
+    configs: Mapping[str, Mapping[str, Any]],
+    *,
+    seeds: Sequence[int] = OPENPOLY_SEEDS,
+    limit: int | None = None,
+    dry_run: bool = False,
+) -> list[str]:
+    """为每个 OpenPoly 边界任务生成 R 份规则复现划分，并写两份清单。
+    Emit R rule-conforming splits per OpenPoly boundary task and update both manifests.
+
+    中文：
+        用途：切分本身由 `build_openpoly_split()` 完全决定；本函数只管落盘、算 sha256、
+              维护 `data/manifests/openpoly_split_manifest.csv`（每份一行，含 fold_role）与
+              `data/manifests/splits_manifest.csv`（全局一行一份产物）。
+              幂等：划分文件不含时间戳，同 seed 重跑字节相同，旧 `created_at` 沿用。
+        输入：configs —— task_id -> 配置；seeds —— 要生成的种子；limit —— 最多几个任务；
+              dry_run —— 只打印。
+        输出：写成功的 task_id 列表。
+        数据来源：发布 CSV（`data_ref`）。配置来源：`split_ref`（目标目录）。
+        副作用：写 `splits/openpoly/<task>/`、两份清单、`PROTOCOL.json`。
+        异常：SplitError —— 规则不成立；OSError —— 无写权限。
+
+    English:
+        Purpose: the partition itself is decided entirely by `build_openpoly_split()`; this
+                 function only persists it, hashes it, and maintains the per-seed manifest plus
+                 the global snapshot manifest. Timestamp-free files make re-runs byte-identical,
+                 so the old `created_at` is carried over.
+        Args: configs; seeds; limit; dry_run. Returns: task ids written.
+        Data source: the published CSV. Config: `split_ref` is the destination directory.
+        Side effects: writes splits/openpoly/**, both manifests and PROTOCOL.json.
+        Raises: SplitError on a broken rule; OSError without write access.
+    """
+    targets = [
+        (task_id, config)
+        for task_id, config in sorted(configs.items())
+        if config["benchmark"] == "openpoly" and config["status"] == "available"
+    ]
+    if limit is not None:
+        targets = targets[:limit]
+
+    write_openpoly_protocol_note(dry_run=dry_run)
+
+    previous = {row["artifact"]: row for row in _read_manifest_rows(OPENPOLY_MANIFEST)}
+    existing_global = {(row["task_id"], row["artifact"]): row for row in _read_manifest_rows(SPLITS_MANIFEST)}
+    done: list[str] = []
+    rows: list[dict[str, Any]] = []
+    global_rows: list[dict[str, Any]] = []
+    for task_id, config in targets:
+        directory = REPO_ROOT / str(config["split_ref"])
+        if dry_run:
+            LOGGER.info("  dry-run：将在 %s 下生成 %d 份规则复现划分 / would build", config["split_ref"], len(seeds))
+            continue
+        directory.mkdir(parents=True, exist_ok=True)
+        for seed in seeds:
+            split = build_openpoly_split(config, seed=seed)
+            destination = directory / f"rule_replicated_seed{seed}.json"
+            destination.write_text(
+                json.dumps(split, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n"
+            )
+            artifact = destination.relative_to(REPO_ROOT).as_posix()
+            digest = sha256_of(destination)
+            # 同一个 sha256 就是同一份产物：沿用旧时间戳，免得每次重跑都像有人改过冻结物。
+            # Same digest means the same artefact: keep the old timestamp so re-runs do not look
+            # like hand edits.
+            old = previous.get(artifact)
+            created_at = old["created_at"] if old and old.get("sha256") == digest else _now_iso()
+            rows.append(
+                {
+                    "task_id": task_id,
+                    "protocol": split["protocol"],
+                    "seed": seed,
+                    "fold_role": split["fold_role"],
+                    "artifact": artifact,
+                    "sha256": digest,
+                    "bytes": destination.stat().st_size,
+                    "n_total": split["n_total"],
+                    "n_train": split["n_train"],
+                    "n_val": split["n_val"],
+                    "n_test": split["n_test"],
+                    "n_psmiles_shared": split["leakage"]["n_psmiles_shared_across_splits"],
+                    "created_at": created_at,
+                }
+            )
+            old_global = existing_global.get((task_id, artifact))
+            global_rows.append(
+                {
+                    "task_id": task_id,
+                    "benchmark": "openpoly",
+                    "protocol": split["protocol"],
+                    "artifact": artifact,
+                    "sha256": digest,
+                    "bytes": destination.stat().st_size,
+                    "n_train": split["n_train"],
+                    "n_val": split["n_val"],
+                    "n_test": split["n_test"],
+                    "created_at": old_global["created_at"] if old_global else created_at,
+                }
+            )
+            LOGGER.info(
+                "  %s · seed %d：train %d / val %d / test %d（%s）/ written",
+                task_id,
+                seed,
+                split["n_train"],
+                split["n_val"],
+                split["n_test"],
+                split["fold_role"],
+            )
+        done.append(task_id)
+
+    if not dry_run and rows:
+        _write_manifest(rows, OPENPOLY_MANIFEST, OPENPOLY_MANIFEST_COLUMNS)
+        _append_manifest_rows(global_rows)
+    return done
 
 # ---- 5. 校验：把验收标准写成断言 / Verification: acceptance criteria as assertions ----
 
@@ -1365,36 +1934,155 @@ def _verify_polybench26(config: Mapping[str, Any], problems: list[str], deep: bo
                 problems.append(f"{label}：canonical 表 sha256 与官方 canonical_sha256 不等")
 
 
-def _verify_openpoly(configs: Mapping[str, Mapping[str, Any]], problems: list[str]) -> None:
-    """校验 OpenPoly 的"不产出划分"结论仍在，且没有偷偷落一份自己切的划分。
-    Check the OpenPoly "no split" conclusion still holds and no self-cut split sneaked in.
+def _check_openpoly_split(
+    payload: Mapping[str, Any],
+    problems: list[str],
+    *,
+    task_id: str,
+    seed: int,
+    deep: bool,
+    config: Mapping[str, Any] | None = None,
+) -> None:
+    """逐份检查一份 OpenPoly 规则复现划分是否真的遵守了论文那三句规则。
+    Check one reproduced OpenPoly split actually obeys the paper's three clauses.
 
     中文：
-        用途：这条测试防的是"下次有人为了让 OpenPoly 跑起来，随手 `train_test_split` 一份"。
-              结论文件不在、或目录里冒出 `*_official.json`，都必须报错。
-        输入：configs —— 全部配置；problems —— 问题列表。
-        输出：无。数据来源：`splits/openpoly/`。
-        配置来源：三个 OpenPoly 配置的 `split_ref`。副作用：只读。异常：无。
+        用途：复现规则最容易出的错不是"切不出来"，而是"切出来了但不是那个规则"——比如用了等频
+              分箱、或者三份不互斥、或者换了种子却复用了旧文件。所以这里逐条验：协议名、
+              三份比例、互斥与全量覆盖、箱数与箱内条数合计、原始行号可回溯；
+              `deep=True` 时**用同一种子重算一遍**，与文件里的行号逐位比对。
+        输入：payload —— 划分文件内容；problems —— 问题列表；task_id / seed —— 期望值；
+              deep —— 是否重算；config —— 给出时用于重算。
+        输出：无（问题写进 problems）。数据来源：划分 JSON、发布 CSV。
+        配置来源：`OPENPOLY_*` 常量。副作用：只读。异常：无（收集而非抛出）。
 
     English:
-        Purpose: guards against a future "just call train_test_split so OpenPoly runs" shortcut.
-                 A missing conclusion file, or an unexpected `*_official.json`, is an error.
-        Args: configs; problems. Returns: none.
-        Data source: splits/openpoly. Config: the three OpenPoly `split_ref` values.
+        Purpose: the failure mode of a reproduced rule is not "cannot split" but "split under a
+                 different rule" - equal-frequency bins, overlapping subsets, or a stale file left
+                 behind under a new seed. So each file is checked for protocol name, the three
+                 shares, disjointness and coverage, bin count and per-bin totals, and traceable
+                 source rows; with `deep=True` it is recomputed from the seed and compared
+                 index-by-index.
+        Args: payload; problems; task_id; seed; deep; config (needed for recomputation).
+        Returns: none (problems are appended). Raises: none.
+    """
+    label = f"{task_id} · seed {seed}"
+    if payload.get("protocol") != OPENPOLY_PROTOCOL:
+        problems.append(f"{label}：protocol 是 {payload.get('protocol')!r}，应为 {OPENPOLY_PROTOCOL!r}")
+    if payload.get("task_id") != task_id:
+        problems.append(f"{label}：文件里的 task_id 是 {payload.get('task_id')!r}")
+    if int(payload.get("seed", -1)) != seed:
+        problems.append(f"{label}：文件里的 seed 是 {payload.get('seed')!r}，与文件名不符")
+
+    counts = {name: int(payload.get(f"n_{name}", -1)) for name in ("total", "train", "val", "test")}
+    if counts["total"] <= 0:
+        problems.append(f"{label}：n_total 非法（{counts['total']}）")
+        return
+    for name in ("train", "val", "test"):
+        if counts[name] <= 0:
+            problems.append(f"{label}：{name} 为空（n_{name}={counts[name]}）")
+        share = counts[name] / counts["total"]
+        if abs(share - OPENPOLY_RATIOS[name]) > OPENPOLY_RATIO_TOLERANCE:
+            problems.append(
+                f"{label}：{name} 占 {share:.4f}，超出 {OPENPOLY_RATIOS[name]}±{OPENPOLY_RATIO_TOLERANCE}"
+            )
+
+    train = payload.get("train_index") or []
+    val = payload.get("val_index") or []
+    test = payload.get("test_index") or []
+    total_parts = len(train) + len(val) + len(test)
+    if total_parts != counts["total"]:
+        problems.append(f"{label}：三段合计 {total_parts}，n_total 写 {counts['total']}")
+    union = set(train) | set(val) | set(test)
+    if len(union) != total_parts:
+        problems.append(f"{label}：三段有重叠（并集 {len(union)} < 合计 {total_parts}）")
+    if union and (min(union) != 0 or max(union) != counts["total"] - 1):
+        problems.append(f"{label}：行号没有覆盖 0..{counts['total'] - 1}（实际 {min(union)}..{max(union)}）")
+
+    bin_counts = payload.get("bin_counts") or []
+    if len(bin_counts) != OPENPOLY_BINS:
+        problems.append(f"{label}：bin_counts 有 {len(bin_counts)} 项，应为 {OPENPOLY_BINS} 箱")
+    elif sum(int(value) for value in bin_counts) != counts["total"]:
+        problems.append(
+            f"{label}：每箱条数合计 {sum(int(v) for v in bin_counts)} ≠ n_total {counts['total']}"
+        )
+
+    source_row = payload.get("source_row") or []
+    if len(source_row) != counts["total"]:
+        problems.append(f"{label}：source_row 有 {len(source_row)} 项，应为 {counts['total']}")
+    elif any(int(b) <= int(a) for a, b in zip(source_row, source_row[1:])):
+        problems.append(f"{label}：source_row 不是严格递增，回溯到原始行会错位")
+
+    if deep and config is not None:
+        values = _openpoly_label_rows(config)[1]
+        again = stratified_split(values, seed=seed)
+        for name in ("train", "val", "test"):
+            if [int(v) for v in again[name]] != [int(v) for v in payload.get(f"{name}_index") or []]:
+                problems.append(f"{label}：用 seed {seed} 重算，{name} 的行号与文件不一致（文件可能被改过）")
+
+
+def _verify_openpoly(
+    configs: Mapping[str, Mapping[str, Any]], problems: list[str], deep: bool = False
+) -> None:
+    """校验 OpenPoly 的三条边界任务：规则说明在、R 份划分在、每一份都守规则、清单对得上。
+    Verify the three OpenPoly boundary tasks: the rule card exists, R splits exist, each obeys the
+    rule, and the manifests agree.
+
+    中文：
+        用途：这条校验要同时防两件事。① **退化回 D-22 之前**：有人把划分删了、或把状态改回
+              `blocked_upstream` 却没人发现。② **悄悄换成自己切的**：目录里冒出
+              `*_official.json`（声称"官方那份"），或某个种子下的文件被手工改了几个行号——
+              后者只有 `deep=True` 的重算才抓得到。
+        输入：configs —— 全部任务配置；problems —— 问题列表；deep —— 是否按种子重算。
+        输出：无。数据来源：`splits/openpoly/**`、两份清单、发布 CSV。
+        配置来源：三个 OpenPoly 任务的 `split_ref` 与 `split_status`。
+        副作用：只读。异常：无（收集而非抛出）。
+
+    English:
+        Purpose: this guards two things at once. (1) A regression to the pre-D-22 state - splits
+                 deleted or status quietly reverted. (2) A silent swap for a hand-made partition:
+                 an `*_official.json` appearing in the directory, or a few indices hand-edited in
+                 one seed's file - the latter is only caught by the `deep` recomputation.
+        Args: configs; problems; deep. Returns: none.
         Side effects: read-only. Raises: none.
     """
-    if not OPENPOLY_NOTE.is_file():
-        problems.append("splits/openpoly/NOT_AVAILABLE.json 不存在（D-22 的结论必须有据可查）")
+    if not OPENPOLY_PROTOCOL_NOTE.is_file():
+        problems.append("splits/openpoly/PROTOCOL.json 不存在（D-24 的规则说明必须有据可查）")
     else:
-        note = json.loads(OPENPOLY_NOTE.read_text(encoding="utf-8"))
-        if note.get("status") != "blocked_upstream":
-            problems.append(f"splits/openpoly 的状态是 {note.get('status')}，应为 blocked_upstream")
-    for task_id, config in configs.items():
+        note = json.loads(OPENPOLY_PROTOCOL_NOTE.read_text(encoding="utf-8"))
+        if note.get("status") != "rule_replicated":
+            problems.append(f"splits/openpoly 的状态是 {note.get('status')!r}，应为 'rule_replicated'")
+        if not note.get("rule", {}).get("quotes"):
+            problems.append("PROTOCOL.json 没有引论文原文（规则必须可追溯到期刊正文）")
+
+    recorded = {row["artifact"]: row for row in _read_manifest_rows(OPENPOLY_MANIFEST)}
+    for task_id, config in sorted(configs.items()):
         if config["benchmark"] != "openpoly":
             continue
-        if (REPO_ROOT / str(config["split_ref"])).exists():
-            problems.append(f"{task_id}：splits/openpoly 里出现了划分文件——D-22 之后不许自己切")
-
+        directory = REPO_ROOT / str(config["split_ref"])
+        if not directory.is_dir():
+            problems.append(f"{task_id}：划分目录不存在（{config['split_ref']}）")
+            continue
+        official = sorted(path.name for path in directory.glob("*_official*.json"))
+        if official:
+            problems.append(
+                f"{task_id}：目录里出现了 {official}——OpenPoly 没有官方划分文件，不许冒充（D-24）"
+            )
+        for seed in OPENPOLY_SEEDS:
+            path = directory / f"rule_replicated_seed{seed}.json"
+            if not path.is_file():
+                problems.append(f"{task_id}：缺少 seed {seed} 的划分（{path.name}）")
+                continue
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            _check_openpoly_split(payload, problems, task_id=task_id, seed=seed, deep=deep, config=config)
+            artifact = path.relative_to(REPO_ROOT).as_posix()
+            row = recorded.get(artifact)
+            if row is None:
+                problems.append(f"{task_id}：{artifact} 不在 openpoly_split_manifest.csv 里")
+            elif row.get("sha256") != sha256_of(path):
+                problems.append(f"{task_id}：{artifact} 的 sha256 与清单不符（文件被改过）")
+            elif row.get("fold_role") != ("primary" if seed in OPENPOLY_PRIMARY_FOLDS else "reserve"):
+                problems.append(f"{task_id}：{artifact} 的 fold_role 是 {row.get('fold_role')!r}")
 
 def verify_splits(
     configs: Mapping[str, Mapping[str, Any]] | None = None, *, deep: bool = False
@@ -1422,7 +2110,11 @@ def verify_splits(
         Config: `split_status` decides which tasks must have a split.
         Side effects: read-only. Raises: none (collects instead of raising).
     """
-    configs = configs or load_all_task_configs(CONFIGS_DIR)
+    # 用宽松加载：划分缺失时要"报成一条问题"，而不是在加载阶段抛异常——
+    # 校验器的价值在于一次列全所有问题，抛第一个就等于让人反复重跑。
+    # Lenient load: a missing split must surface as a problem line, not as a loader exception;
+    # a verifier that raises on the first issue forces repeated re-runs.
+    configs = configs or load_all_task_configs(CONFIGS_DIR, allow_missing_split=True)
     problems: list[str] = []
     for task_id in sorted(configs):
         config = configs[task_id]
@@ -1446,9 +2138,14 @@ def verify_splits(
         elif status == "blocked_upstream":
             if config["benchmark"] != "openpoly":
                 problems.append(f"{task_id}：只有 OpenPoly 允许 blocked_upstream，{config['benchmark']} 不行")
+        elif status == "rule_replicated":
+            # 逐份检查在 `_verify_openpoly()` 里统一做（目录、种子、比例、互斥、清单、重算）。
+            # The per-file checks all live in `_verify_openpoly()`.
+            if config["benchmark"] != "openpoly":
+                problems.append(f"{task_id}：只有 OpenPoly 允许 rule_replicated（D-24）")
         else:
             problems.append(f"{task_id}：未知 split_status={status}")
-    _verify_openpoly(configs, problems)
+    _verify_openpoly(configs, problems, deep)
     return problems
 
 

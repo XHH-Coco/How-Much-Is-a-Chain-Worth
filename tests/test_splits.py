@@ -42,6 +42,12 @@ from chainworth.protocol import splits as S
 CONFIGS = load_all_task_configs(S.CONFIGS_DIR)
 SPLIT_TASKS = {tid: cfg for tid, cfg in CONFIGS.items() if cfg["split_status"] == "present"}
 
+# OpenPoly 是"规则复现"而不是"官方快照"，单独一组（D-24）。
+# OpenPoly is a rule reproduction rather than an official snapshot, so it gets its own group.
+OPENPOLY_TASKS = {
+    tid: cfg for tid, cfg in CONFIGS.items() if cfg["split_status"] == "rule_replicated"
+}
+
 # 需要 A-3 的中间表才能重算；那份文件不入库，克隆后可能不在。
 # The A-3 intermediate tables are needed for the deep recompute and are not committed.
 NEEDS_INTERIM = pytest.mark.skipif(
@@ -77,18 +83,36 @@ def test_verify_splits_deep_passes() -> None:
     assert problems == [], "深度校验未通过：\n" + "\n".join(problems)
 
 
-def test_snapshot_manifest_covers_every_present_task() -> None:
-    """每个 present 的 PolyBench / PolyBench26 任务都要在 `splits_manifest.csv` 里有行。
-    Every present task must appear in the snapshot manifest."""
-    recorded = S._read_manifest(S.SPLITS_MANIFEST)
-    for task_id, config in SPLIT_TASKS.items():
-        if config["benchmark"] == "polybench":
-            assert task_id in recorded, f"{task_id} 不在 splits_manifest.csv"
-        elif config["benchmark"] == "polybench26":
-            prefix = f"{task_id}/" if str(config["split_ref"]).endswith("/") else task_id
-            assert any(key == prefix or key.startswith(prefix) for key in recorded), (
-                f"{task_id} 不在 splits_manifest.csv"
-            )
+def test_snapshot_manifest_covers_every_split_task() -> None:
+    """每个有划分的任务（present 或 rule_replicated）都要在 `splits_manifest.csv` 里有行。
+    Every task that has a split - present or rule_replicated - must appear in the snapshot
+    manifest.
+
+    中文：用 `_read_manifest_rows()` 而不是按 task_id 建键的那版——OpenPoly 一条任务有 10 行，
+          按 task_id 建键会把其中 9 行挤掉，测试反而看不见缺口。
+    English: use the row-list reader; keying by task_id would collapse OpenPoly's ten rows per
+    task into one and hide exactly the gap this test is meant to find.
+    """
+    recorded = [row["artifact"] for row in S._read_manifest_rows(S.SPLITS_MANIFEST)]
+
+    def covered(artifact: str, reference: str) -> bool:
+        """产物与配置路径在**目录层级上相交**就算登记过：PolyBench 是同一个文件，
+        PolyBench26 记的是 `split_ref` 的父目录（`seed_42`），OpenPoly 记的是目录里的子文件。
+        A hit means the two paths intersect in the directory tree: PolyBench records the same
+        file, PolyBench26 records the parent (`seed_42`), OpenPoly records children of the dir.
+        """
+        artifact, reference = artifact.rstrip("/"), reference.rstrip("/")
+        return (
+            artifact == reference
+            or artifact.startswith(reference + "/")
+            or reference.startswith(artifact + "/")
+        )
+
+    for task_id, config in {**SPLIT_TASKS, **OPENPOLY_TASKS}.items():
+        reference = str(config["split_ref"])
+        assert any(covered(artifact, reference) for artifact in recorded), (
+            f"{task_id} 的划分产物不在 splits_manifest.csv（split_ref={reference}）"
+        )
 
 
 # ---- ② 不变量 / Invariants ----
@@ -220,15 +244,120 @@ def test_self_cut_scan_catches_an_injected_call(tmp_path: Path) -> None:
     assert offenders and "train_test_split" in offenders[0]
 
 
-def test_openpoly_has_no_home_made_split() -> None:
-    """OpenPoly 目录里只允许结论文件，不许出现自己切的划分。
-    OpenPoly may hold only the conclusion file, never a home-made split."""
+def test_openpoly_protocol_note_quotes_the_paper() -> None:
+    """规则说明必须引论文原文，且如实声明"作者没给种子"。
+    The protocol card must quote the paper and admit the authors published no seed."""
+    note = json.loads(S.OPENPOLY_PROTOCOL_NOTE.read_text(encoding="utf-8"))
+    assert note["status"] == "rule_replicated"
+    assert note["decision"] == "D-24"
+    quotes = " ".join(note["rule"]["quotes"])
+    assert "8:1:1" in quotes and "10 equal-width bins" in quotes, "规则引文缺关键句"
+    assert note["rule"]["seed_published"] is False
+
+
+def test_openpoly_does_not_pretend_to_be_official() -> None:
+    """OpenPoly 目录里不许冒出 `*_official*.json`——那是冒充官方划分（D-24 之后仍防）。
+    No `*_official*.json` may appear: that would be passing a reproduction off as official."""
     directory = S.SPLITS_ROOT / "openpoly"
-    extra = [p.name for p in directory.iterdir() if p.suffix == ".json" and p.name != "NOT_AVAILABLE.json"]
-    assert not extra, f"splits/openpoly 里出现了划分文件：{extra}（D-22：官方没发布，不许自己切）"
-    note = json.loads((directory / "NOT_AVAILABLE.json").read_text(encoding="utf-8"))
-    assert note["status"] == "blocked_upstream"
-    assert note["decision"] == "D-22"
+    pretend = sorted(path.name for path in directory.rglob("*_official*.json"))
+    assert not pretend, f"splits/openpoly 里出现了冒充官方的文件：{pretend}"
+    for task_id, config in OPENPOLY_TASKS.items():
+        assert not (S.REPO_ROOT / str(config["split_ref"]) / f"{task_id}_official.json").exists()
+
+
+@pytest.mark.parametrize("task_id", sorted(OPENPOLY_TASKS))
+def test_openpoly_splits_follow_the_published_rule(task_id: str) -> None:
+    """每条任务的全部种子都必须守规则：8:1:1、10 箱、互斥、覆盖全量、行号可回溯。
+    Every seed of every task must obey the rule: 8:1:1, ten bins, disjoint, exhaustive, traceable."""
+    directory = S.REPO_ROOT / str(OPENPOLY_TASKS[task_id]["split_ref"])
+    for seed in S.OPENPOLY_SEEDS:
+        payload = json.loads((directory / f"rule_replicated_seed{seed}.json").read_text(encoding="utf-8"))
+        problems: list[str] = []
+        S._check_openpoly_split(payload, problems, task_id=task_id, seed=seed, deep=False)
+        assert problems == [], "\n".join(problems)
+
+
+@pytest.mark.parametrize("task_id", sorted(OPENPOLY_TASKS))
+def test_openpoly_splits_are_reproducible(task_id: str) -> None:
+    """同一种子在发布表上重算，行号必须逐位相同——这是"复现"而不是"自创"的凭据。
+    Recomputing a seed on the published table must give identical indices: that is what makes
+    this a reproduction rather than an invention."""
+    config = OPENPOLY_TASKS[task_id]
+    if not (S.REPO_ROOT / str(config["data_ref"])).is_file():
+        pytest.skip("缺 data/raw/openpoly（不入库）")
+    directory = S.REPO_ROOT / str(config["split_ref"])
+    for seed in (0, 9):
+        again = S.build_openpoly_split(config, seed=seed)
+        on_disk = json.loads((directory / f"rule_replicated_seed{seed}.json").read_text(encoding="utf-8"))
+        for name in ("train", "val", "test"):
+            assert again[f"{name}_index"] == on_disk[f"{name}_index"], f"{task_id} seed {seed} 的 {name} 重算不一致"
+
+
+@pytest.mark.parametrize("task_id", sorted(OPENPOLY_TASKS))
+def test_openpoly_seeds_actually_differ(task_id: str) -> None:
+    """不同种子必须给出不同的测试集，否则"10 份"是假的（比如代码忽略了 seed）。
+    Different seeds must give different test sets, otherwise the "ten splits" are fake."""
+    directory = S.REPO_ROOT / str(OPENPOLY_TASKS[task_id]["split_ref"])
+    seen = set()
+    for seed in S.OPENPOLY_SEEDS:
+        payload = json.loads((directory / f"rule_replicated_seed{seed}.json").read_text(encoding="utf-8"))
+        seen.add(tuple(payload["test_index"]))
+    assert len(seen) == len(S.OPENPOLY_SEEDS), f"{task_id}：{len(seen)} 个不同的测试集，应有 {len(S.OPENPOLY_SEEDS)} 个"
+
+
+def test_openpoly_check_catches_a_broken_partition() -> None:
+    """结构被改坏（行号重复）必须当场报出来——证明浅层校验不是空转。
+    A structurally broken partition (duplicate index) must be reported on the spot: this proves
+    the shallow check is not a no-op."""
+    task_id = sorted(OPENPOLY_TASKS)[0]
+    directory = S.REPO_ROOT / str(OPENPOLY_TASKS[task_id]["split_ref"])
+    payload = json.loads((directory / "rule_replicated_seed0.json").read_text(encoding="utf-8"))
+    payload["train_index"] = sorted(payload["train_index"] + [payload["test_index"][0]])
+    problems: list[str] = []
+    S._check_openpoly_split(payload, problems, task_id=task_id, seed=0, deep=False)
+    assert any("重叠" in problem or "合计" in problem for problem in problems), problems
+
+
+def test_openpoly_shallow_check_cannot_see_a_one_row_swap() -> None:
+    """**记录一条已知局限**：把一个样本从测试集挪进训练集，三份仍互斥、仍覆盖全量，
+    比例只动 1/443 ≈ 0.2pp，浅层校验看不出——只有按种子重算（`deep=True`）才抓得到。
+    这条测试不是在测代码，是在防止下一个人误以为浅层校验足够。
+    Records a known limitation: moving one row from test to train keeps the three sets disjoint
+    and exhaustive and moves the ratios by 1/443 ~ 0.2pp, so the shallow check cannot see it; only
+    the `deep` recomputation can. This test exists to stop the next person believing shallow is
+    enough."""
+    task_id = sorted(OPENPOLY_TASKS)[0]
+    directory = S.REPO_ROOT / str(OPENPOLY_TASKS[task_id]["split_ref"])
+    payload = json.loads((directory / "rule_replicated_seed0.json").read_text(encoding="utf-8"))
+    stolen = payload["test_index"][0]
+    payload["test_index"] = payload["test_index"][1:]
+    payload["train_index"] = sorted(payload["train_index"] + [stolen])
+    payload["n_test"] -= 1
+    payload["n_train"] += 1
+    problems: list[str] = []
+    S._check_openpoly_split(payload, problems, task_id=task_id, seed=0, deep=False)
+    assert problems == [], "浅层校验居然抓到了——那说明这条局限已不存在，请删掉这条测试"
+
+
+def test_openpoly_deep_check_catches_a_one_row_swap() -> None:
+    """同样的交换，`deep=True` 必须抓到——这才是 `--verify --deep` 存在的理由。
+    The same swap must be caught by `deep=True`; that is why `--verify --deep` exists."""
+    task_id = sorted(OPENPOLY_TASKS)[0]
+    config = OPENPOLY_TASKS[task_id]
+    if not (S.REPO_ROOT / str(config["data_ref"])).is_file():
+        pytest.skip("缺 data/raw/openpoly（不入库），无法重算")
+    directory = S.REPO_ROOT / str(config["split_ref"])
+    payload = json.loads((directory / "rule_replicated_seed0.json").read_text(encoding="utf-8"))
+    stolen = payload["test_index"][0]
+    payload["test_index"] = payload["test_index"][1:]
+    payload["train_index"] = sorted(payload["train_index"] + [stolen])
+    payload["n_test"] -= 1
+    payload["n_train"] += 1
+    problems: list[str] = []
+    S._check_openpoly_split(
+        payload, problems, task_id=task_id, seed=0, deep=True, config=config
+    )
+    assert any("不一致" in problem for problem in problems), problems
 
 
 def test_polybench26_copies_are_byte_identical() -> None:

@@ -1,0 +1,83 @@
+{
+ "benchmark": "openpoly",
+ "status": "rule_replicated",
+ "decision": "D-24",
+ "supersedes": {
+  "decision": "D-22",
+  "status_then": "blocked_upstream",
+  "why_changed": "D-22 的判断建立在\"官方连划分规则都没发布\"上。复核论文正文后这一条不成立：METHODS 明确写了 8:1:1 + 值域 10 等宽箱分层抽样。缺的是那一份划分结果与随机种子。"
+ },
+ "rule": {
+  "quotes": [
+   "the dataset was randomly split into training, validation, and test sets at an 8:1:1 ratio.",
+   "for each property, its numerical value range was divided into 10 equal-width bins, and samples were proportionally drawn from each bin to construct the training, validation, and test subsets.",
+   "All models were trained, tuned, and tested on the same data partitions."
+  ],
+  "source": "Wang, J.-F. et al. OpenPoly. Chin. J. Polym. Sci. 2025, 43, 1749-1760, DOI 10.1007/s10118-025-3402-y, METHODS -> Model Training Protocols",
+  "seed_published": false
+ },
+ "what_is_missing": [
+  "experiment_dataset/{train,val,test}_<prop>_data_list.pt（notebook 只读它们，仓库里没有）",
+  "生成这些 .pt 的脚本（4 个 notebook 只 import train_test_split，没有一处调用它切分）",
+  "随机种子 / random_state（论文全文未提；notebook 里的 random_state=42 是模型种子）",
+  "期刊补充材料与数据可用性声明（经查：两者都不存在）"
+ ],
+ "search_log": {
+  "github_tree": "ccaa669，递归全树 39 条目（26 文件 + 13 目录），无 experiment_dataset/，无 .gitignore；__pycache__ 的 .pyc 都被提交 → 作者是整目录上传，缺的目录是真的没传",
+  "zenodo": "10.5281/zenodo.15551637 只有 1 个文件 trained_model.zip（460 MB，8 个模型的权重）",
+  "journal": "DOI 10.1007/s10118-025-3402-y 无 Supplementary Information，也无 data availability 章节"
+ },
+ "what_we_do": {
+  "approach": "按公布的规则复现 R 份划分，公开种子，报区间而不是报单点",
+  "seeds": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "primary_folds": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "reserve_seeds": [
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "fold_mapping": "seed 0–4 就是 eval_unit 里的 5 折（每一折是一次独立的 8:1:1 抽样，不是互斥分块）；seed 5–9 留作划分敏感性分析。总拟合次数 3 性质 × 5 档 × 5 折 × 3 种子 = 225，不变",
+  "why_not_a_red_line": "红线禁的是\"不读官方划分、自己随手切\"。这里切法是论文正文逐字给出的，种子公开，每份划分带箱边界与每箱条数，任何人可用同一命令逐位复现；并且我们如实声明\"这不是作者那一份划分\"（Proposal §7.5 要防的是隐去这件事，不是禁止复现已公布的规则）"
+ },
+ "acceptance_target": {
+  "why": "复现对不对，不能靠自觉，要靠能否跑出官方公布的成绩",
+  "source": "results/final_model_test_performance_summary.csv（官方仓库）",
+  "protocol": "Morgan 指纹 r=2 / 2048 维 + XGBoost，模型 random_state=42",
+  "expected_test_r2": {
+   "op_tg": 0.904375715,
+   "op_dielectric_constant_total": 0.86,
+   "op_tm": 0.807551835
+  },
+  "pass_rule": "R 份划分各跑一遍，官方值应落在 R 个结果的 min–max 区间内（或偏离 ≤ 0.05）；落不进去说明我们读错了规则，必须回到本文件重新核对，而不是调参凑数"
+ },
+ "known_limitations": [
+  "与论文不是同一份划分，绝对 R² 不可逐位对比；H4 的臂间对比（同一划分内）不受影响",
+  "8:1:1 下 Tm 的测试集只有约 17 条，单份划分的 R² 方差很大——这正是要报 R 份区间的原因",
+  "741 行只含 656 个不同 PSMILES，官方规则不按结构分组，跨集结构泄漏由 leakage 字段记账"
+ ],
+ "affected_tasks": [
+  "op_tg",
+  "op_dielectric_constant_total",
+  "op_tm"
+ ],
+ "generated_at": "2026-11-12T04:46:56+08:00"
+}

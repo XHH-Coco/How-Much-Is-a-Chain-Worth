@@ -14,12 +14,12 @@ source_kind: experimental
 n_labels: 443
 n_source: Proposal §2.3（2026-11-11 直接数发布 CSV）；A-7 复核后若变则追加决策
 data_ref: data/raw/openpoly/data/final_polymer_properties_fromliterature.csv
-eval_unit: n in {30,60,120,240,all} x 5 folds x 3 seeds
+eval_unit: n in {30,60,120,240,all} x 5 replicated folds (split seeds 0-4) x 3 model seeds
 arms:
 - a2_conventional
 - a3_graph
-split_ref: splits/openpoly/op_tg_official.json
-split_status: blocked_upstream
-split_protocol: official_train_test_code_5fold
+split_ref: splits/openpoly/op_tg
+split_status: rule_replicated
+split_protocol: replicated_8_1_1_stratified10
 status: available
-notes: 只承担 H4；n 网格 30/60/120/240/全部，n ≤ 443 不外推（Proposal §5 H4）。
+notes: 只承担 H4；n 网格 30/60/120/240/全部，n ≤ 443 不外推（Proposal §5 H4）。划分是按论文公布的 8:1:1 + 值域 10 等宽箱规则复现的 10 份（种子 0-9，见 splits/openpoly/PROTOCOL.json，D-24）——**不是作者那一份**，绝对 R² 不可与论文逐位对比，臂间对比不受影响。

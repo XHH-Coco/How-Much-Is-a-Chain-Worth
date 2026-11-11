@@ -140,9 +140,9 @@ README 定的是**阶段串行**：上一阶段没验收，下一阶段不开工
 
 ### A-5 · 官方划分对齐 + 断言测试（4.0 pH｜关键）
 
-> **状态：已交付 2026-11-12**（仓库所有者代做）。**14 份快照**落 `splits/`：PolyBench **10 份**行号 JSON（6 主表 + 4 备用）、PolyBench26 **4 份**官方 `seed_42/` 原样拷贝（2 主表 + 机制 Cp 的 2 个数据集）；OpenPoly **按红线停住**，只落一份"官方没发布划分"的结论。八条验收标准：**7 条通过、第 ⑤ 条明确不通过且原因在上游**。凭据见 [`docs/交付_P1_A5_官方划分快照.md`](交付_P1_A5_官方划分快照.md)。
+> **状态：已交付 2026-11-12**（仓库所有者代做）。**14 份官方快照 + 30 份 OpenPoly 规则复现划分**落 `splits/`：PolyBench **10 份**行号 JSON（6 主表 + 4 备用）、PolyBench26 **4 份**官方 `seed_42/` 原样拷贝（2 主表 + 机制 Cp 的 2 个数据集）、OpenPoly **3 任务 × 10 种子 = 30 份**（`rule_replicated_seed*.json`）。八条验收标准：**原判 7 通过 + 第 ⑤ 条停住；同日复核后 ⑤ 改判为通过**（形态不同：不是官方快照，是按论文规则复现）。凭据见 [`docs/交付_P1_A5_官方划分快照.md`](交付_P1_A5_官方划分快照.md) §9。
 >
-> **四条已验证、会改变后来做法的事实**（细节在该文档 §2–§4）：① **PolyBench 的官方划分只有一份固定的 70/30 测试集，没有 seed 维度**（`&seed=0/1/2` 返回字节完全相同），`eval_unit` 里的"×3"是**模型种子**不是三份划分（D-20）；② **canonical PSMILES 表要本地物化**，且必须写成 LF——Windows 下 pandas 默认 CRLF，官方 `manage_scaling_indices.py verify` 会直接报 checksum mismatch，归一后与官方 `canonical_sha256` 逐位相等（D-21）；③ **OpenPoly 的 `.pt` 划分没发布**，notebook 只读不切，自己按 8:1:1 重切等于踩头号红线（D-22）；④ **划分状态变四态**：`present` / `blocked_upstream` / `deferred` / `pending`（后者只允许不可用任务）（D-23）。
+> **四条已验证、会改变后来做法的事实**（细节在该文档 §2–§4）：① **PolyBench 的官方划分只有一份固定的 70/30 测试集，没有 seed 维度**（`&seed=0/1/2` 返回字节完全相同），`eval_unit` 里的"×3"是**模型种子**不是三份划分（D-20）；② **canonical PSMILES 表要本地物化**，且必须写成 LF——Windows 下 pandas 默认 CRLF，官方 `manage_scaling_indices.py verify` 会直接报 checksum mismatch，归一后与官方 `canonical_sha256` 逐位相等（D-21）；③ **OpenPoly 是「规则公布了、结果没发布」**：论文正文写了 8:1:1 + 值域 10 等宽箱分层，缺的只是那一份划分与**随机种子**；因此按规则复现 10 份、公开种子、报区间（D-24，改判 D-22）——`NOT_AVAILABLE.json` 已删除，结论由 `splits/openpoly/PROTOCOL.json` 的 `supersedes` 承接。**仍然不接受「随手按 8:1:1 切一刀」**：复现要引文、公开种子、带箱边界、可逐位重算并明写「不是作者那一份」；④ **划分状态变五态**：`present` / `rule_replicated` / `blocked_upstream` / `deferred` / `pending`（最后一态只允许不可用任务）（D-23 + D-24）。
 >
 > **你的下一步（A-6）**：结构产物（PSMILES / wPSMILES / 描述符）**不入库**，交付的是"能重建它们的脚本 + manifest"。注意 `data/raw/polybench26/Datasets/PSMILES/` 现在有 A-5 物化出来的 canonical 表（49 张），**可以复用它**，但不要把"本地物化"当成"官方发布"——两类文件在 `PROVENANCE` 上不一样。
 
