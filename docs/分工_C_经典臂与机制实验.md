@@ -3,7 +3,7 @@
 > **对应**：`docs/Proposal_HowMuchIsAChainWorth_v1.3.md` §6（实验设计）、§7.1 的负责人列 `C`、§9 的 `C — CPU runs`
 > **工时**：固定项 **22.0 人时** + 弹性余量 **2.0** = **24.0 人时**
 > **你负责的目录**：`src/chainworth/arms/`（floor / conventional / chain_info）、`configs/arms/{a1_floor,a2_conventional,a5_chain}.yaml`、`configs/experiments/{main_table,scaling,arch_transfer}.yaml`、`results/raw_runs/`（CPU 部分）、`results/aggregate/main_table.csv`
-> **一句话**：全队所有不用显卡的活都在你这儿——你是那个真正把 535 次拟合跑完、并汇总成一张表的人。
+> **一句话**：全队所有不用显卡的活都在你这儿——你是那个真正把 505 次拟合跑完、并汇总成一张表的人。
 >
 > **四人均分口径**：全队技术工时 96 pH（原 105 pH 减去写作与汇报的 9 pH，那 9 pH 由仓库所有者承担），四个人各 **24.0 pH**，固定项落在 21.5–22.0，极差 0.5 pH，差额是各自的弹性余量。
 
@@ -38,7 +38,7 @@
 |:--|:--|:--|:--|
 | 数据量扫描（scaling） | D 算 κ（H2 的判据） | 5 档 × 5 折 × 2 性质 × 2 臂 = **100 fits** | CPU |
 | OpenPoly 经典臂 | D 求 H4 的交叉点 | 3 性质 × 5 档 × 5 折 × 3 种子 = **225 fits** | CPU |
-| 架构迁移 | §5 的架构排序 | 1 性质 × 2 臂 × 5 折 × 3 种子 = **30 runs**（原记 60，见 DECISIONS Q-04） | CPU |
+| 架构迁移 | §5 的架构排序 | 1 性质 × 2 臂 × 5 折 × 3 种子 = **30 runs**（原记 60，已由 DECISIONS D-10 定案） | CPU |
 | 主表汇总 | 全队与汇报 | 8 任务 × 5 臂 | — |
 
 三批全在 CPU 上，用的是**你自己在 A2 里调好的超参**和 A 已经算好的特征，**只换训练集大小或换数据子集**——不许另起一套模型。
@@ -65,7 +65,7 @@
 
 ● 主责　○ 参与/等待
 
-**你是唯一一个"既跑又汇总"的人**，所以你的顺序必须是：**先把 A1/A2 在一两个任务上跑通 → 出第一批真数字给 D → 再放大到 8 个任务 → 最后做三批机制实验**。反过来做（先跑 535 次再想汇总）会让你在 P5 最后一天才发现某个字段没落盘。
+**你是唯一一个"既跑又汇总"的人**，所以你的顺序必须是：**先把 A1/A2 在一两个任务上跑通 → 出第一批真数字给 D → 再放大到 8 个任务 → 最后做三批机制实验**。反过来做（先跑 505 次再想汇总）会让你在 P5 最后一天才发现某个字段没落盘。
 
 ### 与 B、D 的边界
 
@@ -126,14 +126,14 @@
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | PolyBench26 官方 `Datasets/task4_architecture_transfer/` 的**物化工作流**（留出集官方不发布，必须本地跑 `create_task4_shared_splits.py` 生成，见 `SOURCES.md`【坑七】）；A2 的经典臂配置。**训练集 canonical 6,478（交替 6,110 + 均聚 368），OOD 36,828（random 18,414 + block 18,414）；目标只有 electron affinity 一个性质** |
-| **怎么做** | **1 性质（EA）× 2 臂 × 5 折 × 3 种子 = 30 runs**，经典臂为主；每个 run 同时产出 ID 评估（交替 / 均聚两档）与 OOD 评估（random / block）。**OOD 必须五折集成后只报一次**，见下方【口径警告】。有条件再加 GNN 臂（**可选项，+4–7 GPU-h，由 B 代跑，不计入你的 24 pH**） |
-| **产出** | `configs/experiments/arch_transfer.yaml`、`results/aggregate/arch_transfer.csv` + 30 条 run 记录 + 全部 5 折的 OOD 预测向量（**这个必须留，集成要用**） |
-| **验收标准** | ① **ID 两档 + OOD 两档分别报**，不许把 ID 与 OOD 混在一张"架构排序"里——它们的可比性不同；② 报告**实际排序**（block > random > alternating > homopolymer 是否成立），而不是只报"通过/不通过"；③ 若排序不成立，直接写入 §5 的证伪条件，**不许重调超参再试**；④ 若加了 GNN 臂，必须与经典臂同 split / 同种子，否则两列不能并排放；⑤ **OOD 那一栏不得给"均值 ± 标准误"，不得对五折 OOD RMSE 做 t 检验**——折固定、不是独立重复 |
+| **拿什么** | PolyBench26 官方 `Datasets/task4_architecture_transfer/` 的**三个脚本**：`create_task4_shared_splits.py`（物化留出集，官方只发布工作流）、`summarize_weighted_predictions.py`（OOD 合成，**这才是 OOD 那一栏的正确算法**）、`evaluate_rdkit_ood.py`（官方地板，用来校验你的物化没做错）；外加官方的 `task4_all_model_scores.csv`（已发布的对账基准）与 A2 的经典臂配置。**训练集 canonical 6,478（交替 6,110 + 均聚 368），OOD 36,828（random 18,414 + block 18,414）；目标只有 electron affinity 一个性质** |
+| **怎么做** | 分五步，**顺序不能换**：① **物化**——跑 `create_task4_shared_splits.py --polybert-dictionary …`（那个 224 MB 的 pkl 只有 polyBERT 臂需要，经典臂可省），产物落 `generated/shared_splits/`（gitignored）；跑完先核行数：canonical 6,478（交替 6,110 + 均聚 368）、OOD 36,828（random 18,414 + block 18,414），**与官方 README 对不上就停**；② **先复现官方地板**——用 `evaluate_rdkit_ood.py` 跑一遍 RDKit RF，拿它与 `task4_all_model_scores.csv` 的 RDKit RF 行对照（官方：ID 交替 0.148–0.170、均聚 0.37–0.64；OOD ensemble random 0.536 / block 0.581 / combined 0.559）。差一个量级说明物化或合成错了，别往下跑；③ **30 runs**——1 性质 × 2 臂 × 5 折 × 3 种子，ID 评估直接用每折 test 预测（交替 611 / 均聚 37 行）；④ **OOD 走官方三段式**——从 36,828 行 holdout 取全部唯一组分（`psmiles_a` ∪ `psmiles_b`）→ 用该折该臂该种子训好的模型对**每个组分各预测一次**（一个 psmiles 一条，不许重复）→ 交给 `summarize_weighted_predictions.py` 按 `pred_a·f_a + pred_b·f_b` 合成，得 random / block / combined 各一个点值。该脚本会对「组分缺预测」「摩尔分数不合 1」「psmiles 重复」直接抛错，**不要绕开它自己写加权**；⑤ 五折预测向量全部留档（D-09 要用）。有条件再加 GNN 臂（**可选项，+4–7 GPU-h，由 B 代跑，不计入你的 24 pH**） |
+| **产出** | `configs/experiments/arch_transfer.yaml`、`results/aggregate/arch_transfer.csv`、30 条 run 记录、**组件级预测** `results/aggregate/arch_component_preds/<run_id>.csv`（两列 `psmiles,prediction`，就是官方脚本要的输入格式）、**OOD 合成结果** `results/aggregate/arch_ood/<run_id>.csv` + `..._metrics.json`、以及**全部 5 折的 OOD 预测向量**（这个必须留，集成要用） |
+| **验收标准** | ① **ID 两档 + OOD 两档分别报**，不许把 ID 与 OOD 混在一张"架构排序"里——它们的可比性不同；② **官方地板复现**：RDKit RF 的 OOD combined 与你实测值的差要在报告里写出来，差距 >0.1 就先查物化而不是调模型；③ **组分覆盖完备**：holdout 里每个唯一 `psmiles` 有且只有一条组件预测（写成断言，缺一条就红）；④ 报告**实际排序**（block > random > alternating > homopolymer 是否成立），而不是只报"通过/不通过"；⑤ 若排序不成立，直接写入 §5 的证伪条件，**不许重调超参再试**；⑥ 若加了 GNN 臂，必须与经典臂同 split / 同种子，否则两列不能并排放；⑦ **OOD 那一栏不得给"均值 ± 标准误"，不得对五折 OOD RMSE 做 t 检验**——折固定、不是独立重复 |
 
 > 【口径警告·必读】 官方 README 原话：*The OOD holdout is fixed across folds, so fold metrics are not independent replicates. ... Do not apply a t-test to the five fold-level OOD RMSEs.* **正确做法**：保留 5 折的 OOD 预测向量 → 按聚合物取平均 → 从五折集成算出 random / block / combined 各**一个** RMSE/MAE/MSE。ID（交替 / 均聚）才允许按折汇总均值与总体标准差。这条同时约束 `分工_D` 的置信区间：OOD 那栏给的是集成点值 + 重采样区间，不是"5 个折的均值 ± SE"。做错了不会报错，只会给出一个假显著的结论。
 >
-> 【口径冲突·待会签】 原条目与 Proposal §7.1 写的是"**2 性质** × 2 臂 × 5 折 × 3 种子 = **60 runs**"。官方 task4 **只做 electron affinity 一个性质**，所以 60 这个数按官方结构算不出来，正确的是 30 runs。**已记为 `docs/DECISIONS.md` Q-04，本项 5.0 pH 暂不动**（OOD 加权集成：wPSMILES 组件预测 + molar fractions 合成，是原来没算的工作量，大致补回差额）。等 C 与 D 会签后再决定是降 runs 还是降工时，**在那之前不要按 60 去排期**。
+> 【口径已定·D-10】 原条目与 Proposal §7.1 写的是"**2 性质** × 2 臂 × 5 折 × 3 种子 = **60 runs**"。官方 task4 **只做 electron affinity 一个性质**，60 按官方结构算不出来，正确的是 **30 runs**——Proposal 中英已同步改。**5.0 pH 不降**：少掉的 30 次拟合并未让工作变少，因为原计划漏了一整条管线——OOD 那 36,828 行不是直接预测，而是"逐组分预测 + 按摩尔分数加权合成"（官方 `summarize_weighted_predictions.py`，公式 `pred_a·f_a + pred_b·f_b`）。这条管线要额外生成未见组分的特征、按 30 个 run 各算一遍、再合成，恰好是 2 pH 量级的活。**结案记录见 `docs/DECISIONS.md` D-10。**
 >
 > 【许可】 这个任务的训练源是 polyVERSE（EA），属 **GTRC General Public Use License**，不是主表那个 CC BY 4.0。结果表须随附 GTRC 全文、免费分发、不得商用，且**不能把 GTRC 的条款套到 PolyBench 的任务头上**。投稿或公开仓库时这一栏要单独标许可。
 
@@ -143,7 +143,7 @@
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | 全部 run 记录 + 预测（B 的 GPU 273 条 + 你的 CPU 535 条）；PolyBench 排行榜上的公开数 |
+| **拿什么** | 全部 run 记录 + 预测（B 的 GPU 273 条 + 你的 CPU 505 条）；PolyBench 排行榜上的公开数 |
 | **怎么做** | 汇总 8 任务 × 5 臂的表（均值 ± std，CI 由 D 回填）；逐格标注 `run_id`；与排行榜的差，写成"差在协议 / 差在实现"两类，不许混为一谈 |
 | **产出** | `results/aggregate/main_table.csv` + `docs/Main Table Notes.md` |
 | **验收标准** | ① 表中每一格都能点回具体 `run_id`（D-8 的对账脚本会自动查）；② 与排行榜对比时注明"官方数来自哪一版、哪个模型、哪种划分"；③ 差距 > 10% 的格子必须给出解释或标注 `unexplained`（诚实标注比编解释好）；④ 缺格（`blocked_no_gpu`）留灰，不许填 0 |
@@ -156,12 +156,12 @@
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | 全队落在 `results/raw_runs/*.json` 与 `results/aggregate/predictions/*.parquet` 的东西（B 的 273 条 + 你自己的 535 条） |
+| **拿什么** | 全队落在 `results/raw_runs/*.json` 与 `results/aggregate/predictions/*.parquet` 的东西（B 的 273 条 + 你自己的 505 条） |
 | **怎么做** | 写 `tests/test_run_records.py`，六条断言：① 每条记录字段齐全（`run_id, task, arm, seed, split_version, config_hash, env_fingerprint, device, wall_clock_s, metrics`）；② 每个 run 有对应预测文件；③ 预测行数 = 该 split 测试集行数；④ 同一 `run_id` 不出现两次；⑤ `--limit` 试跑产物不得出现在全量目录；⑥ `device` 与 `env_fingerprint` 对得上（`cuda` ↔ `env_gnn.json`，`cpu` ↔ `env_core.json`） |
 | **产出** | `tests/test_run_records.py` + `docs/Audit Log.md` 的运行侧章节 |
-| **验收标准** | ① 故意删掉一条记录的 `split_version`，测试必须红；② 故意把一份 `--limit 200` 的试跑产物改名当全量，测试必须红；③ 每次批量结束跑一遍，并记下条数（273 + 535），缺哪条说清是哪条、为什么 |
+| **验收标准** | ① 故意删掉一条记录的 `split_version`，测试必须红；② 故意把一份 `--limit 200` 的试跑产物改名当全量，测试必须红；③ 每次批量结束跑一遍，并记下条数（273 + 505），缺哪条说清是哪条、为什么 |
 
-> 【注意】 你审的是**别人的记录为主**（B 的 273 条），加上自己的 535 条做自查。run 记录错了不会抛异常，只会让结论对不上账——所以这条的价值不在"跑绿"，在于**你敢于打回 B 的记录**。发现异常就退回，不要"帮忙"改数。
+> 【注意】 你审的是**别人的记录为主**（B 的 273 条），加上自己的 505 条做自查。run 记录错了不会抛异常，只会让结论对不上账——所以这条的价值不在"跑绿"，在于**你敢于打回 B 的记录**。发现异常就退回，不要"帮忙"改数。
 
 ---
 
@@ -171,7 +171,7 @@
 configs/arms/{a1_floor,a2_conventional,a5_chain}.yaml
 configs/experiments/{main_table,scaling,arch_transfer}.yaml
 src/chainworth/arms/{floor,conventional,chain_info}.py
-results/raw_runs/<run_id>.json                 CPU 的 535 条，入库
+results/raw_runs/<run_id>.json                 CPU 的 505 条，入库
 results/aggregate/predictions/<run_id>.parquet  预测，入库（小文件）
 results/aggregate/{scaling_cpu,openpoly_cpu,arch_transfer,main_table,scramble_control}.csv
 docs/Main Table Notes.md  docs/Audit Log.md（运行侧章节）
@@ -184,7 +184,7 @@ tests/test_run_records.py
 
 ## 4. 没有 GPU 怎么办
 
-**你一项都不需要 GPU。** 535 次拟合全在 CPU 上，一台普通笔记本就能跑完：
+**你一项都不需要 GPU。** 505 次拟合全在 CPU 上，一台普通笔记本就能跑完：
 
 | 任务 | GPU | 说明 |
 |:--|:--|:--|
@@ -231,7 +231,7 @@ tests/test_run_records.py
 | **P2 结束** | OpenPoly 经典臂 225 fits + 架构迁移 30 runs 完成 | H4 与架构排序 |
 | **P3 结束** | 主表定稿（CI 由 D 回填）；C-6 审计全绿，B 的记录该退的已退 | 交付前 |
 
-> **别把 535 次拟合堆到最后一天**：它们是"可并行但总量大"的活。正确姿势是**每跑完一批就落盘一批、汇总一批**，而不是"全部跑完再写汇总脚本"。
+> **别把 505 次拟合堆到最后一天**：它们是"可并行但总量大"的活。正确姿势是**每跑完一批就落盘一批、汇总一批**，而不是"全部跑完再写汇总脚本"。
 
 ---
 
@@ -267,7 +267,7 @@ tests/test_run_records.py
 - [ ] `git status` 里没有模型权重、没有 `logs/`、没有 `.ipynb_checkpoints`
 - [ ] `pytest tests/` 全绿，含 `test_run_records.py`
 - [ ] 故意注入错误（删字段 / 改名试跑产物）时审计测试会红
-- [ ] run 记录条数与该跑的数目对得上（535 + B 的 273），缺的都有 `blocked_no_gpu` 占位
+- [ ] run 记录条数与该跑的数目对得上（505 + B 的 273），缺的都有 `blocked_no_gpu` 占位
 - [ ] 每份 run 记录都带 `split_version`、`config_hash`、`env_fingerprint`、`device`、`wall_clock_s`
 - [ ] 每份 run 记录都有对应 `predictions/*.parquet`，行数与测试集一致
 - [ ] `configs/arms/*.yaml` 里的预算表 ≤30 trials，且与 `docs/` 里的说明一致
@@ -293,6 +293,6 @@ tests/test_run_records.py
 
 > **你原来是 21.0，现在 24.0，多的是哪几笔**：A1/A2（5.0）与 A5（1.5）从 B 划过来、主表（2.5）沿用你原来那一条、运行记录审计（4.0）从 B 划过来 = +13.0；同时**五张图 + 三条结论 + Λ/κ/CI/H1–H4 + 对账 + 两端口审计（13.0）全部移给 D** = −13.0。净变化就是把"判据与图"整块交出去，专心做"跑与汇总"。
 >
-> **为什么审计给你 4 pH**：你跑出了全队 535/808 的 fit，run 记录这张"数字的出生证明"主要出自你手。审计不是给自己贴金——**它最大的用处是让你有资格打回 B 的记录**（device 写错、预测没落盘、config_hash 对不上），而不是让 D 一个人对着 808 条记录逐条猜。
+> **为什么审计给你 4 pH**：你跑出了全队 505/778 的 fit，run 记录这张"数字的出生证明"主要出自你手。审计不是给自己贴金——**它最大的用处是让你有资格打回 B 的记录**（device 写错、预测没落盘、config_hash 对不上），而不是让 D 一个人对着 778 条记录逐条猜。
 >
-> **为什么你的余量只有 2.0**：你的风险不在算力（全 CPU，可并行），而在**总量**——535 次拟合很容易"跑到最后一晚"。余量别花在重调超参上，花在"某一批要重跑"上。
+> **为什么你的余量只有 2.0**：你的风险不在算力（全 CPU，可并行），而在**总量**——505 次拟合很容易"跑到最后一晚"。余量别花在重调超参上，花在"某一批要重跑"上。
