@@ -744,7 +744,12 @@ def write_manifest(rows: Sequence[DownloadRow], out_path: Path) -> None:
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(MANIFEST_COLUMNS))
+        # `lineterminator="\n"`：`.gitattributes` 把 `*.csv` 定为 `eol=lf`，而 csv 模块默认写
+        # `\r\n`。不显式指定的话，每次在本机重跑都会把工作区文件改回 CRLF，git 每次都提示
+        # "CRLF will be replaced"，看起来像清单被谁动过。
+        # `lineterminator="\n"` matches the repo's `*.csv text eol=lf` rule; the csv module
+        # defaults to `\r\n`, which makes every local re-run look like a hand edit.
+        writer = csv.DictWriter(handle, fieldnames=list(MANIFEST_COLUMNS), lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(row.as_dict())
