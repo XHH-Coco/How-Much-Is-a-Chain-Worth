@@ -195,9 +195,38 @@
 | **验收标准** | ① 嵌入行与结构一一对应（抽 50 个结构反查，见 B-2）；② (a) 与 (b) 若都跑了，同一 split/seed 上比较，差异写进主表备注；③ 若只跑 (a)，**必须**在决策记录里写明触发了 §7.4 的 triage (ii)，并在汇报材料上标注——**不许悄悄降级** |
 
 > 【前置已就绪】B-2 的 `data/processed/polybert/{embeddings.npy,index.parquet}` 已于 2026-11-12 就位
-> （11,494 × 600，按规范式排序）。读法：`embeddings.npy` 的第 k 行对应 `index.parquet` 的 `row=k`，
-> 用 `psmiles_canonical` 与 B-1 的 `features/<task>.npz` 对齐——**不要按行号直接拼**，两个文件的
-> 行序来源不同（B-1 按 `row_id`、B-2 按规范式）。
+> （**18,152 × 600**，按规范式排序；B-2 初版是 11,494 个 PolyBench 结构，B-1.5 扩表征后重新嵌入过一次，
+> 现在 8 个主表任务 + 3 个 OpenPoly 任务的**覆盖率都是 100%**）。读法：`embeddings.npy` 的第 k 行对应
+> `index.parquet` 的 `row=k`，用 `psmiles_canonical` 与 B-1 的 `features/<task>.npz` 对齐——
+> **不要按行号直接拼**，两个文件的行序来源不同（B-1 按 `row_id`、B-2 按规范式）。
+>
+> 【状态】 **已交付 2026-11-12**：两种模式都跑了，各 **48 条**（6 PolyBench × 3 种子 + 2 PB26 × 5 折 × 3 种子，
+> 与 A3 **逐条同任务/同折/同种子/同验证留出**）。
+> **(a) 冻结嵌入 + ridge 进主表**：48 条全部 `device=cuda`、`config_hash` 单一（`sha256:ca4261c3…`）、
+> 缺嵌入 0 行、16 个 `split_version`、48 条逐条过 `record_problems()`；**合计 6.0 秒 = 0.0017 GPU-h**
+> （预算是 0.5–3.5 GPU-h，低三个数量级——闭式解在卡上是亚毫秒级，那笔预算原本是按微调估的）。
+> R²：`pb26_homopolymer_density` **0.9000 ± 0.0256**、`pb26_polymetrix_tg` **0.8418 ± 0.0139**、
+> `pb_t1_tg` **0.8236**、`pb_t1_tm` 0.6367、`pb_t2_modulus` 0.0583、`pb_t2_permeability` 0.0016、
+> `pb_t3_dielectric_loss` **0.2250**、`pb_t3_iwlt` **0.1256**（后四行的标准差是 0，因为线性头无随机性）。
+> **(b) 微调 48 条作对照**（与 (a) 同任务/同折/同种子）：**9,660.6 秒 = 2.684 GPU-h**，单条 6–1,163 秒，
+> 轮数 6–30（46/48 早停）。**6 个任务微调更好**（`+0.057 ~ +0.129`：homo +0.060、polymetrix +0.057、
+> tg +0.060、tm +0.066、dielectric_loss +0.129、iwlt +0.077），**输的两个恰好是 (a) 也没学到东西的
+> `modulus`（−0.039）与 `permeability`（−0.047）**——表示里没有信号时放开权重只会放大噪声。
+> **48 条 R² 中位数 (b) 0.8956 > A3 0.8899 > (a) 0.8408**：微调之后 polyBERT 与官方 GNN 打平，
+> 所以「polyBERT 不如 GNN」只在冻结时成立。结果落 `results/aggregate/a4_finetune/`，
+> 逐条差并成 `results/aggregate/a4_finetune_vs_frozen.csv`（48 条配对、0 缺边）。
+> **主表仍用 (a)**（分工书"默认跑 (a)"，且闭式解可完全重算，(b) 在小样本上种子间 sd 到 0.05–0.10）。
+> 微调的可复现性也实测了：同进程两次 + 跨进程两次，`r2` 全精度相同、预测最大差 0
+> （`a4_finetune_repeatability.json`）。
+> 产物 `configs/arms/a4_polybert.yaml`（冻结 v1）+ 48 条记录 + 48 份预测 + `a4_repeatability.json`；
+> 入口 `scripts/05_run_gpu.py --arm a4_polybert`（`--finetune` / `--compare` / `--repeat-check`）。
+> **三条与分工书不同的事**：① 分工书"产出"写的是"两条（或一条）run 记录"，实际按**主表每格都要有数**
+> 跑了 48 条——2 条只能证明管线通，填不满 8 个任务 × 5 臂的表；② (b) **跑了**，所以不触发 §7.4 的
+> triage (ii)，不是降级交付；③ `head.alpha_grid` 第一版只到 1000，跑完发现四个小样本任务的 12 条
+> **全部选中上界**，扩到 1e6 后 48 条全部重跑（6 秒）——`modulus` 0.005→0.058、`permeability` −0.124→0.002。
+> **一个结论值得单说**：A3 学不动的四个任务，**A4 全部不比 A3 差，两个明显更好**（`dielectric_loss` 0.225 vs −0.009、
+> `iwlt` 0.126 vs 0.019）——那不是"条件敏感"被推翻，是"小样本 + 大容量易过拟合"，600 个自由度配强正则
+> 比 60 万参数在 143–651 行上更稳。凭据见 [`交付_P2_B4_A4polyBERT迁移臂.md`](交付_P2_B4_A4polyBERT迁移臂.md)。
 
 ### B-5 · OpenPoly 扫描的 GPU 部分（2.0 pH｜**GPU 必需**｜关键）
 

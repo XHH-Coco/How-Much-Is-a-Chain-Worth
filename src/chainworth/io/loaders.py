@@ -58,9 +58,15 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
-import pandas as pd
 
 from chainworth.io.tasks import load_all_task_configs
+
+# `pandas` 刻意不在模块层导入：本模块有一半函数只读 JSON/YAML（`load_task_config`、
+# `load_split`、`SplitSpec`），而 A4 臂跑的 `DSC6020_Project_Polybert` 环境**没有 pandas**。
+# 需要它的三个函数各自在函数体内导入，注解因为 `from __future__ import annotations` 不求值。
+# `pandas` is deliberately not imported at module level: half of this module only reads JSON/YAML,
+# and the polyBERT environment (where the A4 arm runs) has no pandas. The three functions that
+# need it import it locally; annotations are strings thanks to `from __future__ import annotations`.
 
 REPO_ROOT = Path(__file__).resolve().parents[3]     # src/chainworth/io/loaders.py -> 仓库根
 CONFIGS_DIR = REPO_ROOT / "configs" / "tasks"
@@ -296,6 +302,8 @@ def load_rows(task_id: str, *, limit: int | None = None) -> pd.DataFrame:
         Config: `target_column`. Side effects: read-only.
         Raises: AssemblyError on a missing table or a missing `target_column`.
     """
+    import pandas as pd
+
     config = load_task_config(task_id)
     target_column = str(config["target_column"])
     columns = list(HARMONISED_COLUMNS)
@@ -686,6 +694,8 @@ def load_structure_table_index() -> pd.DataFrame:
             f"缺结构表 {_relative(STRUCTURES_PATH)}：先跑 "
             "`python scripts/02_features.py --source all`（约 2 分 40 秒）"
         )
+    import pandas as pd
+
     frame = pd.read_parquet(STRUCTURES_PATH)
     return frame.set_index("psmiles_canonical", drop=False)
 
@@ -717,6 +727,8 @@ def load_descriptor_table(task_id: str) -> pd.DataFrame:
         raise AssemblyError(
             f"缺特征文件 {_relative(path)}：先跑 `python scripts/02_features.py --source all`"
         )
+    import pandas as pd
+
     frame = pd.read_parquet(path)
     return frame.set_index("psmiles_canonical", drop=False)
 

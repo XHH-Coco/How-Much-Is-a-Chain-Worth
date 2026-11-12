@@ -1,0 +1,145 @@
+# A4 polyBERT 迁移臂 · 冻结配置 v1
+# A4 polyBERT transfer arm - frozen config v1
+#
+# 冻结于 2026-11-12。**本文件的字节哈希就是 run 记录里的 `config_hash`**，所以跑之前改一个空格，
+# 48 条 run 的 config_hash 全部作废。要改超参 = 换版本号 + 全表重跑。
+# Frozen on 2026-11-12. **This file's byte hash is `config_hash` in every run record**, so editing a
+# space before a run invalidates all 48 of them.
+#
+# 这条臂回答的问题与 A3 不同：A3 是"从零学着从结构预测"（结构信息 + 图架构），A4 是"**已经读过
+# 一千万条聚合物串**的编码器能不能直接迁移过来"（同样是结构信息，但换了架构与预训练）。
+# 两者共用同一份划分、同一份验证留出、同一个指标函数，所以主表里 A3 与 A4 两列可以直接相减。
+# A3 learns from scratch; A4 asks whether an encoder that already read ~10^7 polymer strings
+# transfers. Same splits, same inner validation, same metric - so the two columns are subtractable.
+#
+# 两种模式的分工（分工_B §2 B-4）：
+#   (a) 冻结嵌入 + ridge 头 —— **进主表**，默认模式，闭式解，无随机性；
+#   (b) 微调 —— **只作对照**，不进主表（验收②说"差异写进主表备注"），结果落
+#       `results/aggregate/a4_finetune_vs_frozen.csv` + DECISIONS 的 D-34。
+# Mode (a) is the arm in the main table; mode (b) is a contrast reported beside it, never folded in.
+
+arm: a4_polybert
+version: "1.0"
+frozen_at: "2026-11-12"
+owner: B
+
+# ---- 表示：B-2 的冻结嵌入，本臂不改它 ----
+# Representation: B-2's frozen embeddings; this arm does not touch them.
+# 三个哈希各有各的口径，别混：
+#   `embeddings_content_sha256` 是**数组内容**的哈希（B-2 的 `sha256_of_array`，与 manifest 同口径），
+#      不是 .npy 的字节哈希——两者不同，核对时要用同一个算法；
+#   `index_file_sha256` 是 index.parquet 的字节哈希；
+#   `model_weights_sha256` 是 polyBERT 权重的字节哈希，加载时由 `chem.polybert.load_model` 核验（D-31）。
+# Three hashes with three different bases; do not mix them up.
+representation:
+  source: B-2 frozen embeddings
+  embeddings: data/processed/polybert/embeddings.npy
+  index: data/processed/polybert/index.parquet
+  emb_dim: 600
+  n_structures: 18152
+  pooling: masked_mean          # 官方 README 的掩码均值池化，与 SentenceTransformer 等价
+  join_key: psmiles_canonical   # 按规范式对齐，**不按行号**（B-1 按 row_id、B-2 按规范式升序）
+  embeddings_content_sha256: 2b79ccae4eb3b0ab409048aa6e2231eb2830b4ba2b72f555c7e71810957fc3c6
+  index_file_sha256: 2a7046524b22cca3a087a66144dc36ceb07f61ae8a1329da2ad48d35b62187ec
+  model_repo: xushijie/polyBERT
+  model_revision: e7dce434fb3eff37905dc114008660e5479ca9a8
+  model_weights_sha256: 21cfab4a3b0599852fb8ef529a67e41632246b9256ed834938ba9b46cb24148f
+  frozen: true
+
+# ---- (a) 头：ridge 回归，闭式解 ----
+# (a) The head: a closed-form ridge regression.
+head:
+  kind: ridge
+  feature_scaling: train_zscore   # 只用训练行的均值/标准差，验证与测试用同一组
+  target_scaling: train_zscore    # 同上（验收④：不许用全量统计量）
+  intercept: false                # X 与 y 都已中心化到 0 均值，截距恒为 0，不留多余的列
+  # 候选网格的来历：第一版只到 1000，跑完 48 条发现**四个小样本任务的全部 12 条都选中上界 1000**
+  # （pb_t2_modulus / pb_t2_permeability / pb_t3_dielectric_loss / pb_t3_iwlt，训练行 143–651，
+  # 而特征是 600 维）。选到边界说明"更强正则可能更好"，不是"这里最好"——所以把上界延到 1e6 再跑。
+  # 这是一次**发现缺陷后修正候选范围**，不是"为了让数字好看而调参"：判据是"选中边界"这个客观
+  # 信号，而且改动后 48 条全部重跑（5 秒），没有挑着改哪一条。
+  alpha_grid: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
+  # 选 alpha 的规矩：在**训练内部**那份留出上取 val RMSE 最小；并列时取更小的 alpha（更少正则）。
+  # 测试集一次都不碰。候选网格固定写在这里，所以"选了哪个"是可复算的，不是手挑的。
+  alpha_selection: argmin_val_rmse
+  solver: normal_equations         # (X'X + aI)^-1 X'y，600 维，秒级；不用 SVD 也不需要 sklearn
+  seed_effect: none                # 闭式解无随机性：三个种子的数会**完全相同**，记录里如实记
+
+# ---- (b) 微调：对照，不进主表 ----
+# (b) Fine-tuning: a contrast, kept out of the main table.
+finetune:
+  enabled: true
+  role: contrast
+  model_repo: xushijie/polyBERT
+  model_revision: e7dce434fb3eff37905dc114008660e5479ca9a8
+  model_weights_sha256: 21cfab4a3b0599852fb8ef529a67e41632246b9256ed834938ba9b46cb24148f
+  pooling: masked_mean
+  max_tokens: 512
+  head: linear_600_to_1
+  freeze_backbone: false
+  batch_size: 32
+  max_epochs: 30
+  patience: 5
+  monitor: val_loss
+  lr: 2.0e-5                      # BERT 类微调的常用量级；A4 的表示已预训练，不需要大 lr
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  seed_effect: real               # 初始化、dropout、批序都随种子变
+  target_scaling: train_zscore
+
+# ---- 设备 ----
+device:
+  prefer: cuda
+  per_process_memory_fraction: 0.90
+  cudnn_deterministic: true
+  num_workers: 0
+
+# ---- 运行网格：48 条 = 6 x 3 + 2 x 5 x 3 ----
+# 与 A3 **逐条对齐**（同任务、同折、同种子、同验证留出），否则主表两列不能相减。
+# Mirrors A3 run for run; anything else would make the two columns incomparable.
+seeds: [0, 1, 2]
+runs:
+  polybench:
+    folds: [official_70_30]
+    tasks:
+      - pb_t1_tg
+      - pb_t1_tm
+      - pb_t2_modulus
+      - pb_t2_permeability
+      - pb_t3_dielectric_loss
+      - pb_t3_iwlt
+  polybench26:
+    folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    tasks:
+      - pb26_polymetrix_tg
+      - pb26_homopolymer_density
+
+# PolyBench 官方只发 70/30，没有验证集；与 A3 用**同一个**留出种子，保证两臂选的是同一份
+# 样本。这一条写错，主表的差就不再是"架构/表示的差"，而是"两份不同验证集的差"。
+validation:
+  val_fraction_if_missing: 0.10
+  val_split_seed: 20261121    # 与 configs/arms/a3_graph.yaml 必须相同
+
+budget:
+  predicted_gpu_hours: [0.5, 3.5]
+  per_run_minutes: [0.05, 6]
+  note: >-
+    (a) 是闭式解，单条以秒计，(b) 才是主要开销。整个 (b) 若超过 3.5 GPU-h，按 §7.4 的
+    triage (ii) 停掉并在交付文档里标注，**不许悄悄只交 (a) 却说跑了两条**。
+
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  # 两个模式跑在**两个不同的环境**里，所以记两个指纹，不许共用一个：
+  #   (a) 冻结 + ridge 在 `DSC6020_Project_GNN` 里跑——那条路要 rdkit（规范化对齐）与 torch
+  #       （`torch.linalg.solve` 在卡上解），而 GNN 环境两者都有；记录写 env_gnn.json。
+  #   (b) 微调在 `DSC6020_Project_Polybert` 里跑——只有它装了 transformers；记录写 env_polybert.json。
+  #   为什么不是反过来：polyBERT 环境**没有 rdkit**，冻结臂在那里连规范式都算不出来。
+  # The two modes run in two different environments, so two fingerprints, never one shared:
+  # (a) needs rdkit (canonical join) and torch (solve on the card) - both live in the GNN env;
+  # (b) needs transformers, which only the polyBERT env has. The reverse does not work: the polyBERT
+  # env has no rdkit, so the frozen arm could not even canonicalise there.
+  env_fingerprint: results/env_fingerprints/env_gnn.json
+  env_fingerprint_finetune: results/env_fingerprints/env_polybert.json
+  finetune_root: results/aggregate/a4_finetune

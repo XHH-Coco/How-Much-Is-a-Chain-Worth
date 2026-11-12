@@ -68,11 +68,16 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pandas as pd
 
-from chainworth.chem import descriptors as D
-from chainworth.chem.structures import FINGERPRINT_PREFIX
 from chainworth.io import loaders as L
+
+# `pandas`、`chainworth.chem.descriptors`（要 rdkit）与 `chainworth.chem.structures`（要 pandas）
+# **都刻意不在模块层导入**：A4 臂跑在 `DSC6020_Project_Polybert` 环境里，那个环境有 numpy/pyarrow
+# 但**没有 pandas、没有 rdkit**（`lock/polybert.pip.txt`），而它要的就是本模块的 `load_pack()`——
+# 读一个 `.npz`。把这些依赖留在顶层，等于让"读一个 npz"也要先装好化学信息学全家桶。
+# `pandas`, `descriptors` (rdkit) and `structures` (pandas) are deliberately **not** imported at
+# module level: the A4 arm runs in the polyBERT environment, which ships numpy/pyarrow but neither
+# pandas nor rdkit, and all it needs here is `load_pack()` - a plain `.npz` read.
 
 LOGGER = logging.getLogger("chainworth.features")
 
@@ -212,6 +217,10 @@ def descriptor_columns() -> list[str]:
         Args: none. Returns: the column names. Data source: chainworth.chem.descriptors.
         Config: `descriptors.DROPPED_DESCRIPTORS`. Side effects: none.
     """
+    # 局部导入：本函数要 rdkit，而本模块的 `load_pack()` 不该因为读一个 npz 就要求装 rdkit。
+    # Local import: this function needs rdkit, while `load_pack()` must not.
+    from chainworth.chem import descriptors as D
+
     return D.descriptor_columns()
 
 
@@ -229,6 +238,9 @@ def fingerprint_columns() -> list[str]:
         artefacts can be compared field by field.
         Args: none. Returns: the column names. Data source: `FINGERPRINT_PREFIX` + `FINGERPRINT_BITS`.
     """
+    from chainworth.chem import descriptors as D
+    from chainworth.chem.structures import FINGERPRINT_PREFIX
+
     return [f"{FINGERPRINT_PREFIX}{index:04d}" for index in range(D.FINGERPRINT_BITS)]
 
 
@@ -519,6 +531,8 @@ def standardize_fit(X_train: np.ndarray) -> dict[str, np.ndarray]:
         Returns: a dict with `mean` / `scale` / `n_train`; constant columns get scale 1.
         Data source: the caller. Side effects: none. Raises: ValueError on an unexpected shape.
     """
+    from chainworth.chem import descriptors as D
+
     matrix = np.asarray(X_train, dtype=np.float64)
     if matrix.ndim != 2 or matrix.shape[1] != len(descriptor_columns()) + D.FINGERPRINT_BITS:
         raise ValueError(
@@ -772,8 +786,15 @@ def verify_features(task_ids: Sequence[str] | None = None, *, sample: int = 100)
 
         # ③ 同一结构出现多次时必须给同一组特征（跨行一致性，与图无关的那一半）
         # (3) one structure appearing several times must get one feature vector (the non-graph half)
-        duplicates = pd.Series(pack["psmiles"]).value_counts()
-        repeated = [key for key, count in duplicates.items() if key and count > 1]
+        # 用 numpy 数频次而不用 `pd.Series(...).value_counts()`：本模块已不再依赖 pandas
+        # （A4 环境没有它）。排序按频次降序、并列时按字典序，抽检集合与原来的行为等价。
+        # numpy instead of pandas: this module no longer depends on it, and the A4 environment has
+        # no pandas. Frequency-descending order keeps the sampled set equivalent to before.
+        values, counts = np.unique(np.asarray(pack["psmiles"]).astype(str), return_counts=True)
+        order = np.argsort(-counts, kind="stable")
+        repeated = [
+            str(values[i]) for i in order if values[i] and int(counts[i]) > 1
+        ]
         for key in repeated[:20]:
             index = np.flatnonzero(pack["psmiles"] == key)
             block = pack["desc"][index]

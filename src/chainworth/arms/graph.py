@@ -110,8 +110,13 @@ import yaml
 # callers may touch the GPU while building data, so `train_one` would be too late.
 os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 
-from chainworth.chem import features as F
-from chainworth.chem import graph as G
+# `features` 与 `chem.graph` **不在模块层导入**：它们分别要 pandas / rdkit，而本模块的通用部分
+# （网格、指标、记录读写、`run_grid`）要被 A4（`arms/polybert.py`）复用——A4 跑在
+# `DSC6020_Project_Polybert` 环境里，那个环境**没有 pandas 也没有 rdkit**（`lock/polybert.pip.txt`）。
+# 真正需要建图的地方只有 `build_task_data()`，它在函数体内导入这两者。
+# `features` and `chem.graph` are not imported at module level: they need pandas/rdkit, while the
+# generic half of this module (grid, metrics, record I/O, `run_grid`) is reused by the A4 arm, which
+# runs in an environment without either. Only `build_task_data()` needs them, and imports them there.
 from chainworth.io import loaders as L
 
 LOGGER = logging.getLogger("chainworth.arms.graph")
@@ -125,6 +130,13 @@ GPU_HOURS_PATH = AGGREGATE_DIR / "gpu_hours.csv"
 ENV_FINGERPRINT = "results/env_fingerprints/env_gnn.json"
 
 ARM = "a3_graph"
+
+# 五个臂的名字，抄自 `results/raw_runs/_schema.json` 的 `arm.enum`（测试会拿文件和这份常量对拍，
+# 所以这里不是"第二份真相"，而是"schema 变了我必须知道"）。`record_problems()` 用它判臂名，
+# 这样 A4 不必再往这个模块里塞一个 `if arm == ...`。
+# The five arm names, copied from the schema's `arm.enum`; a test diffs this tuple against the file,
+# so it is a tripwire rather than a second source of truth.
+KNOWN_ARMS = ("a1_floor", "a2_conventional", "a3_graph", "a4_polybert", "a5_chain")
 
 # run_id 的格式由 `results/raw_runs/_schema.json` 的 pattern 钉死；
 # 这里的两个常量只是把那条规则写在代码里，免得拼错要到写文件时才发现。
@@ -305,19 +317,39 @@ def load_arm_config(path: str | Path | None = None) -> ArmConfig:
         raise ArmError(f"{target.name} 不是合法 YAML：{error}") from error
     if not isinstance(raw, dict):
         raise ArmError(f"{target.name} 顶层不是映射：配置格式不对")
-    for key in ("arm", "version", "architecture", "training", "device", "seeds", "runs", "records"):
+    # 通用键所有臂都有；`architecture`/`training` 是 A3 的位置，`representation`/`head` 是 A4 的。
+    # 按 arm 分派检查，而不是要求每份配置都带一堆用不上的节——A4 没有 `training.loss`，
+    # 硬要它写一个就是逼人填假值。
+    # Common keys for every arm; `architecture`/`training` belong to A3, `representation`/`head` to
+    # A4. Checks are dispatched by arm instead of demanding a section each config never reads.
+    for key in ("arm", "version", "device", "seeds", "runs", "records"):
         if key not in raw:
             raise ArmError(f"{target.name} 缺顶层键 `{key}`")
-    if str(raw["arm"]) != ARM:
-        raise ArmError(f"{target.name} 的 arm={raw['arm']!r}，本模块只训练 {ARM!r}")
-    architecture = raw["architecture"]
-    training = raw["training"]
-    for key in ("depth", "hidden", "atom_feature_dim", "bond_feature_dim"):
-        if key not in architecture:
-            raise ArmError(f"{target.name} 的 architecture 缺 `{key}`")
-    for key in ("batch_size", "max_epochs", "patience", "monitor", "max_lr", "loss"):
-        if key not in training:
-            raise ArmError(f"{target.name} 的 training 缺 `{key}`")
+    arm_name = str(raw["arm"])
+    if arm_name not in KNOWN_ARMS:
+        raise ArmError(f"{target.name} 的 arm={arm_name!r} 不在 {list(KNOWN_ARMS)} 里")
+    if arm_name == ARM:
+        for key in ("architecture", "training"):
+            if key not in raw:
+                raise ArmError(f"{target.name} 缺顶层键 `{key}`")
+        architecture = raw["architecture"]
+        training = raw["training"]
+        for key in ("depth", "hidden", "atom_feature_dim", "bond_feature_dim"):
+            if key not in architecture:
+                raise ArmError(f"{target.name} 的 architecture 缺 `{key}`")
+        for key in ("batch_size", "max_epochs", "patience", "monitor", "max_lr", "loss"):
+            if key not in training:
+                raise ArmError(f"{target.name} 的 training 缺 `{key}`")
+    elif arm_name == "a4_polybert":
+        for key in ("representation", "head", "validation"):
+            if key not in raw:
+                raise ArmError(f"{target.name} 缺顶层键 `{key}`（A4 要表示来源、头、验证留出）")
+        representation = raw["representation"]
+        for key in ("embeddings", "index", "emb_dim", "join_key"):
+            if key not in representation:
+                raise ArmError(f"{target.name} 的 representation 缺 `{key}`")
+        if "alpha_grid" not in raw["head"]:
+            raise ArmError(f"{target.name} 的 head 缺 `alpha_grid`：候选正则强度必须写死在配置里")
     seeds = raw["seeds"]
     if not isinstance(seeds, list) or not seeds or not all(isinstance(s, int) for s in seeds):
         raise ArmError(f"{target.name} 的 seeds 必须是整数列表，现在是 {seeds!r}")
@@ -354,6 +386,12 @@ class RunKey:
     benchmark: str
     fold: str
     seed: int
+    # `arm` 默认取本模块的 A3；A4（`arms/polybert.py`）复用同一个 `RunKey` 与同一份编排
+    # （`run_grid`），只把这个字段换成 `a4_polybert`——两条臂的网格、白名单校验、run_id 形状
+    # 因此是**同一份代码**，不会各写一套然后悄悄不一致。
+    # `arm` defaults to A3; the polyBERT arm reuses this same RunKey and the same `run_grid`,
+    # swapping only this field, so both arms share one implementation of the grid and its checks.
+    arm: str = ARM
 
     def run_id(self) -> str:
         """`<task>__a3_graph__<fold>__seed<N>`（schema 只允许小写字母数字与下划线）。
@@ -368,17 +406,18 @@ class RunKey:
         bad = [c for c in fold if not (c.isalnum() or c == "_")]
         if bad:
             raise ArmError(f"折名 {self.fold!r} 含 schema 不允许的字符 {bad}：run_id 会不合法")
-        return RUN_ID_SEPARATOR.join([self.task, ARM, fold, f"seed{self.seed}"])
+        return RUN_ID_SEPARATOR.join([self.task, self.arm, fold, f"seed{self.seed}"])
 
 
-def run_id_for(task: str, fold: str, seed: int) -> str:
+def run_id_for(task: str, fold: str, seed: int, *, arm: str = ARM) -> str:
     """按任务/折/种子拼 run_id（不查配置，供测试与对账用）。
     Build a run id from task/fold/seed without touching the config (for tests and reconciliation).
 
-    中文：输入：task、fold、seed。输出：字符串。副作用：无。异常：ArmError —— 名字不合法。
-    English: Args: task, fold, seed. Returns: a string. Raises ArmError on an illegal name.
+    中文：输入：task、fold、seed、arm（默认 A3）。输出：字符串。副作用：无。
+          异常：ArmError —— 名字不合法。
+    English: Args: task, fold, seed, arm (A3 by default). Returns: a string. Raises on an illegal name.
     """
-    return RunKey(task=task, benchmark="", fold=fold, seed=seed).run_id()
+    return RunKey(task=task, benchmark="", fold=fold, seed=seed, arm=arm).run_id()
 
 
 def enumerate_runs(
@@ -410,6 +449,12 @@ def enumerate_runs(
     grid = config.raw["runs"]
     if not isinstance(grid, dict):
         raise ArmError("配置的 `runs` 必须是映射（polybench / polybench26 两条）")
+    # 臂名从配置读，不从模块常量猜：A3/A4 共用这份网格展开，只有 `arm` 不同。
+    # The arm name comes from the config, not from a module constant: A3 and A4 share this
+    # expansion and differ only in `arm`.
+    arm_name = str(config.raw.get("arm") or ARM)
+    if arm_name not in KNOWN_ARMS:
+        raise ArmError(f"配置里的 arm={arm_name!r} 不在 schema 的枚举 {list(KNOWN_ARMS)} 里")
     wanted_tasks = set(tasks) if tasks else None
     wanted_folds = set(folds) if folds else None
     wanted_seeds = set(seeds) if seeds is not None and len(seeds) else None
@@ -441,7 +486,15 @@ def enumerate_runs(
                 for seed in config.raw["seeds"]:
                     if wanted_seeds is not None and int(seed) not in wanted_seeds:
                         continue
-                    keys.append(RunKey(task=task, benchmark=benchmark, fold=fold, seed=int(seed)))
+                    keys.append(
+                        RunKey(
+                            task=task,
+                            benchmark=benchmark,
+                            fold=fold,
+                            seed=int(seed),
+                            arm=arm_name,
+                        )
+                    )
 
     if wanted_tasks is not None:
         unknown = sorted(wanted_tasks - known_tasks)
@@ -632,6 +685,11 @@ def build_task_data(task_id: str, *, limit: int | None = None, use_cache: bool =
     if use_cache and key in _GRAPH_CACHE:
         return _GRAPH_CACHE[key]
 
+    # 见模块头的说明：这两个模块要 pandas / rdkit，只在这里导入。
+    # See the module header: these two need pandas/rdkit, so they are imported right here.
+    from chainworth.chem import features as F
+    from chainworth.chem import graph as G
+
     started = time.perf_counter()
     pack = F.load_pack(task_id)
     split = L.load_split(task_id)
@@ -768,10 +826,16 @@ def gpu_block(device: str, *, cudnn_deterministic: bool) -> dict[str, Any] | Non
           配置来源：`device.cudnn_deterministic`。副作用：无。异常：无。
     English: Args: device, cudnn_deterministic. Returns: a dict or None.
     """
+    if device != "cuda":
+        # 先判设备再 import torch：`DSC6020_Project_Core` 里没有 torch，而 A4 的线性头可以用
+        # numpy 在 CPU 上解（见 `arms/polybert.py` 的 `_ridge_solve`），那条路径不该因为"记录里
+        # 要写个 gpu 块"就崩掉。
+        # Test the device before importing torch: the core environment has no torch, and the A4 linear
+        # head can be solved with numpy on the CPU - that path must not die for a gpu block it will
+        # never write.
+        return None
     import torch
 
-    if device != "cuda":
-        return None
     props = torch.cuda.get_device_properties(0)
     return {
         "model": torch.cuda.get_device_name(0),
@@ -1352,11 +1416,30 @@ def fold_version(spec: L.SplitSpec, fold: str) -> tuple[str, str | None]:
     for path in candidates:
         if path.is_file():
             digest = _sha256_of_file(path)
-            return f"{digest[:12]}@{F.repo_relative(path)}", digest
+            return f"{digest[:12]}@{_repo_relative(path)}", digest
     return f"{spec.sha256[:12]}@{spec.ref}", None
 
 
 # ---- 8. 落盘 / Writing ----
+
+
+def _repo_relative(path: Path) -> str:
+    """绝对路径 → 仓库相对的 POSIX 路径（与 `features.repo_relative` 同一口径）。
+    Turn an absolute path into a repo-relative POSIX path, same convention as `features.repo_relative`.
+
+    中文：
+        用途：`split_version` 里那条路径要在记录里跨机器可读，所以不能带盘符与反斜杠。
+              这里自己实现一份而不是调 `features.repo_relative`：`features` 要 pandas / rdkit，
+              而本函数属于 A4 也要复用的通用部分（见模块头）。
+        输入：path。输出：字符串。数据来源：无。副作用：无。异常：无（不在仓库内的路径原样返回）。
+    English: `split_version` carries this path and records must be readable on any machine, so no
+    drive letter and no backslashes. Implemented here rather than calling `features`, which needs
+    pandas/rdkit, because this helper is part of the generic half A4 also reuses.
+    """
+    try:
+        return path.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def write_run_record(record: dict[str, Any], *, directory: Path | None = None) -> Path:
@@ -1411,7 +1494,12 @@ def write_predictions(
         task row position (never a 0..n-1 ordinal), because D uses it to look the label back up.
         Raises: ArmError when pyarrow is missing or the arrays disagree in length.
     """
-    import pandas as pd
+    # 直接走 pyarrow 而不用 pandas：polyBERT 环境里**没有 pandas**（`lock/polybert.pip.txt` 只有
+    # pyarrow），而 A4 要复用这个写入口。多一层 pandas 就等于让一条臂多一个用不上的依赖。
+    # Straight pyarrow rather than pandas: the polyBERT environment ships pyarrow but no pandas,
+    # and A4 reuses this writer. Going through pandas would add a dependency to one arm only.
+    import pyarrow as pa
+    import pyarrow.parquet as pq
 
     if outcome.row_id.size != outcome.y_pred.size:
         raise ArmError(
@@ -1421,13 +1509,13 @@ def write_predictions(
     target_dir = Path(directory) if directory is not None else PREDICTIONS_DIR
     target_dir.mkdir(parents=True, exist_ok=True)
     path = target_dir / f"{identifier}.parquet"
-    frame = pd.DataFrame(
+    table = pa.table(
         {
-            "row_id": np.asarray(outcome.row_id, dtype=np.int64),
-            "y_pred": np.asarray(outcome.y_pred, dtype=np.float64),
+            "row_id": pa.array(np.asarray(outcome.row_id, dtype=np.int64)),
+            "y_pred": pa.array(np.asarray(outcome.y_pred, dtype=np.float64)),
         }
     )
-    frame.to_parquet(path, index=False, engine="pyarrow")
+    pq.write_table(table, path)
     return path
 
 
@@ -1505,7 +1593,13 @@ def record_problems(record: dict[str, Any]) -> list[str]:
     if problems:
         return problems
     run_id = str(record["run_id"])
-    expected = run_id_for(str(record["task"]), str(record.get("split_fold", "")), int(record["seed"]))
+    arm_name = str(record.get("arm", ""))
+    if arm_name not in KNOWN_ARMS:
+        problems.append(f"arm={arm_name!r} 不在 schema 的枚举 {list(KNOWN_ARMS)} 里")
+        return problems
+    expected = run_id_for(
+        str(record["task"]), str(record.get("split_fold", "")), int(record["seed"]), arm=arm_name
+    )
     if run_id != expected:
         problems.append(f"run_id {run_id!r} 与 task/fold/seed 拼出来的 {expected!r} 不一致")
     if record.get("status") not in ("ok", "blocked_no_gpu", "failed"):
@@ -1520,8 +1614,6 @@ def record_problems(record: dict[str, Any]) -> list[str]:
         problems.append("split_version 的哈希前缀不是 12 位")
     if not str(record.get("env_fingerprint", "")).startswith("results/env_fingerprints/env_"):
         problems.append("env_fingerprint 必须是 results/env_fingerprints/env_{core,gnn,polybert}.json")
-    if record.get("arm") != ARM:
-        problems.append(f"arm={record.get('arm')!r}，本模块只写 {ARM!r}")
     if record.get("status") == "ok":
         for key in RECORD_REQUIRED_OK:
             if key not in record:
@@ -1558,6 +1650,8 @@ def run_grid(
     patience: int | None = None,
     resume: bool = True,
     out_root: Path | None = None,
+    builder: Any = None,
+    trainer: Any = None,
 ) -> list[dict[str, Any]]:
     """按网格逐条训练、落记录与预测、汇总墙钟；返回记录列表。
     Train the grid run by run, writing records, predictions and wall clocks; return the records.
@@ -1570,7 +1664,10 @@ def run_grid(
                   跳过的判据是"文件名在、且 JSON 里 status=ok 且 config_hash 与当前一致"——
                   配置换了就必须重跑，否则记录会声称自己用的是旧配置。
         输入：config；tasks/folds/seeds —— 子集；limit —— 冒烟；device；max_epochs/patience ——
-              覆盖；resume —— 跳过已完成的；out_root —— 测试用输出根（None 走仓库默认）。
+              覆盖；resume —— 跳过已完成的；out_root —— 测试用输出根（None 走仓库默认）；
+              builder / trainer —— **注入点**：A4 传 `polybert.build_task_data` 与
+              `polybert.train_one`，于是"按任务分组 + resume 语义 + 写记录/预测/墙钟"这一整套
+              编排只有一份实现，两条臂不会在"哪些算跑完了"这种细节上分叉。
         输出：本次写出的记录列表（按网格顺序）。
         数据来源：`TaskData`。配置来源：`config`。
         副作用：训练、写记录/预测/`gpu_hours.csv`。异常：ArmError —— 见各步。
@@ -1579,8 +1676,12 @@ def run_grid(
         by task so one TaskData (and therefore one graph build) serves all 15 runs of that task;
         (2) `resume` skips only `ok` records **whose config_hash matches**, so a failed placeholder
         is retried and a config change forces a re-run instead of a record claiming an old config.
+        `builder`/`trainer` are injection points: the polyBERT arm passes its own two functions, so
+        the grouping / resume / writing orchestration exists once, not twice.
         Returns: the records written this time, in grid order.
     """
+    builder = builder or build_task_data
+    trainer = trainer or train_one
     keys = enumerate_runs(config, tasks=tasks, folds=folds, seeds=seeds)
     raw_dir = (out_root / "raw_runs") if out_root else RAW_RUNS_DIR
     pred_dir = (out_root / "predictions") if out_root else PREDICTIONS_DIR
@@ -1612,10 +1713,10 @@ def run_grid(
             pending.append(key)
         if not pending:
             continue
-        data = build_task_data(task, limit=limit)
+        data = builder(task, limit=limit)
         for key in pending:
             LOGGER.info("开始 %s", key.run_id())
-            outcome = train_one(
+            outcome = trainer(
                 data,
                 config,
                 fold=key.fold,

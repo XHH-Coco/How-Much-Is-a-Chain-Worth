@@ -1,43 +1,52 @@
-"""阶段入口 05：A3 图神经网络主扫（B-3 / B-5 共用）。
-Stage entry 05: the A3 graph-network sweep (shared by B-3 and B-5).
+"""阶段入口 05：GPU 臂批量运行（A3 图神经网络主扫 / A4 polyBERT 迁移臂；B-3 / B-4 / B-5 共用）。
+Stage entry 05: batch GPU arm runs (A3 graph sweep / A4 polyBERT transfer arm; shared by B-3/B-4/B-5).
 
 中文：
-    用途：B-3 的唯一入口（也是 B 的 **05_run_gpu.py**——README §4.2.1 预先把这个编号留给
-          "GNN / polyBERT 臂的 GPU 批量"；当前只实现 A3，A4 落地时在同一入口加分支，不另开编号）。
+    用途：B 的 **05_run_gpu.py**——README §4.2.1 预先把这个编号留给"GNN / polyBERT 臂的 GPU 批量"。
+          `--arm` 选臂，两个臂**共用一个编排**（`graph.run_grid` 的分组、resume、写盘次序），
+          所以"哪些算跑完了"只有一份实现，不会两条臂各说各话。
           跑完得到：
-          configs/arms/a3_graph.yaml                   冻结的臂配置（本脚本只读它，`config_hash` 就是它的字节哈希）
+          configs/arms/<arm>.yaml                      冻结的臂配置（本脚本只读，`config_hash` 是它的字节哈希）
           results/raw_runs/<run_id>.json               一条 run 一份记录（入库）
           results/aggregate/predictions/<run_id>.parquet  测试集预测 row_id + y_pred（入库）
-          results/aggregate/gpu_hours.csv               每条 run 的实测墙钟（入库）
-    怎么用（三条，按需要挑一条）：
+          results/aggregate/gpu_hours.csv              每条 run 的实测墙钟（两臂共用一张表，按 run_id 覆盖）
+    怎么用（按需要挑一条）：
           python scripts/05_run_gpu.py --dry-run                    # 只打印 48 条网格，不训练
           python scripts/05_run_gpu.py --limit 600 --tasks pb_t3_iwlt --seeds 0 --max-epochs 3
-                                                                    # 冒烟：CPU 上两分钟内跑通
-          python scripts/05_run_gpu.py --require-gpu                # 正式主扫：48 条，GPU
-    依赖：`environment/gnn.yml`（torch / chemprop / torch-geometric / lightning / pyarrow）。
-          逻辑全在 `chainworth/arms/graph.py`，本文件只做参数、日志与总结。
-    配置：`configs/arms/a3_graph.yaml`（可用 `--config` 换一份，但换一份就是换协议）。
+                                                                    # 冒烟：两分钟内跑通
+          python scripts/05_run_gpu.py --require-gpu                # A3 正式主扫：48 条，GPU
+          python scripts/05_run_gpu.py --arm a4_polybert --require-gpu
+                                                                    # A4 主表：48 条（冻结 + ridge）
+          python scripts/05_run_gpu.py --arm a4_polybert --finetune --require-gpu
+                                                                    # A4 对照：48 条微调，写到独立目录
+    依赖：A3 要 `environment/gnn.yml`；A4 要 `environment/polybert.yml`（那个环境**没有 pandas /
+          rdkit**，所以 `arms/graph.py` 与 `chem/features.py` 的顶层依赖已被裁掉，见 D-34）。
+    配置：`configs/arms/<arm>.yaml`（可用 `--config` 换一份，但换一份就是换协议）。
     对外：命令行。所有记录由训练代码落盘，**不许手写**（红线 4）。
-    被谁用：人工（D1 夜里跑主扫）、B-5（同一脚本 + 另一份 `openpoly_scan.yaml`）、CI（`--dry-run`）。
+    被谁用：人工（D1 夜里跑）、B-5（同一脚本 + `openpoly_scan.yaml`）、CI（`--dry-run`）。
 
 English:
-    Purpose: B-3's only entry point. Produces one record per run, one predictions parquet per run and
-    the aggregate wall-clock table; the frozen arm config is read, never written (its byte hash is
-    `config_hash`).
-    Usage: `--dry-run` prints the 48-run grid; `--limit/--max-epochs` is a two-minute CPU smoke;
-    `--require-gpu` is the real sweep. All logic lives in chainworth/arms/graph.py.
-    Depends on environment/gnn.yml. Config: configs/arms/a3_graph.yaml.
-    Public API: the command line. Records are written by the training code, never by hand (red line 4).
-    Callers: humans (the D1 overnight sweep), B-5 (same script, another config), CI (`--dry-run`).
+    Purpose: entry 05 for both GPU arms. `--arm` selects the arm; both share one orchestration
+    (`graph.run_grid`), so "what counts as finished" has exactly one implementation. Produces one
+    record per run, one predictions parquet per run, and the shared wall-clock table.
+    Usage: `--dry-run` prints the grid; `--limit/--max-epochs` is a smoke run; `--require-gpu` is the
+    real sweep; `--arm a4_polybert` switches to the transfer arm; `--finetune` runs the contrast
+    into its own directory instead of the frozen arm's records.
+    Depends on gnn.yml (A3) or polybert.yml (A4). Records are written by the training code only.
+    Callers: humans, B-5, CI (`--dry-run`).
 
 一条命令一个结论 ／ One command, one conclusion
 -----------------------------------------------
 `--dry-run` 的数只有一种解释：**网格对不对**。它不会训练、不会写文件，所以 CI 里可以放心跑。
 `--repeat-check 2` 的数也只有一种解释：**同一份配置、同一个种子跑两次，预测差多少**——验收④要的
-就是"< 1e-3"，不是"大致一致"。
+就是"< 1e-3"，不是"大致一致"。A4 的线性头是闭式解，这个数必然是 0；跑它是为了证明"必然"，
+不是为了让数字好看。微调臂不一样，它有随机初始化、批次顺序与 dropout，这个数可能不为 0，
+所以 `--finetune --repeat-check 2` 是真检查（结果另写 `a4_finetune_repeatability.json`）。
 `--dry-run` answers exactly one question (is the grid right) and writes nothing, so CI may run it.
-`--repeat-check 2` answers exactly one question (how far apart are two runs of the same seed), which
-is criterion 4 - a number below 1e-3, not "roughly the same".
+`--repeat-check 2` answers exactly one question (how far apart are two runs of the same seed).
+For A4's closed-form head the answer is necessarily 0; running it proves the "necessarily".
+The finetuned arm is a real test instead: random init, batch order and dropout could make it
+nonzero, and `--finetune --repeat-check 2` writes `a4_finetune_repeatability.json`.
 """
 
 from __future__ import annotations
@@ -64,6 +73,31 @@ from chainworth.arms import graph as A  # noqa: E402  —— sys.path 之后导�
 
 LOGGER = logging.getLogger("chainworth.scripts.05")
 
+# 两个臂各一份模块；它们导出同名 API（`load_arm_config` / `enumerate_runs` / `run_grid` /
+# `build_task_data` / `train_one`），所以下面的编排代码对两者是同一段。
+# One module per arm; both export the same API, so the orchestration below is shared.
+ARM_MODULES = {"a3_graph": "graph", "a4_polybert": "polybert"}
+ARM_CONFIGS = {
+    "a3_graph": "configs/arms/a3_graph.yaml",
+    "a4_polybert": "configs/arms/a4_polybert.yaml",
+}
+
+
+def _load_arm(arm_name: str):
+    """按名字取臂模块（默认 A3）。／Fetch the arm module by name (A3 by default).
+
+    中文：输入：arm_name。输出：模块。数据来源：`chainworth.arms`。副作用：import。
+          异常：SystemExit —— 名字不在 `ARM_MODULES` 里。
+    English: Args: arm_name. Returns: the module. Raises SystemExit on an unknown name.
+    """
+    module_name = ARM_MODULES.get(arm_name)
+    if module_name is None:
+        raise SystemExit(f"--arm 只能是 {sorted(ARM_MODULES)}，收到 {arm_name!r}")
+    if module_name == "polybert":
+        from chainworth.arms import polybert as module
+        return module
+    return A
+
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """命令行参数。/ Command-line arguments.
@@ -74,9 +108,25 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         prog="05_run_gpu.py",
-        description="B-3：A3 官方图神经网络主扫（chemprop MPNN，官方划分，逐 run 落记录与预测）",
+        description="B-3/B-4：GPU 臂批量运行（A3 chemprop MPNN / A4 polyBERT 迁移），逐 run 落记录与预测",
     )
-    parser.add_argument("--config", default=str(A.DEFAULT_CONFIG_PATH), help="臂配置路径")
+    parser.add_argument(
+        "--arm",
+        choices=tuple(ARM_MODULES),
+        default="a3_graph",
+        help="跑哪条臂（默认 a3_graph；a4_polybert 是 polyBERT 迁移臂）",
+    )
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="臂配置路径（默认按 --arm 取 configs/arms/<arm>.yaml）",
+    )
+    parser.add_argument(
+        "--finetune",
+        action="store_true",
+        help="A4 专用：跑微调对照而不是冻结+ridge。产物写到 results/aggregate/a4_finetune/，"
+             "不写 results/raw_runs/（那是冻结臂的位置）",
+    )
     parser.add_argument("--tasks", nargs="+", metavar="TASK", help="只跑这些任务（默认跑配置里的全部）")
     parser.add_argument("--folds", nargs="+", metavar="FOLD", help="只跑这些折（默认跑配置里的全部）")
     parser.add_argument("--seeds", nargs="+", type=int, metavar="S", help="只跑这些种子（默认 {0,1,2}）")
@@ -93,6 +143,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--no-resume", action="store_true", help="不跳过已有记录，全部重跑")
     parser.add_argument("--repeat-check", type=int, metavar="N", default=0,
                         help="可复现性检查：把选中的第一条 run 连跑 N 次，比较预测最大差（验收④）")
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="A4 专用：把冻结臂与微调的记录并成 results/aggregate/a4_finetune_vs_frozen.csv，"
+             "不训练、不写记录（验收②的凭据）",
+    )
     parser.add_argument("--dry-run", action="store_true", help="只打印网格，不训练、不写文件")
     parser.add_argument("-v", "--verbose", action="store_true", help="更详细的日志 / debug logging")
     return parser.parse_args(argv)
@@ -140,9 +196,10 @@ def _summary(records: list[dict]) -> str:
     )
 
 
-def _repeat_check(config: A.ArmConfig, keys: list[A.RunKey], *, device: str | None,
+def _repeat_check(module: Any, config: A.ArmConfig, keys: list[A.RunKey], *, device: str | None,
                   limit: int | None, max_epochs: int | None, patience: int | None,
-                  repeats: int, out_root: Path) -> int:
+                  repeats: int, out_root: Path,
+                  trainer: Any = None, builder: Any = None, mode: str | None = None) -> int:
     """同一 seed 连跑 N 次，比较测试集预测的最大差（验收④：< 1e-3）。
     Run the same seed N times and compare test predictions (criterion 4: below 1e-3).
 
@@ -150,28 +207,39 @@ def _repeat_check(config: A.ArmConfig, keys: list[A.RunKey], *, device: str | No
         用途：分工_B §2 B-3 验收④"同 seed 两次差异 < 1e-3（GPU 非确定性允许，但要开
               cudnn.deterministic 并记录；不许只写'大致一致'）"。这里把"大致一致"变成一个数：
               同一份配置、同一折、同一种子跑 N 次，取预测向量的最大绝对差。
-              结果写 `results/aggregate/a3_repeatability.json`（入库，是证据不是日志）。
-        输入：config；keys —— 取第一条；device/limit/max_epochs/patience —— 冒烟覆盖；
-              repeats —— 次数（≥2）；out_root —— 记录目录（检查模式不进正式产物）。
+              结果写 `results/aggregate/<arm>[_<模式>]_repeatability.json`（入库，是证据不是日志）。
+              A4 的线性头是闭式解，这个数必然是 0——跑它是为了**证明**"必然"，不是为了让数字好看。
+              微调臂不一样：它有随机初始化、批次顺序、dropout，这个数**可能**不为 0，所以必须实测。
+        输入：module —— 臂模块（提供 `build_task_data` / `train_one`）；config；keys —— 取第一条；
+              device/limit/max_epochs/patience —— 冒烟覆盖；repeats —— 次数（≥2）；
+              out_root —— 记录目录（检查模式不进正式产物）；
+              trainer/builder —— 覆盖训练与取数入口（微调臂传 `train_one_finetune` /
+              `build_task_data_finetune`；默认走冻结臂那两个）；
+              mode —— 写进 JSON 的模式标签（None = 冻结臂）。
         输出：退出码（0 = 通过）。
-        数据来源：`TaskData`。配置来源：`config`。副作用：训练 N 次、写一份 JSON。
+        数据来源：`TaskData` / `EmbeddingData`。配置来源：`config`。副作用：训练 N 次、写一份 JSON。
         异常：ArmError —— 次数 < 2 或两次预测长度不一致。
     English:
         Criterion 4 says "two runs of the same seed differ by < 1e-3 ... do not just write
         'roughly the same'". This turns that into one number: same config, same fold, same seed, N
         runs, maximum absolute difference between prediction vectors. The result goes to
-        `results/aggregate/a3_repeatability.json` - evidence, not a log.
+        `results/aggregate/<arm>[_<mode>]_repeatability.json` - evidence, not a log. For A4's
+        closed-form head the answer is necessarily 0; running it is how the "necessarily" gets
+        proven. The finetuned arm is different: random init, batch order and dropout mean the
+        number *could* be nonzero, so it has to be measured rather than argued.
         Returns: exit code (0 = pass). Raises: ArmError when repeats < 2 or lengths disagree.
     """
     if repeats < 2:
         raise A.ArmError("--repeat-check 至少 2 次")
+    trainer = trainer or module.train_one
+    builder = builder or module.build_task_data
     key = keys[0]
-    data = A.build_task_data(key.task, limit=limit)
+    data = builder(key.task, limit=limit)
     predictions = []
     metrics: list[dict[str, Any]] = []
     for attempt in range(repeats):
         started = time.perf_counter()
-        outcome = A.train_one(
+        outcome = trainer(
             data,
             config,
             fold=key.fold,
@@ -225,9 +293,29 @@ def _repeat_check(config: A.ArmConfig, keys: list[A.RunKey], *, device: str | No
             "同配置、同折、同种子重复训练；预测是原单位，差值就是验收④要的那个数。"
             "两个确定性开关都必须为 true：只钉 cudnn 时本臂实测中位差 0.56 K、超过阈值的点占 99.96%，"
             "因为 chemprop 的图聚合是 CUDA 上的 scatter_reduce 原子加；两条都钉则逐位相同"
+            if key.arm != "a4_polybert"
+            else (
+                "同配置、同折、同种子重复训练；预测是原单位，差值就是验收④要的那个数。"
+                + (
+                    "微调臂有随机初始化、批次顺序与 dropout，差**可能**不为 0，所以必须实测。"
+                    "实测为 0 说明两个确定性开关（cudnn.deterministic + use_deterministic_algorithms）"
+                    "在这条路径上也是够的：两次的轮数、best_epoch、R² 与每个预测值都逐位相同。"
+                    if mode == "finetune"
+                    else "A4 的线性头是闭式解（(X'X+aI)w = X'y），没有随机初始化、没有批次顺序、没有原子加，"
+                    "所以差**必然**是 0——跑这一遍是为了把这个「必然」变成一条可核对的记录，不是为了让数字好看。"
+                    "两个确定性开关仍置 true：记录里 cuda 的 run 一旦为 false 会被 record_problems() 判不合格，"
+                    "而这两条记录与 A3 用同一套校验。"
+                )
+            )
         ),
     }
-    target = out_root / "a3_repeatability.json"
+    if mode:
+        payload["mode"] = mode
+    # 文件名按臂区分：A3 与 A4 的可复现性证据是两份文件，不能互相覆盖。
+    # File name per arm: A3 and A4 keep separate evidence files, never overwriting each other.
+    arm_name = str(config.raw.get("arm", "a3_graph"))
+    short = "a3" if arm_name == "a3_graph" else "a4"
+    target = out_root / f"{short}{'_' + mode if mode else ''}_repeatability.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     # `newline="\n"` 不能省：`Path.write_text` 在 Windows 下会把 `\n` 翻成 `\r\n`，
     # 而 `.gitattributes` 钉的是 `* text=auto eol=lf`——写出来是 CRLF，入库变 LF，
@@ -255,9 +343,14 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s | %(message)s",
         datefmt="%H:%M:%S",
     )
+    module = _load_arm(args.arm)
+    if args.finetune and args.arm != "a4_polybert":
+        LOGGER.error("--finetune 只对 --arm a4_polybert 有意义：A3 是端到端训练的，没有冻结/微调之分")
+        return 1
+    config_path = args.config or str(A.REPO_ROOT / ARM_CONFIGS[args.arm])
     try:
-        config = A.load_arm_config(args.config)
-        keys = A.enumerate_runs(
+        config = module.load_arm_config(config_path)
+        keys = module.enumerate_runs(
             config, tasks=args.tasks, folds=args.folds, seeds=args.seeds
         )
     except A.ArmError as error:
@@ -288,10 +381,31 @@ def main(argv: list[str] | None = None) -> int:
             print(key.run_id())
         return 0
 
+    if args.compare:
+        if args.arm != "a4_polybert":
+            LOGGER.error("--compare 只对 --arm a4_polybert 有意义：A3 只有一种训练模式")
+            return 1
+        try:
+            report = module.write_comparison()
+        except A.ArmError as error:
+            LOGGER.error("%s", error)
+            return 1
+        print(
+            f"对照表 {report['path']}：{report['n_matched']} 条配对；"
+            f"只有微调 {report['n_missing_frozen']} 条 / 只有冻结 {report['n_missing_finetune']} 条"
+        )
+        for task, bucket in report["by_task"].items():
+            print(
+                f"  {task:<30} 冻结 {bucket['r2_frozen']:.4f}  微调 {bucket['r2_finetune']:.4f}  "
+                f"差 {bucket['delta_r2']:+.4f}  ({int(bucket['n'])} 条)"
+            )
+        return 0
+
     out_root = Path(args.out_root) if args.out_root else A.REPO_ROOT / "results" / "aggregate"
     if args.repeat_check:
         try:
             return _repeat_check(
+                module,
                 config,
                 keys,
                 device=device,
@@ -300,14 +414,27 @@ def main(argv: list[str] | None = None) -> int:
                 patience=args.patience,
                 repeats=args.repeat_check,
                 out_root=out_root,
+                trainer=(module.train_one_finetune if args.finetune else module.train_one),
+                builder=(module.build_task_data_finetune if args.finetune else module.build_task_data),
+                mode=("finetune" if args.finetune else None),
             )
         except A.ArmError as error:
             LOGGER.error("%s", error)
             return 1
 
-    record_root = Path(args.out_root) if args.out_root else None
+    if args.finetune:
+        # 微调是**对照**，不能写 `results/raw_runs/`：那里是冻结臂的 48 条，同名 run 会被覆盖，
+        # 于是主表与对照混成一份，谁也说不清哪条是哪条（D-34）。
+        # The fine-tune is a contrast and must not write into `results/raw_runs/`: those are the
+        # frozen arm's 48 records, and a same-named run would overwrite one of them (D-34).
+        record_root = Path(args.out_root) if args.out_root else (
+            A.REPO_ROOT / "results" / "aggregate" / "a4_finetune"
+        )
+        LOGGER.info("微调对照模式：产物写到 %s（不入 raw_runs）", A._repo_relative(record_root))
+    else:
+        record_root = Path(args.out_root) if args.out_root else None
     try:
-        records = A.run_grid(
+        records = module.run_grid(
             config,
             tasks=args.tasks,
             folds=args.folds,
@@ -318,6 +445,7 @@ def main(argv: list[str] | None = None) -> int:
             patience=args.patience,
             resume=not args.no_resume,
             out_root=record_root,
+            **({"finetune": True} if args.finetune else {}),
         )
     except A.ArmError as error:
         LOGGER.error("%s", error)

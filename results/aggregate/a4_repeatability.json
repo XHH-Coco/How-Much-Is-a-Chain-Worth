@@ -1,0 +1,31 @@
+{
+  "run_id": "pb_t1_tg__a4_polybert__official_70_30__seed0",
+  "repeats": 2,
+  "max_abs_prediction_delta": 0.0,
+  "median_abs_prediction_delta": 0.0,
+  "p99_abs_prediction_delta": 0.0,
+  "n_over_threshold": 0,
+  "n_test": 2417,
+  "deltas": [
+    0.0
+  ],
+  "per_repeat_metrics": [
+    {
+      "r2": 0.8235639982875402,
+      "rmse": 45.99963432263636,
+      "epochs_run": 0
+    },
+    {
+      "r2": 0.8235639982875402,
+      "rmse": 45.99963432263636,
+      "epochs_run": 0
+    }
+  ],
+  "threshold": 0.001,
+  "passed": true,
+  "cudnn_deterministic": true,
+  "deterministic_algorithms": true,
+  "device": "cuda",
+  "checked_at": "2026-11-12T15:35:32+0800",
+  "note": "同配置、同折、同种子重复训练；预测是原单位，差值就是验收④要的那个数。A4 的线性头是闭式解（(X'X+aI)w = X'y），没有随机初始化、没有批次顺序、没有原子加，所以差**必然**是 0——跑这一遍是为了把这个「必然」变成一条可核对的记录，不是为了让数字好看。两个确定性开关仍置 true：记录里 cuda 的 run 一旦为 false 会被 record_problems() 判不合格，而这两条记录与 A3 用同一套校验。"
+}

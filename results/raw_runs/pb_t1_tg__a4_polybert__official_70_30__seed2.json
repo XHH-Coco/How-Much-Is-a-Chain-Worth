@@ -1,0 +1,109 @@
+{
+  "run_id": "pb_t1_tg__a4_polybert__official_70_30__seed2",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t1_tg",
+  "arm": "a4_polybert",
+  "seed": 2,
+  "split_version": "fcbe58cc7d46@splits/polybench/pb_t1_tg/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:ca4261c39439345bab3575e5e8cd37589e586467891eeaaf729ed5b4b3db1e4f",
+  "n_train": 5074,
+  "n_test": 2417,
+  "n_val": 564,
+  "metrics": {
+    "r2": 0.8235639982875402,
+    "mae": 33.9737025358448,
+    "rmse": 45.99963432263636
+  },
+  "wall_clock_s": 0.188,
+  "device": "cuda",
+  "env_fingerprint": "results/env_fingerprints/env_gnn.json",
+  "predictions": "results/aggregate/predictions/pb_t1_tg__a4_polybert__official_70_30__seed2.parquet",
+  "epochs_run": 0,
+  "early_stopped": false,
+  "best_epoch": null,
+  "best_val_rmse": 47.44745119861403,
+  "val_loss_normalized": null,
+  "val_loss_unit": "rmse_original（原单位；线性头没有标准化单位的损失曲线）",
+  "val_source": "inner_10%_of_train",
+  "n_rows_without_embedding": 0,
+  "rows_without_embedding_ids": [],
+  "target_scaling": "train_zscore",
+  "mode": "frozen_ridge",
+  "alpha": 100.0,
+  "alpha_grid": [
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0,
+    1000.0,
+    10000.0,
+    100000.0,
+    1000000.0
+  ],
+  "alpha_scores": [
+    [
+      0.01,
+      48.111449551727624
+    ],
+    [
+      0.1,
+      48.10390089335221
+    ],
+    [
+      1.0,
+      48.03382921800302
+    ],
+    [
+      10.0,
+      47.62894100157645
+    ],
+    [
+      100.0,
+      47.44745119861403
+    ],
+    [
+      1000.0,
+      50.03725594309268
+    ],
+    [
+      10000.0,
+      55.82787074925689
+    ],
+    [
+      100000.0,
+      69.42963716818562
+    ],
+    [
+      1000000.0,
+      95.12359551894365
+    ]
+  ],
+  "n_features": 600,
+  "representation": {
+    "source": "B-2 polyBERT (frozen)",
+    "pooling": "masked_mean",
+    "join_key": "psmiles_canonical",
+    "embedding_content_sha256": "2b79ccae4eb3b0ab409048aa6e2231eb2830b4ba2b72f555c7e71810957fc3c6"
+  },
+  "hyperparameters": {
+    "head": "ridge",
+    "solver": "normal_equations",
+    "feature_scaling": "train_zscore",
+    "target_scaling": "train_zscore",
+    "intercept": false
+  },
+  "notes": "polyBERT 嵌入冻结（B-2 产物）+ ridge 线性头（闭式解）；alpha 在训练内部留出上选，测试集只用于打分；线性头无随机性，三个种子的数逐位相同（这是设计，不是稳定性的证据）",
+  "gpu": {
+    "model": "NVIDIA GeForce RTX 4070",
+    "driver": "591.86",
+    "torch_cuda": "12.1",
+    "cudnn_deterministic": true,
+    "deterministic_algorithms": true,
+    "capability": "8.9",
+    "memory_total_mib": 12282
+  },
+  "split_fold_sha256": "fcbe58cc7d46825288a44e06bddc5a24bd7c02f40aecd00c011e5fb6e842c3d5"
+}
