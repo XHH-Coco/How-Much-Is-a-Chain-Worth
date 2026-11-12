@@ -382,3 +382,71 @@ def test_task_configs_agree_on_the_row_counts() -> None:
         total = int(payload["n_train"]) + int(payload["n_val"]) + int(payload["n_test"])
         assert total == int(task_cfg["n_labels"]) == int(payload["n_total"])
         assert total <= 443, "B-5 验收②：一律 n ≤ 443，不许外推"
+
+
+# ---- 8. 5–9 折敏感性分析：网格能扩，配置哈希不能变 / Extra folds must not touch the hash ----
+#
+# 5–9 那五份划分要跑，但**不能写进配置**：配置的字节哈希就是 225 条记录的 `config_hash`，
+# 加两个折名等于换一份配置，`write_n_index()` 会把已交付的 225 条当成旧协议剔除。
+# 所以走 `extra_folds`：折是数据，不是超参。这一节把"扩得开、但哈希不动"钉死。
+# Seeds 5-9 cannot go into the config (its byte hash *is* the config_hash of 225 records), so they
+# travel as `extra_folds`. These tests pin "the grid grows, the hash does not".
+
+
+def test_extra_folds_expand_the_grid_but_keep_the_config_hash(config: G.ArmConfig) -> None:
+    """只给 5–9 时网格是 225 条（不是 450），且 `config_hash` 与已交付记录一致。
+    Naming only seeds 5-9 gives 225 runs (not 450) and leaves `config_hash` untouched.
+    """
+    default = G.enumerate_runs(config)
+    assert len(default) == 225
+    assert {key.fold for key in default} == {"seed0", "seed1", "seed2", "seed3", "seed4"}
+
+    extra = ["seed5", "seed6", "seed7", "seed8", "seed9"]
+    shifted = G.enumerate_runs(config, folds=extra, extra_folds=extra)
+    assert len(shifted) == 225
+    assert {key.fold for key in shifted} == set(extra)
+
+    # 折换了，档位/任务/种子一个没换：两条网格逐键只差 `fold`。
+    assert {key.n_level for key in shifted} == {key.n_level for key in default}
+    assert {key.task for key in shifted} == {key.task for key in default}
+    assert {key.seed for key in shifted} == {key.seed for key in default}
+
+    # 配置一个字节没动——这是整件事的前提。
+    assert config.hash == "sha256:9328cfdf5e79851b44d96c8d7ecf9d1d4f5aa98750761ef345f59e702becda50"
+
+
+def test_extra_folds_do_not_leak_into_the_polybench_grids() -> None:
+    """A3 的主网格没有 openpoly 块，给 extra_folds 也不该多出任何一条 run。
+    The A3 main grid has no openpoly block, so extra folds must add nothing.
+    """
+    a3 = G.load_arm_config(A3)
+    plain = G.enumerate_runs(a3)
+    noisy = G.enumerate_runs(a3, extra_folds=["seed5", "seed6"])
+    assert len(plain) == len(noisy) == 48
+    assert [key.run_id() for key in plain] == [key.run_id() for key in noisy]
+
+
+def test_openpoly_loader_exposes_folds_5_to_9_without_changing_the_digest() -> None:
+    """`load_split` 要给到 10 折，但 `sha256` 必须仍是 0–4 五份的拼接哈希。
+    `load_split` exposes 10 folds while `sha256` stays the digest of the first five.
+
+    为什么这两件事必须同时成立：折多了，5–9 才跑得起来；哈希不变，已交付的 225 条记录才
+    不会被判成"另一份划分"。每条记录的 `split_version` 是**逐折文件**的哈希，所以多加载几折
+    不会改写任何旧记录的 `split_version`。
+    """
+    for task in TASKS:
+        spec = L.load_split(task)
+        names = [fold.name for fold in spec.folds]
+        assert names[:5] == ["seed0", "seed1", "seed2", "seed3", "seed4"]
+        assert names[5:] == ["seed5", "seed6", "seed7", "seed8", "seed9"]
+
+        digest = hashlib.sha256()
+        for seed in range(5):
+            path = REPO / "splits" / "openpoly" / task / f"rule_replicated_seed{seed}.json"
+            digest.update(hashlib.sha256(path.read_bytes()).hexdigest().encode("ascii"))
+        assert spec.sha256 == digest.hexdigest()
+
+        # 逐折哈希：记录里 `split_version` 的格式是 `<12 位>@<路径>`。
+        version, fold_sha = G.fold_version(spec, "seed7")
+        assert version.endswith(f"splits/openpoly/{task}/rule_replicated_seed7.json")
+        assert fold_sha is not None and len(fold_sha) == 64

@@ -714,6 +714,123 @@ def _tokenise(tokenizer: Any, texts: Sequence[str], max_tokens: int) -> Any:
     )
 
 
+def build_finetune_record(
+    *,
+    config: A.ArmConfig,
+    benchmark: str,
+    task_id: str,
+    fold: str,
+    seed: int,
+    split: Any,
+    n_train: int,
+    n_test: int,
+    n_val: int,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    wall_clock_s: float,
+    device: str,
+    hidden: int,
+    epochs: int,
+    epochs_run: int,
+    best_epoch: int,
+    best_val_rmse: float,
+    val_source: str,
+    fine_cfg: Any,
+    batch_size: int,
+    patience: int,
+    freeze: bool,
+    max_tokens: int,
+    deterministic: bool,
+) -> dict[str, Any]:
+    """把一条微调 run 的结果拼成记录（**纯函数，不 import torch**）。
+    Assemble one fine-tune record — a pure function that never imports torch.
+
+    中文：
+        用途：记录的结构是 `results/raw_runs/_schema.json` 的冻结契约，也是 C 的汇总脚本与
+              D 的指标表的输入。把它从 `train_one_finetune` 里拆出来，是为了让"结构对不对"
+              能在**没有 transformers/torch 的环境里**被 pytest 检查。拆之前，唯一的检查长在
+              `test_finetune_smoke_writes_a_consistent_record` 上，而那条要 transformers，
+              装了 transformers 的环境又没有 pytest——所以它从未进过任何一次 `pytest tests`
+              （B-4 交付文档 §8 第 9 条，那是一处"绿着但什么都没查"的缺口）。
+              拆之后：结构由 `tests/test_arms_polybert.py` 的纯函数用例守（core 环境即可），
+              端到端一致性仍由那条冒烟用例在 polybert 环境守。
+        输入：config；benchmark/task_id/fold/seed/split；n_train/n_test/n_val；y_true/y_pred；
+              wall_clock_s/device；hidden/epochs/epochs_run/best_epoch/best_val_rmse/val_source；
+              fine_cfg/batch_size/patience/freeze/max_tokens/deterministic。
+        输出：记录 dict。**键的顺序也是契约**：重跑同一条 run 必须写出逐字节相同的 JSON，
+              所以下面这个字面量的顺序不要为了"好读"去重排。
+        数据来源：调用方（`train_one_finetune` 的训练结果）。
+        配置来源：`config`（`config_hash` 与 `records.env_fingerprint_finetune`）。
+        副作用：无。异常：ArmError —— 预测条数 ≠ 真值条数。
+    English:
+        The record shape is a frozen contract (it feeds C's summary script and D's metric table).
+        Pulling it out of `train_one_finetune` lets pytest check the shape **without torch or
+        transformers**; before the split, the only check needed transformers and lived in an
+        environment with no pytest, so it never ran in any `pytest tests` (B-4 doc, §8 item 9).
+        Returns the record dict. **Key order is part of the contract** — do not reorder the literal
+        below for readability, or a re-run stops being byte-identical. Raises ArmError when the
+        prediction count disagrees with the truth count.
+    """
+    if y_pred.size != y_true.size:
+        raise A.ArmError(
+            f"{task_id}/{fold}/seed{seed}：预测 {y_pred.size} 条 ≠ 测试集 {y_true.size} 条"
+        )
+    run_id = A.run_id_for(task_id, fold, seed, arm=ARM)
+    split_version, fold_sha = A.fold_version(split, fold)
+    record: dict[str, Any] = {
+        "run_id": run_id,
+        "status": "ok",
+        "benchmark": benchmark,
+        "task": task_id,
+        "arm": ARM,
+        "seed": int(seed),
+        "split_version": split_version,
+        "split_fold": fold,
+        "config_hash": A.config_hash(config),
+        "n_train": int(n_train),
+        "n_test": int(n_test),
+        "n_val": int(n_val),
+        "metrics": A._json_safe(A.metrics(y_true, y_pred)),
+        "wall_clock_s": round(float(wall_clock_s), 3),
+        "device": device,
+        "env_fingerprint": str(config.section("records")["env_fingerprint_finetune"]),
+        "predictions": f"results/aggregate/predictions/{run_id}.parquet",
+        "epochs_run": int(epochs_run),
+        "early_stopped": int(epochs_run) < int(epochs),
+        "best_epoch": int(best_epoch),
+        "best_val_rmse": A._json_safe(best_val_rmse),
+        "val_loss_normalized": None,
+        "val_loss_unit": "rmse_original（已乘回 scale）",
+        "val_source": val_source,
+        # 微调路径不查嵌入（无 rdkit），所以这里写 None 而不是 0：0 会被读成"确认没有缺行"。
+        # None reads as "not measured", whereas 0 would claim "confirmed no missing rows".
+        "n_rows_without_embedding": None,
+        "rows_without_embedding_ids": [],
+        "target_scaling": "train_zscore",
+        "mode": "finetune",
+        "n_features": int(hidden),
+        "hyperparameters": {
+            "lr": float(fine_cfg.get("lr", 2e-5)),
+            "batch_size": int(batch_size),
+            "max_epochs": int(epochs),
+            "patience": int(patience),
+            "weight_decay": float(fine_cfg.get("weight_decay", 0.01)),
+            "freeze_backbone": bool(freeze),
+            "max_tokens": int(max_tokens),
+        },
+        "notes": (
+            "polyBERT 微调（对照，不进主表）；与冻结臂同折、同留出、同测试集，"
+            "所以两者之差只归因于'训不训权重'"
+        ),
+    }
+    gpu = A.gpu_block(device, cudnn_deterministic=deterministic)
+    if gpu is not None:
+        record["gpu"] = gpu
+    if fold_sha:
+        record["split_fold_sha256"] = fold_sha
+    return record
+
+
 def train_one_finetune(
     data: EmbeddingData,
     config: A.ArmConfig,
@@ -723,6 +840,7 @@ def train_one_finetune(
     device: str | None = None,
     max_epochs: int | None = None,
     patience: int | None = None,
+    n_level: str | None = None,
 ) -> A.TrainOutcome:
     """跑一条 (b) 的 run：在任务上微调 polyBERT 的最后几层 + 一个线性输出头。
     Run one (b) run: fine-tune polyBERT plus a linear output head on the task.
@@ -749,6 +867,17 @@ def train_one_finetune(
         raise A.ArmError(f"微调要 torch：{error}") from error
     from chainworth.chem import polybert as PB
 
+    # 签名里收 `n_level` 只为与 `train_one()` 对齐：`05_run_gpu.py --repeat-check` 把 n 档
+    # 一起传下去（B-5 修过的一个真 bug：不传就检查了另一条 run），它对两条臂用同一个调用形状。
+    # A4 的网格没有 n 档，所以这里值恒为 None；万一有人把 `n_levels` 抄进 A4 的配置，下面
+    # 这条守卫当场报错，而不是悄悄跑出"名字带档位、实际全量"的记录。
+    # `n_level` exists so both trainers share one call shape for `--repeat-check`; it is always
+    # None for A4, and the guard below makes a copy-pasted `n_levels` fail loudly.
+    if n_level is not None:
+        raise A.ArmError(
+            "A4 的网格没有 n 档：n 档只属于 B-5 的 OpenPoly 扫描（分工_B §2 B-5），"
+            "要跑规模扫描请用 --arm a3_graph --config configs/experiments/openpoly_scan.yaml"
+        )
     fine_cfg = config.section("finetune")
     device_cfg = config.section("device")
     val_cfg = config.section("validation")
@@ -902,60 +1031,37 @@ def train_one_finetune(
             f"{data.task_id}/{fold}/seed{seed}：预测 {y_pred.size} 条 ≠ 测试集 {y_true.size} 条"
         )
 
-    run_id = A.run_id_for(data.task_id, fold, seed, arm=ARM)
-    split_version, fold_sha = A.fold_version(data.split, fold)
     epochs_run = len(history)
-    record: dict[str, Any] = {
-        "run_id": run_id,
-        "status": "ok",
-        "benchmark": data.benchmark,
-        "task": data.task_id,
-        "arm": ARM,
-        "seed": int(seed),
-        "split_version": split_version,
-        "split_fold": fold,
-        "config_hash": A.config_hash(config),
-        "n_train": int(train_rows.size),
-        "n_test": int(test_rows.size),
-        "n_val": int(val_rows.size),
-        "metrics": A._json_safe(A.metrics(y_true, y_pred)),
-        "wall_clock_s": round(wall, 3),
-        "device": chosen,
-        "env_fingerprint": str(config.section("records")["env_fingerprint_finetune"]),
-        "predictions": f"results/aggregate/predictions/{run_id}.parquet",
-        "epochs_run": epochs_run,
-        "early_stopped": epochs_run < epochs,
-        "best_epoch": best_epoch,
-        "best_val_rmse": A._json_safe(best_val),
-        "val_loss_normalized": None,
-        "val_loss_unit": "rmse_original（已乘回 scale）",
-        "val_source": val_source,
-        # 微调路径不查嵌入（无 rdkit），所以这里写 None 而不是 0：0 会被读成"确认没有缺行"。
-        # None reads as "not measured", whereas 0 would claim "confirmed no missing rows".
-        "n_rows_without_embedding": None,
-        "rows_without_embedding_ids": [],
-        "target_scaling": "train_zscore",
-        "mode": "finetune",
-        "n_features": int(hidden),
-        "hyperparameters": {
-            "lr": float(fine_cfg.get("lr", 2e-5)),
-            "batch_size": batch_size,
-            "max_epochs": epochs,
-            "patience": wait,
-            "weight_decay": float(fine_cfg.get("weight_decay", 0.01)),
-            "freeze_backbone": freeze,
-            "max_tokens": max_tokens,
-        },
-        "notes": (
-            "polyBERT 微调（对照，不进主表）；与冻结臂同折、同留出、同测试集，"
-            "所以两者之差只归因于'训不训权重'"
-        ),
-    }
-    gpu = A.gpu_block(chosen, cudnn_deterministic=deterministic)
-    if gpu is not None:
-        record["gpu"] = gpu
-    if fold_sha:
-        record["split_fold_sha256"] = fold_sha
+    # 记录由纯函数拼（`build_finetune_record`）：本函数要 torch，而记录结构必须有能在
+    # core 环境里跑的用例守着——见该函数的 docstring。
+    # The record is assembled by a pure function so its shape can be tested without torch.
+    record = build_finetune_record(
+        config=config,
+        benchmark=data.benchmark,
+        task_id=data.task_id,
+        fold=fold,
+        seed=seed,
+        split=data.split,
+        n_train=int(train_rows.size),
+        n_test=int(test_rows.size),
+        n_val=int(val_rows.size),
+        y_true=y_true,
+        y_pred=y_pred,
+        wall_clock_s=wall,
+        device=chosen,
+        hidden=hidden,
+        epochs=epochs,
+        epochs_run=epochs_run,
+        best_epoch=best_epoch,
+        best_val_rmse=best_val,
+        val_source=val_source,
+        fine_cfg=fine_cfg,
+        batch_size=batch_size,
+        patience=wait,
+        freeze=freeze,
+        max_tokens=max_tokens,
+        deterministic=deterministic,
+    )
 
     # 一个进程连跑多条 run 时，CUDA 缓存分配器不把空闲块还给驱动，单轮会变慢：实测同一条
     # pb26_polymetrix_tg 在"已经跑过 18 个其他任务"的进程里是 37–39 秒/轮，在刚启动的进程里是

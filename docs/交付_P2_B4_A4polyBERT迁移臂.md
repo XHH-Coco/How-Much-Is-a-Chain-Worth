@@ -24,11 +24,12 @@
 | `results/aggregate/a4_finetune/gpu_hours.csv` | 微调的墙钟（**单列一处**，48 行 = 2.6835 GPU-h；查总花销要两处相加 = 3.38 GPU-h） | 48 |
 | `results/aggregate/a4_repeatability.json` | 冻结臂同 seed 两次的可复现性实测（验收④） | 1 |
 | `results/aggregate/a4_finetune_repeatability.json` | **微调**同 seed 两次的可复现性实测（验收④；跨进程另测一次，见 §4） | 1 |
+| `results/aggregate/a4_finetune_repeatability_polymetrix_tg.json` | **最大任务**（`pb26_polymetrix_tg` fold_00 seed2）同 seed 两次的实测——补 §8-6 的缺口，见 §9.1 ② | 1 |
 | `results/aggregate/a4_finetune/` | 微调（对照）的记录、预测、墙钟——**刻意不写进 `raw_runs/`** | 48 条 |
 | `results/aggregate/a4_finetune_vs_frozen.csv` | (a) 与 (b) 同任务同折同种子的逐条对照（验收②凭据） | 1 |
 | `src/chainworth/arms/polybert.py` | 本臂的全部逻辑（数据对齐、ridge、微调、对照表） | 1 |
 | `scripts/05_run_gpu.py` | 入口：`--arm a4_polybert`（`--finetune` / `--compare` / `--repeat-check`） | 改 |
-| `tests/test_arms_polybert.py` | 23 项断言（22 纯函数 + 1 需要 transformers） | 1 |
+| `tests/test_arms_polybert.py` | 26 项断言（25 项纯函数，其中 3 项守微调记录结构；1 项需要 transformers） | 1 |
 
 > **为什么微调不写 `results/raw_runs/`**：`raw_runs/` 里是主表的 48 条，文件名由 `run_id` 唯一确定。
 > 微调用的是同一套任务/折/种子，`run_id` 会完全一样——写进去就是**覆盖**，主表与对照从此分不清
@@ -396,6 +397,8 @@ print('OK')"
 6. **微调的可复现性只测了最小的任务**（`pb_t3_iwlt`，228 行，约 10 秒一条）。选它是因为"能反复跑
    而不占卡"，代价是：大任务（`pb26_polymetrix_tg`，单条 300–1,163 秒）没做同样的两次比对。
    确定性开关是进程级的、与任务大小无关，所以推断上应当一致——但这是推断，不是实测，如实记在这里。
+   > **已补（§9.1 ②）**：最大任务 `pb26_polymetrix_tg` fold_00 seed2 测了两次，`r2` 与 20 小时前的
+   > 交付记录**全精度相同**（`0.905717301776498`）、预测最大差 **0.0**。推断已变成实测。
 7. **微调记录的 `batch_size` / `max_epochs` / `patience` / `lr` 只在 `hyperparameters` 里，不在顶层**
    （A3 的记录两处都有）。主表不需要这几个字段，但**若 C 的汇总脚本按顶层取，会取到空值，要改成
    读 `hyperparameters`**。不改的原因：改记录结构要 48 条全部重跑，为一处冗余不值得。
@@ -406,8 +409,10 @@ print('OK')"
    transformers，而装了 transformers 的 `DSC6020_Project_Polybert` **没有 pytest**（另外两个环境有
    pytest 但没 transformers）。按仓库纪律没往冻结环境里擅自装 pytest，所以这条一直是被 skip 的。
    本轮用等价的直调断言在 polybert 环境里跑过（§7 第 6 条），但它没有进入任何一次 `pytest tests`
-   ——**这是测试覆盖的真实缺口，不是"跑过就算"**。要补的话是给 polybert 环境加一条 dev 依赖并
-   在 `lock/` 里登记，属于分工 A 的范围。
+   ——**这是测试覆盖的真实缺口，不是"跑过就算"**。~~要补的话是给 polybert 环境加一条 dev 依赖并
+   在 `lock/` 里登记，属于分工 A 的范围。~~ **已补（§9.1 ①），而且不需要改环境**：把记录组装抽成
+   不 import torch 的纯函数 `build_finetune_record()`，结构由 core 环境的 pytest 守；端到端一致性
+   仍由那条冒烟在 polybert 环境守。两个环境各守一层。
 
 ---
 
@@ -423,10 +428,71 @@ print('OK')"
 | 条目 | 性质 | 为什么不做的硬理由 | 不做的代价（谁会被它绊到） | 补齐价码 |
 |:--|:--|:--|:--|:--|
 | §8-1/2 超参搜索（含 `max_epochs=30` 偏紧） | **纪律** | 红线 2：A3 是"官方标准配置"，不是"调到最好的一版"。A4 (b) 是**与 A3 对比的对照臂**，只调一侧，H3 就从"信息 vs 架构"塌成"信息 vs 我调的参数"。另外 epoch 在本方案里是**预注册的预算旋钮**而不是待优化超参——Proposal §7.1 降级梯第 (i) 条明写"最大 epoch 从 100 降到 60"。既然按预算只能往下调，就不能因为结果好看再往上调。 | 两条跑满的在降（`pb_t1_tg` seed2 第 29 轮、`pb26_polymetrix_tg` fold_00 seed2 第 25 轮），这两条被**系统性压低**，所以 A4 (b) 报的是**下界**不是上限。偏差方向单一（只会让微调显得更差），不会制造假阳性。**真正的陷阱是措辞**：48 条中位 0.8956 对 A3 0.8899 只差 0.0057，而单个任务的折间 sd 就有 0.015–0.028——这个差值支持"不弱于"，不支持"更好"。 | 48 条重跑 +2.68 GPU-h，总计 6.07，超 B-4 预算 3.5 的 73%（现已用 3.38 = 97%）。要新预算，且 A3 须对称重跑，否则对比失效。 |
-| §8-6 可复现性只测最小任务（`pb_t3_iwlt`，228 行） | **推断** | 两个确定性开关都是**进程级**的（`cudnn.deterministic` + `use_deterministic_algorithms` + 模块层 `CUBLAS_WORKSPACE_CONFIG`），不含任何与任务规模相关的分支；B-3 的 48 条（含大任务）已证同 seed 逐位相同。 | 严格讲"规模相关的非确定性"不能用推断排除：chemprop 的 `scatter_reduce_(sum)` 走原子加，竞争机会随行数增加。所以"小任务过、大任务也过"是推断，不是实测。影响面有限——D 的种子方差用 3 个**不同**种子，不依赖"同 seed 差 0"。 | 挑最大任务一条测两次：1,163 秒 × 2 = 0.646 GPU-h，是剩余额度 0.12 的 5.4 倍。**不必 48 条**。 |
-| §8-9 那条用例不进任何 `pytest` | **欠账 + 纪律（环境的）** | `environment/*.yml`、`lock/*` 是冻结物，往 polybert 环境装 pytest 属于改环境，要分工 A 出 v3 锁；单方面装会让锁文件与实际环境不一致，下次重建又丢。 | **这是九条里唯一的真风险，因为它会沉默失效**：`test_finetune_smoke_writes_a_consistent_record` 是唯一保证"微调记录结构与主表一致"的自动用例，现在 pytest 绿着却不检查它。与 §8-7 叠加——`batch_size`/`max_epochs` 只在 `hyperparameters` 里，C 的汇总脚本若按顶层取会拿到空值，而没有任何测试会红。 | **不需要 GPU、不需要改环境**：把断言拆成"不依赖 transformers 的记录结构层"（喂一条构造好的最小记录/mock 张量）+ "需要 transformers 的冒烟层"，前者进 `pytest tests`。这是九条里唯一"当天可补且该补"的。 |
+| §8-6 可复现性只测最小任务（`pb_t3_iwlt`，228 行） | ~~推断~~ **已补（§9.1 ②）** | 两个确定性开关都是**进程级**的（`cudnn.deterministic` + `use_deterministic_algorithms` + 模块层 `CUBLAS_WORKSPACE_CONFIG`），不含任何与任务规模相关的分支；B-3 的 48 条（含大任务）已证同 seed 逐位相同。 | 严格讲"规模相关的非确定性"不能用推断排除：chemprop 的 `scatter_reduce_(sum)` 走原子加，竞争机会随行数增加。所以"小任务过、大任务也过"是推断，不是实测。影响面有限——D 的种子方差用 3 个**不同**种子，不依赖"同 seed 差 0"。 | 挑最大任务一条测两次：1,163 秒 × 2 = 0.646 GPU-h，是剩余额度 0.12 的 5.4 倍。**不必 48 条**。 |
+| §8-9 那条用例不进任何 `pytest` | ~~欠账 + 纪律（环境的）~~ **已补（§9.1 ①）** | `environment/*.yml`、`lock/*` 是冻结物，往 polybert 环境装 pytest 属于改环境，要分工 A 出 v3 锁；单方面装会让锁文件与实际环境不一致，下次重建又丢。 | **这是九条里唯一的真风险，因为它会沉默失效**：`test_finetune_smoke_writes_a_consistent_record` 是唯一保证"微调记录结构与主表一致"的自动用例，现在 pytest 绿着却不检查它。与 §8-7 叠加——`batch_size`/`max_epochs` 只在 `hyperparameters` 里，C 的汇总脚本若按顶层取会拿到空值，而没有任何测试会红。 | **不需要 GPU、不需要改环境**：把断言拆成"不依赖 transformers 的记录结构层"（喂一条构造好的最小记录/mock 张量）+ "需要 transformers 的冒烟层"，前者进 `pytest tests`。这是九条里唯一"当天可补且该补"的。 |
 
 **一句话结论**：九条里 1 条该马上补（测试分层，零成本）、1 条最值得买（最大任务的两次对比，0.65 GPU-h）、
 其余 7 条不做是**对的**——它们要么是纪律、要么是预算旋钮、要么是等 B-5 之后的臂。写论文时若要声称
 "微调优于 A3"，必须先回来买第 2 条，且顺手把 §8-1 的 epoch 解开，否则会被一句"你 30 轮截断了吗"
 问住。
+**那两条都已经买了（§9.1）：测试分层零成本补完；最大任务实测两次差 0.0，与白天记录全精度相同。**
+
+---
+
+## 9.1 补做记录（2026-11-12 夜）
+
+按 §9 那张表的价码排序执行，前两条已经补掉。
+
+### ① 测试分层——零 GPU、零环境改动
+
+**做了什么**：把记录组装从 `train_one_finetune` 里抽成纯函数 `build_finetune_record()`
+（`src/chainworth/arms/polybert.py`），它**不 import torch**。`tests/test_arms_polybert.py`
+因此新增一节三条用例，跑在 core 环境：
+
+| 用例 | 钉住什么 | 改坏了会怎样 |
+|:--|:--|:--|
+| `test_finetune_record_matches_the_delivered_schema` | 产出与已交付的 `pb_t3_iwlt__...official_70_30__seed0` **逐键同构、键序相同**（`gpu` 除外——cpu 不写它）；`hyperparameters` 的 7 个键一个不少 | 改字段名、重排键序、漏超参键，这里当场红 |
+| `test_finetune_record_on_cuda_carries_the_gpu_block` | `device=cuda` 必带 `gpu` 块且两个确定性开关为 true；把 `cudnn_deterministic` 关掉，`record_problems()` 必须报 | "必须为 true"不再只是一句注释 |
+| `test_finetune_record_rejects_a_prediction_count_mismatch` | 预测条数 ≠ 真值条数当场 `ArmError` | 不会落一条 `n_test` 对不上的记录 |
+
+**结果**：`tests/test_arms_polybert.py` **25 passed / 1 skipped**（原来 23 项）；全量
+`pytest tests` **277 passed / 7 skipped**。那条 skip 的仍是要 transformers 的冒烟用例。
+另外在 `DSC6020_Project_Polybert` 里直调跑了 1 轮微调（约 10 秒），记录的键集合、键序、
+`hyperparameters`、`record_problems()` 与实际交付记录**逐项相同**——拆函数没有改变任何一个字段。
+
+**这一步的实际意义**：§8-9 说的"绿着但什么都没检查"已经不存在了。结构由纯函数用例在 core
+环境守，端到端一致性仍由冒烟用例在 polybert 环境守；**两个环境各守一层，缺一个都不再是全绿**。
+没有往冻结环境装任何包，`environment/*.yml` 与 `lock/*` 一个字节没动。
+
+### ② 最大任务的两次对比——0.49 GPU-h 买到的答案还是 0.0
+
+**为什么是这条**：§8-6 说可复现性只在最小任务（`pb_t3_iwlt`，143 行训练）上测过，最大任务
+（`pb26_polymetrix_tg` fold_00 seed2，5,893 行训练 / 737 测试）从来没做同样的比对。§9 给的价码是
+1,163 秒 × 2 = 0.646 GPU-h，是剩余额度 0.12 的 5.4 倍——所以这是一次**明知超预算仍要买**的补做。
+
+**怎么跑**：`--finetune --repeat-check 2 --tasks pb26_polymetrix_tg --folds fold_00 --seeds 2`，
+`--out-root` 指向临时目录、跑完再改名。**这样不会覆盖原来那份**（`a4_finetune_repeatability.json`
+里是 `pb_t3_iwlt` 的记录，白天那份）。`a3_repeatability.json` 被覆盖的教训还记着。
+
+**结果**：
+
+| 项 | 交付记录（白天，另一进程） | 今晚第 1 次 | 今晚第 2 次 |
+|:--|--:|--:|--:|
+| `r2`（全精度） | 0.905717301776498 | **0.905717301776498** | **0.905717301776498** |
+| `rmse` | 35.03208631435361 | 同上 | 同上 |
+| `epochs_run` / `best_epoch` | 30 / 25 | 30 | 30 |
+| 墙钟 | 1,162.8 秒 | 990.1 秒 | 771.6 秒 |
+| 两次预测最大差 | — | **0.0** | **0.0** |
+
+**结论**：同 seed 在**最大任务**上也**逐位相同**——而且不只是"今晚这两次之间相同"，是**与 20 小时前
+另一个进程里的交付记录全精度相同**（`0.905717301776498` 一位不差）。两个确定性开关都是 true。
+所以 §8-6 那条从"推断"升为"实测"：A4 (b) 的 48 条现在**一大一小两端都验过**，
+规模相关的非确定性在这条路径上**没有出现**。
+
+**顺带一个不能忽略的观察**：同一任务、同样 30 轮，墙钟 **1,162.8 / 990.1 / 771.6 秒**，最大差
+**1.5 倍**。1,162.8 那条是在"已经跑过 18 条其它 run"的进程里，另外两条在新进程里。这印证了
+§8-8 那句"墙钟受进程状态影响、不能当性能指标"，也说明「微调 48 条 2.684 GPU-h」是同一进程连跑的
+结果——但记录里的 `wall_clock_s` 是实测值，**不改**，只在文档里记下这个差异的来源。
+
+**代价（如实记）**：990.1 + 771.6 = 1,761.7 秒 = **0.489 GPU-h**，比 §9 估的 0.646 少（今晚进程更干净）。
+B-4 的实付因此从 **3.38 → 3.87 GPU-h**，**超 3.5 预算 11%**。

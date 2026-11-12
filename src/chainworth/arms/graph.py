@@ -575,6 +575,7 @@ def enumerate_runs(
     folds: Sequence[str] | None = None,
     seeds: Sequence[int] | None = None,
     n_levels: Sequence[str] | None = None,
+    extra_folds: Sequence[str] | None = None,
 ) -> list[RunKey]:
     """把配置里的网格展开成 run 列表；可按任务/折/种子/n 档打子集（冒烟与三行重跑用）。
     Expand the configured grid into a run list, filterable by task/fold/seed/n-level.
@@ -586,7 +587,11 @@ def enumerate_runs(
               benchmark 名字猜——猜错了会静默少跑 180 条。
               **折名不做匹配猜测**：`--folds` 给的名字必须在配置里存在，否则报错——
               静默跳过会让人以为"跑完了"，而实际一条没跑。
-        输入：config；tasks / folds / seeds / n_levels —— 可选白名单。
+              `extra_folds` 是**显式**的例外：只对 openpoly 生效，用来跑配置里没列的划分
+              （B-5 的 5–9 折敏感性分析）。为什么不能把 5–9 写进配置？配置的字节哈希就是
+              225 条的 `config_hash`，加两个折名等于换了一份配置，`write_n_index()` 会把
+              已交付的 225 条当成"旧协议"全部剔除。折是**数据**，不是超参。
+        输入：config；tasks / folds / seeds / n_levels / extra_folds —— 可选白名单。
         输出：`RunKey` 列表（按配置顺序，n 档在折之外那一层）。
         数据来源：`configs/arms/a3_graph.yaml` 与 `configs/tasks/*.yaml`。
         配置来源：`runs`、`seeds`、`n_levels`（可在 `runs.<benchmark>` 里覆盖顶层）。
@@ -598,6 +603,10 @@ def enumerate_runs(
         key decides whether the dimension exists**, never the benchmark name - guessing wrong would
         silently skip 180 runs. The fold filter is **not** a prefix match: a name missing from the
         config raises, because a silent skip looks exactly like "all done" while nothing ran.
+        `extra_folds` is the explicit exception: openpoly only, for folds the config does not list
+        (B-5's 5-9 sensitivity run). They cannot go into the config because its byte hash *is* the
+        `config_hash` of the 225 delivered records - adding two names would make `write_n_index()`
+        treat those 225 as an older protocol and drop them. Folds are data, not hyper-parameters.
         Returns: RunKeys in config order. Raises: ArmError on an unknown task/fold/n-level.
     """
     grid = config.raw["runs"]
@@ -613,6 +622,9 @@ def enumerate_runs(
     wanted_folds = set(folds) if folds else None
     wanted_seeds = set(seeds) if seeds is not None and len(seeds) else None
     wanted_levels = {str(x).lower() for x in n_levels} if n_levels else None
+    # 配置外的折：只有调用方显式给出才追加，且只在 openpoly 上追加（别的基准没有第二套文件）。
+    # Folds outside the config: appended only when the caller names them, and only for openpoly.
+    extra_folds_list = [str(name) for name in (extra_folds or [])]
 
     top_levels = config.raw.get("n_levels")
     if top_levels is not None and (not isinstance(top_levels, list) or not top_levels):
@@ -627,6 +639,8 @@ def enumerate_runs(
             raise ArmError(f"`runs.{benchmark}` 必须是映射（tasks / folds 两个键）")
         block_tasks = list(block.get("tasks", []))
         block_folds = [str(name) for name in block.get("folds", [])]
+        if extra_folds_list and benchmark == "openpoly":
+            block_folds.extend(name for name in extra_folds_list if name not in block_folds)
         if not block_tasks or not block_folds:
             raise ArmError(f"`runs.{benchmark}` 的 tasks/folds 不能为空")
         block_levels = block.get("n_levels", top_levels)
@@ -2149,6 +2163,7 @@ def run_grid(
     folds: Sequence[str] | None = None,
     seeds: Sequence[int] | None = None,
     n_levels: Sequence[str] | None = None,
+    extra_folds: Sequence[str] | None = None,
     limit: int | None = None,
     device: str | None = None,
     max_epochs: int | None = None,
@@ -2168,7 +2183,8 @@ def run_grid(
               ② **`resume` 只跳过 `ok` 的记录**：`failed` / `blocked_no_gpu` 的占位不会被当成"跑过了"。
                   跳过的判据是"文件名在、且 JSON 里 status=ok 且 config_hash 与当前一致"——
                   配置换了就必须重跑，否则记录会声称自己用的是旧配置。
-        输入：config；tasks/folds/seeds —— 子集；limit —— 冒烟；device；max_epochs/patience ——
+        输入：config；tasks/folds/seeds —— 子集；extra_folds —— 配置外的折（只对 openpoly，
+              B-5 的 5–9 敏感性分析）；limit —— 冒烟；device；max_epochs/patience ——
               覆盖；resume —— 跳过已完成的；out_root —— 测试用输出根（None 走仓库默认）；
               builder / trainer —— **注入点**：A4 传 `polybert.build_task_data` 与
               `polybert.train_one`，于是"按任务分组 + resume 语义 + 写记录/预测/墙钟"这一整套
@@ -2187,7 +2203,9 @@ def run_grid(
     """
     builder = builder or build_task_data
     trainer = trainer or train_one
-    keys = enumerate_runs(config, tasks=tasks, folds=folds, seeds=seeds, n_levels=n_levels)
+    keys = enumerate_runs(
+        config, tasks=tasks, folds=folds, seeds=seeds, n_levels=n_levels, extra_folds=extra_folds
+    )
     raw_dir = (out_root / "raw_runs") if out_root else RAW_RUNS_DIR
     pred_dir = (out_root / "predictions") if out_root else PREDICTIONS_DIR
     hours_path = (out_root / "gpu_hours.csv") if out_root else GPU_HOURS_PATH

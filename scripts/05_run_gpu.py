@@ -136,6 +136,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--folds", nargs="+", metavar="FOLD", help="只跑这些折（默认跑配置里的全部）")
     parser.add_argument("--seeds", nargs="+", type=int, metavar="S", help="只跑这些种子（默认 {0,1,2}）")
     parser.add_argument(
+        "--extra-folds",
+        nargs="+",
+        metavar="FOLD",
+        help="配置网格之外的折（B-5 的 5–9 折敏感性分析；只对 openpoly 有意义）。"
+             "**不能把这些折写进配置**：配置的字节哈希就是 225 条的 config_hash，改它等于换协议，"
+             "`write_n_index()` 会把已交付的 225 条当成旧协议剔除。折是数据，不是超参",
+    )
+    parser.add_argument(
         "--n-levels",
         nargs="+",
         metavar="LEVEL",
@@ -385,6 +393,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.finetune and args.arm != "a4_polybert":
         LOGGER.error("--finetune 只对 --arm a4_polybert 有意义：A3 是端到端训练的，没有冻结/微调之分")
         return 1
+    extra_kwargs: dict[str, Any] = {}
+    if args.extra_folds:
+        if args.arm != "a3_graph":
+            LOGGER.error(
+                "--extra-folds 只对 --arm a3_graph 有意义：它是给 B-5 的 OpenPoly 敏感性分析用的"
+                "（跑配置网格之外的划分）。A4 的任务是 PolyBench/PB26，没有第二套折文件。"
+            )
+            return 1
+        # 只给 `--extra-folds` 时，意图显然是"就跑这几折"；否则会和配置里的 5 折并集，变成 450 条。
+        # Naming only `--extra-folds` means "run exactly these"; otherwise it unions with the config's
+        # five folds and the grid silently doubles to 450 runs.
+        if not args.folds:
+            args.folds = list(args.extra_folds)
+        extra_kwargs["extra_folds"] = args.extra_folds
     config_path = args.config or str(A.REPO_ROOT / ARM_CONFIGS[args.arm])
     try:
         config = module.load_arm_config(config_path)
@@ -394,6 +416,7 @@ def main(argv: list[str] | None = None) -> int:
             folds=args.folds,
             seeds=args.seeds,
             n_levels=args.n_levels,
+            **extra_kwargs,
         )
     except A.ArmError as error:
         LOGGER.error("%s", error)
@@ -488,6 +511,7 @@ def main(argv: list[str] | None = None) -> int:
             patience=args.patience,
             resume=not args.no_resume,
             out_root=record_root,
+            **extra_kwargs,
             **({"finetune": True} if args.finetune else {}),
         )
     except A.ArmError as error:

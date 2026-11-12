@@ -16,9 +16,14 @@ inside the training data only, and the records validate.
              - 同输入两次求解逐位相同（闭式解没有随机性，这条是主表 `std=0` 的依据）；
              - 标准化只用训练行（改验证行不改变 mean/scale）；
              - `record_problems()` 收 A4 记录、拒 `arm` 与 `run_id` 不匹配的记录。
-          ② **需要数据（core 环境，play 装配产物在）**：冒烟跑一条 (a)，断言预测行数 = 测试集行数、
+          ② **微调记录的纯函数（core 环境，不需要 transformers）**：`build_finetune_record()`
+             的产出必须与已交付的 48 条**逐键同构、键序相同**；cuda 必带 `gpu` 块且两个确定性
+             开关为 true；预测条数不匹配当场报错。这一组补的是 B-4 §8 第 9 条——原来"微调记录
+             结构"只由一条需要 transformers 的用例守着，而那个环境没有 pytest，等于从未进过
+             任何一次 `pytest tests`。
+          ③ **需要数据（core 环境，装配产物在）**：冒烟跑一条 (a)，断言预测行数 = 测试集行数、
              `row_id` 落在官方 `test_index` 内、`device` 与真实设备一致。
-          ③ **需要 transformers（polybert 环境才跑）**：微调冒烟 1 轮，断言预测行数与记录齐全。
+          ④ **需要 transformers（polybert 环境才跑）**：微调冒烟 1 轮，断言预测行数与记录齐全。
     依赖：`configs/arms/a4_polybert.yaml`（入库）、`data/processed/features/*.npz` 与
           `data/processed/polybert/*`（不入库）。缺产物时相关用例跳过。
     配置：无环境变量。跑 ①③ 用对应环境。
@@ -32,11 +37,15 @@ English:
     through canonical strings (row-order lookup is the wrong answer this case pins down), ridge
     recovers a known linear function, two identical solves are bit-identical (the basis for `std=0`
     in the main table), standardisation uses training rows only, and `record_problems()` accepts an
-    A4 record while rejecting a mismatched arm/run_id; (2) cases needing data - one (a) smoke run with
-    prediction count, `row_id` membership and `device` asserted; (3) cases needing transformers - a
-    one-epoch fine-tune smoke.
+    A4 record while rejecting a mismatched arm/run_id; (2) the fine-tune record's pure builder - its
+    output must be key-for-key identical to a delivered record, in the same key order, with a gpu
+    block on cuda whose determinism switches are both true, and a raised error on a count mismatch
+    (this closes B-4 §8 item 9: the shape used to be covered only by a transformers-dependent test
+    in an environment without pytest); (3) cases needing data - one (a) smoke run with prediction
+    count, `row_id` membership and `device` asserted; (4) cases needing transformers - a one-epoch
+    fine-tune smoke.
     Depends on: configs/arms/a4_polybert.yaml (committed) plus the non-committed data artefacts; the
-    affected cases skip when those are absent. Run group (3) in the polyBERT environment.
+    affected cases skip when those are absent. Run group (4) in the polyBERT environment.
 """
 
 from __future__ import annotations
@@ -398,7 +407,137 @@ def test_a4_and_a3_share_the_same_split_version() -> None:
     assert version_a4 == version_a3
 
 
-# ---- 6. 微调冒烟（要 transformers） / Fine-tune smoke (needs transformers) ----
+# ---- 6. 微调记录的结构（纯函数，不需要 transformers） / Fine-tune record shape ----
+#
+# 这一节是 B-4 §8 第 9 条那个缺口的补法。原来"微调记录结构与主表一致"只有一条用例守着，
+# 而那条要 transformers；装了 transformers 的环境又没有 pytest，于是它从未进过任何一次
+# `pytest tests`。现在记录由一个不 import torch 的纯函数拼（`build_finetune_record`），
+# 结构就能在 core 环境里被断言：改字段、改顺序、漏 `hyperparameters` 的键，这里当场红。
+# This section closes the gap recorded as B-4 §8 item 9: the shape used to be covered only by a
+# transformers-dependent smoke test living in an environment without pytest, so it never ran in
+# `pytest tests`. The record is now built by a pure function, so its shape is asserted here.
+
+FINETUNE_RUNS_DIR = REPO_ROOT / "results" / "aggregate" / "a4_finetune" / "raw_runs"
+HAS_FINETUNE_RUNS = FINETUNE_RUNS_DIR.is_dir() and any(FINETUNE_RUNS_DIR.glob("*.json"))
+
+needs_finetune_runs = pytest.mark.skipif(
+    not HAS_FINETUNE_RUNS,
+    reason="缺已交付的微调记录（results/aggregate/a4_finetune 不入库）：先跑 `--finetune`",
+)
+
+# 参照物是一条**真实交付**的记录。断言的是"结构"，不是"数值"：n_train/n_val/n_test 与
+# val_source 照抄那条 JSON，只为让记录自洽，不参与任何结论。
+_DELIVERED_FINETUNE = FINETUNE_RUNS_DIR / "pb_t3_iwlt__a4_polybert__official_70_30__seed0.json"
+
+
+def _fake_gpu_block(device: str, *, cudnn_deterministic: bool) -> dict:
+    """替身：core 环境没有 torch，`A.gpu_block("cuda")` 会去 import 它。只伪造结构。
+    A stand-in: core has no torch, so the real block cannot be produced here.
+    """
+    return {
+        "model": "fake",
+        "driver": "0",
+        "torch_cuda": "0",
+        "cudnn_deterministic": bool(cudnn_deterministic),
+        "deterministic_algorithms": True,
+        "capability": "8.9",
+        "memory_total_mib": 0,
+    }
+
+
+def _build_sample_record(**overrides: object) -> dict:
+    """用一组自洽的标量拼一条记录；`overrides` 用来构造反例。
+    Build one record from self-consistent scalars; `overrides` builds the negative cases.
+    """
+    config = P.load_arm_config(CONFIG_PATH)
+    rng = np.random.default_rng(0)
+    y_true = rng.normal(size=69)
+    y_pred = y_true + rng.normal(scale=0.1, size=69)
+    kwargs: dict[str, object] = dict(
+        config=config,
+        benchmark="polybench",
+        task_id="pb_t3_iwlt",
+        fold="official_70_30",
+        seed=0,
+        split=L.load_split("pb_t3_iwlt"),
+        n_train=143,
+        n_test=69,
+        n_val=16,
+        y_true=y_true,
+        y_pred=y_pred,
+        wall_clock_s=10.0,
+        device="cpu",
+        hidden=600,
+        epochs=30,
+        epochs_run=14,
+        best_epoch=9,
+        best_val_rmse=40.15989251293401,
+        val_source="inner_10%_of_train",
+        fine_cfg=config.section("finetune"),
+        batch_size=32,
+        patience=5,
+        freeze=False,
+        max_tokens=512,
+        deterministic=True,
+    )
+    kwargs.update(overrides)
+    return P.build_finetune_record(**kwargs)  # type: ignore[arg-type]
+
+
+@needs_finetune_runs
+def test_finetune_record_matches_the_delivered_schema() -> None:
+    """纯函数产出的记录必须与已交付的 48 条**逐键同构**，键序也一样。
+    The pure builder must match a delivered record key for key, in the same order.
+    """
+    delivered = json.loads(_DELIVERED_FINETUNE.read_text(encoding="utf-8"))
+    record = _build_sample_record()
+
+    # cpu 不写 gpu 块（schema 只在 device=cuda 时要求它）；其余键一个不多、一个不少。
+    assert set(record) == set(delivered) - {"gpu"}
+    # 键序也是契约：重跑同一条 run 必须写出逐字节相同的 JSON，重排就算改格式。
+    # `gpu` 是 cuda 才有的条件块，比较顺序时两边都摘掉它。
+    assert [key for key in record if key != "gpu"] == [key for key in delivered if key != "gpu"]
+    # C 的汇总脚本要按顶层读这四个超参（B-4 §8 第 7 条），漏掉就是它取到空值的原因。
+    assert {"lr", "batch_size", "max_epochs", "patience"} <= set(record["hyperparameters"])
+    assert set(record["hyperparameters"]) == set(delivered["hyperparameters"])
+    assert set(record["metrics"]) == set(delivered["metrics"])
+    assert record["arm"] == "a4_polybert"
+    assert record["mode"] == "finetune"
+    assert record["env_fingerprint"] == "results/env_fingerprints/env_polybert.json"
+    assert record["n_test"] == 69
+    assert record["predictions"] == f"results/aggregate/predictions/{record['run_id']}.parquet"
+    assert P.record_problems(record) == []
+
+
+def test_finetune_record_on_cuda_carries_the_gpu_block(monkeypatch: pytest.MonkeyPatch) -> None:
+    """device=cuda 的记录必须带 gpu 块，且块里两个确定性开关都为 true；关掉一个必须被校验抓住。
+    A cuda record must carry the gpu block with both determinism switches on, and turning one off
+    must be caught - otherwise "must be true" is only a comment.
+    """
+    monkeypatch.setattr(P.A, "gpu_block", _fake_gpu_block)
+    record = _build_sample_record(device="cuda")
+    assert "gpu" in record
+    assert record["gpu"]["cudnn_deterministic"] is True
+    assert record["gpu"]["deterministic_algorithms"] is True
+    assert P.record_problems(record) == []
+
+    record["gpu"]["cudnn_deterministic"] = False
+    assert P.record_problems(record) != []
+
+
+def test_finetune_record_rejects_a_prediction_count_mismatch() -> None:
+    """预测条数 ≠ 真值条数必须当场报错，而不是落一条 `n_test` 对不上的记录。
+    A count mismatch must raise instead of landing a record whose `n_test` disagrees.
+    """
+    with pytest.raises(A.ArmError, match="预测"):
+        _build_sample_record(
+            y_true=np.zeros(10, dtype=np.float64),
+            y_pred=np.zeros(9, dtype=np.float64),
+            n_test=9,
+        )
+
+
+# ---- 7. 微调冒烟（要 transformers） / Fine-tune smoke (needs transformers) ----
 
 
 @needs_transformers

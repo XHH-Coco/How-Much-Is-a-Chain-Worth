@@ -93,6 +93,17 @@ HARMONISED_COLUMNS = ("source_row", "smiles_canonical", "label")
 # is not an experiment parameter but the definition of which split files count as folds.
 OPENPOLY_FOLD_SEEDS = (0, 1, 2, 3, 4)
 
+# 敏感性分析用的另外五份（A-5 一共发了 10 份，`splits/openpoly/<task>/rule_replicated_seed{5..9}.json`）。
+# 它们**不进** `SplitSpec.sha256`（那个哈希必须与已交付的 225 条记录保持一致），也**不改变**
+# 任何记录的 `split_version`——因为 `fold_version()` 优先用**逐折文件自己的哈希**
+# （实测 `1fdd8d5a131a@splits/openpoly/op_tg/rule_replicated_seed0.json`），整份拼接哈希只是兜底。
+# 缺这几份时只跳过、不报错：主表五折能跑，没有 5–9 只是做不了敏感性分析。
+# The five extra split files A-5 shipped (10 in total). They stay **out of** `SplitSpec.sha256`
+# (that digest must keep matching the 225 delivered records) and they never change a record's
+# `split_version`, because `fold_version()` prefers the per-fold file digest and only falls back to
+# the concatenation. Missing files are skipped rather than raised: the main five folds still work.
+OPENPOLY_EXTRA_FOLD_SEEDS = (5, 6, 7, 8, 9)
+
 
 class AssemblyError(RuntimeError):
     """装配无法进行时抛这一个；消息里必须写清"缺什么、谁该补"。
@@ -484,21 +495,23 @@ def _openpoly_split(task_id: str, config: dict[str, Any]) -> SplitSpec:
               五个折文件各有一份哈希，`sha256` 取五份按种子排序后的拼接哈希——单取一份会把
               "五份里有一份被换过"这种事藏起来。
         输入：task_id；config（`split_ref` 指向 `splits/openpoly/<task>/` 目录）。
-        输出：`SplitSpec`（五折，名为 `seed0`…`seed4`）。
-        数据来源：`splits/openpoly/<task>/rule_replicated_seed{0..4}.json`。
+        输出：`SplitSpec`——主表五折 `seed0`…`seed4`；磁盘上若还有 `seed5`…`seed9`，追加在后面
+              供敏感性分析（B-5 §9 第 2 条），但不进 `sha256`。
+        数据来源：`splits/openpoly/<task>/rule_replicated_seed{0..9}.json`（0–4 必需，5–9 可选）。
         配置来源：`split_ref` / `split_protocol`。
-        副作用：只读。异常：AssemblyError —— 缺文件。
+        副作用：只读。异常：AssemblyError —— 缺 0–4 中任意一份。
 
     English:
         Purpose: this is **not the authors' split** (D-24), so `protocol` always carries
         `rule_replicated` and `row_order` is copied as "published-order base-data row numbers", so
         downstream knows the indices address the raw CSV, not a harmonised table. The hash is the
-        concatenated digest of all five files in seed order - taking one would hide "one of the
-        five was swapped".
-        Args: task_id; config (`split_ref` is the directory). Returns: a SplitSpec with five folds.
-        Data source: splits/openpoly/<task>/rule_replicated_seed{0..4}.json.
-        Config: `split_ref` / `split_protocol`. Side effects: read-only.
-        Raises: AssemblyError when a file is missing.
+        concatenated digest of the five main files in seed order - taking one would hide "one of the
+        five was swapped"; seeds 5-9 are appended when present (split-sensitivity) but kept out of it.
+        Args: task_id; config (`split_ref` is the directory). Returns: a SplitSpec with the five main
+        folds plus any extra ones on disk.
+        Data source: splits/openpoly/<task>/rule_replicated_seed{0..9}.json (0-4 required, 5-9
+        optional). Config: `split_ref` / `split_protocol`. Side effects: read-only.
+        Raises: AssemblyError when one of the five main files is missing.
     """
     directory = REPO_ROOT / str(config["split_ref"])
     folds: list[FoldSpec] = []
@@ -509,6 +522,25 @@ def _openpoly_split(task_id: str, config: dict[str, Any]) -> SplitSpec:
             raise AssemblyError(f"缺 OpenPoly 划分 {path}：先跑 scripts/03_splits.py（A-5）")
         payload = json.loads(path.read_text(encoding="utf-8"))
         digests.append(_sha256_of(path))
+        folds.append(
+            FoldSpec(
+                name=f"seed{seed}",
+                train_index=np.asarray(payload["train_index"], dtype=np.int64),
+                val_index=np.asarray(payload["val_index"], dtype=np.int64),
+                test_index=np.asarray(payload["test_index"], dtype=np.int64),
+            )
+        )
+    # 5–9 是敏感性分析的另外五份（B-5 §9 第 2 条）。**不进 `digests`**：`sha256` 必须与已交付的
+    # 225 条一致；每条记录的 `split_version` 走逐折文件哈希，所以多加载几折不改变旧记录的身份。
+    # 缺文件只跳过——主表五折不依赖它们。
+    # Seeds 5-9 are the extra five files used for the split-sensitivity check. They stay OUT of
+    # `digests` so `sha256` keeps matching the 225 delivered records; each record's `split_version`
+    # is the per-fold file digest, so loading more folds does not re-identify an old record.
+    for seed in OPENPOLY_EXTRA_FOLD_SEEDS:
+        path = directory / f"rule_replicated_seed{seed}.json"
+        if not path.is_file():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
         folds.append(
             FoldSpec(
                 name=f"seed{seed}",

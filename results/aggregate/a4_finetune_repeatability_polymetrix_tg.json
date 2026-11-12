@@ -1,0 +1,34 @@
+{
+  "run_id": "pb26_polymetrix_tg__a4_polybert__fold_00__seed2",
+  "n_level": null,
+  "n_train": 5893,
+  "repeats": 2,
+  "max_abs_prediction_delta": 0.0,
+  "median_abs_prediction_delta": 0.0,
+  "p99_abs_prediction_delta": 0.0,
+  "n_over_threshold": 0,
+  "n_test": 737,
+  "deltas": [
+    0.0
+  ],
+  "per_repeat_metrics": [
+    {
+      "r2": 0.905717301776498,
+      "rmse": 35.03208631435361,
+      "epochs_run": 30
+    },
+    {
+      "r2": 0.905717301776498,
+      "rmse": 35.03208631435361,
+      "epochs_run": 30
+    }
+  ],
+  "threshold": 0.001,
+  "passed": true,
+  "cudnn_deterministic": true,
+  "deterministic_algorithms": true,
+  "device": "cuda",
+  "checked_at": "2026-11-13T00:16:07+0800",
+  "note": "同配置、同折、同种子重复训练；预测是原单位，差值就是验收④要的那个数。微调臂有随机初始化、批次顺序与 dropout，差**可能**不为 0，所以必须实测。实测为 0 说明两个确定性开关（cudnn.deterministic + use_deterministic_algorithms）在这条路径上也是够的：两次的轮数、best_epoch、R² 与每个预测值都逐位相同。",
+  "mode": "finetune"
+}
