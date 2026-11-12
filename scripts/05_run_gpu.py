@@ -277,9 +277,16 @@ def _repeat_check(module: Any, config: A.ArmConfig, keys: list[A.RunKey], *, dev
             n_level=key.n_level,
         )
         predictions.append(outcome.y_pred)
+        # 墙钟必须落进凭据：否则"这次检查花了多少卡时"只存在于控制台日志里，事后无法从产物核算。
+        # 本文件第一版就是这样——2026-11-12 补做最大任务两次对比花了 0.489 GPU-h，只有文档叙述，
+        # 任何脚本都读不出来。重复训练恰好是唯一"花两倍卡时买一个数字"的操作，账更不能含糊。
+        # Wall clock has to land in the evidence: otherwise "what did this check cost" lives only in
+        # a console log. The first version did exactly that - the 0.489 GPU-h repeat check of
+        # 2026-11-12 was unreadable from any artefact.
         metrics.append({"r2": outcome.record["metrics"]["r2"],
                         "rmse": outcome.record["metrics"]["rmse"],
-                        "epochs_run": outcome.record["epochs_run"]})
+                        "epochs_run": outcome.record["epochs_run"],
+                        "wall_clock_s": round(time.perf_counter() - started, 3)})
         LOGGER.info(
             "第 %d/%d 次：r2=%.6f rmse=%.6f %.1f 秒",
             attempt + 1,
@@ -310,6 +317,12 @@ def _repeat_check(module: Any, config: A.ArmConfig, keys: list[A.RunKey], *, dev
         "n_level": key.n_level,
         "n_train": int(outcome.record.get("n_train") or 0),
         "repeats": repeats,
+        # 这条检查的总卡时 = 各次墙钟之和。它不进 `gpu_hours.csv`（那张表一次 run 一行，
+        # 而这里同一条 run 被跑了 N 次），所以必须自带这一项，否则总账会少算。
+        # Total GPU time for this check. It is deliberately absent from `gpu_hours.csv` (one row per
+        # run, but here one run is trained N times), so the payload has to carry it.
+        "wall_clock_total_s": round(sum(item["wall_clock_s"] for item in metrics), 3),
+        "wall_clock_s": [item["wall_clock_s"] for item in metrics],
         "max_abs_prediction_delta": worst,
         "median_abs_prediction_delta": float(np.median(diff)),
         "p99_abs_prediction_delta": float(np.percentile(diff, 99)),

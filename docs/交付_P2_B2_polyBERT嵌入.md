@@ -16,7 +16,7 @@
 | `data/processed/polybert/index.parquet` | `row / structure_id / psmiles_canonical / polybert_input / n_tokens / n_unk` | 376 KiB |
 | `data/processed/polybert/manifest.json` | 维度、覆盖数、模型 revision、权重 sha256、两份产物哈希 | 1 KiB |
 | `data/processed/polybert/shards/shard_00000..00011.npz` | 12 片中间产物，**保留**：断了重跑只补缺的片 | 26 MiB |
-| `data/manifests/polybert_manifest.csv` | 上面那份清单的一行（**入库**，便于看历史） | 1 行 |
+| `data/manifests/polybert_manifest.csv` | 上面那份清单的一行（**入库**，便于看历史）。**现 2 行**：v1 = 11,494 结构（B-2 初版，08:08）、v2 = 18,152 结构（B-1.5 扩表征后重嵌入，08:39）。追加式写入、**无版本列**，读的人必须按 `created_at` 取最新一行，别取第一行（2026-11-13 验收时补的说明；只有 `append_manifest_csv()` 写它，没有任何脚本读它，所以是"人会读错"而不是"程序会读错"） | 2 行 |
 
 代码：`src/chainworth/chem/polybert.py`（逻辑）+ `scripts/03c_polybert.py`（入口）+ `tests/test_polybert.py`（15 项）。
 **`data/processed/polybert/` 不入库**（`data/processed/*` 被 gitignore），重建命令见 §6。

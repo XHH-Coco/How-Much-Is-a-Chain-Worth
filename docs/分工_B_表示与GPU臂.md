@@ -300,7 +300,8 @@ src/chainworth/arms/{graph,polybert}.py
 src/chainworth/io/loaders.py
 data/processed/polybert/embeddings.npy + index.parquet + manifest
 data/processed/features/<task>.npz + feature_manifest.csv
-results/raw_runs/<run_id>.json                       GPU 的 273 条，入库
+results/raw_runs/<run_id>.json                       GPU 的 546 条，入库
+                                                     （48 A3 + 48 A4 冻结 + 225 B-5 主表 + 225 B-5 敏感性；A4 微调另落 a4_finetune/）
 results/aggregate/predictions/<run_id>.parquet        预测，入库（小文件）
 results/aggregate/{openpoly_gpu_index,gpu_hours}.csv
 docs/DECISIONS.md（A4 微调那条决策）
@@ -339,7 +340,7 @@ docs/RUN_REQUESTS.md（没有卡时才需要填）
 
 代跑完成后，run 记录会回到 `results/raw_runs/`。**你仍然负责验收**：
 
-- [ ] 条数对不对（273 条 = 48 + 225，缺一条都要说清是哪条、为什么）
+- [ ] 条数对不对（546 条 = 48 A3 + 48 A4 冻结 + 225 主表 + 225 敏感性；微调的 48 条在 `a4_finetune/`，缺一条都要说清是哪条、为什么）
 - [ ] 每条记录里 `device` 是 `cuda`、`env_fingerprint` 指向 `env_gnn.json`
 - [ ] 预测文件行数与 split 测试集行数一致
 - [ ] 随机抽 3 条，用同一命令在 CPU 上 `--limit` 重跑，指标量级合理（不要求相同，只要求不是明显坏掉）
@@ -410,11 +411,11 @@ docs/RUN_REQUESTS.md（没有卡时才需要填）
 
 - [ ] `git status` 里没有权重文件、没有 `logs/`、没有 HuggingFace 缓存
 - [ ] 所有训练入口都有 `--limit` 与 `--dry-run`，CPU 上 2 分钟能跑完一片
-- [ ] `pytest tests/` 全绿，含 `test_splits_identity.py`、`test_no_leakage.py`
-- [ ] run 记录条数对得上（48 + 225 = 273），缺的都有 `blocked_no_gpu` 占位
+- [ ] `pytest tests/` 全绿，含 `test_splits.py`（划分身份/复现的断言在这份里，**没有单独的 `test_splits_identity.py`**——初版清单写的那个文件名从来不存在）与 `test_no_leakage.py`
+- [ ] run 记录条数对得上（**546** = 48 + 48 + 225 + 225），缺的都有 `blocked_no_gpu` 占位
 - [ ] 每份 run 记录都带 `split_version`、`config_hash`、`env_fingerprint`、`device`、`wall_clock_s`
 - [ ] 每份 run 记录都有对应 `predictions/*.parquet`，行数与测试集一致
-- [ ] `configs/arms/*.yaml` 里的预算表 ≤30 trials，且与 `docs/` 里的说明一致
+- [ ] `configs/arms/*.yaml` 里的预算表 ≤30 trials —— **B 的两条臂不适用**：A3 按红线 2 不许调参，A4 的 ridge 头是闭式解（`alpha` 走固定网格、不做搜索），两者都没有 trials 表。等价的自检是"`training` 段全是固定值、且 `openpoly_scan.yaml` 的 `architecture`/`training`/`device` 与 `a3_graph.yaml` 逐键相同"，由 `tests/test_openpoly_scan.py` 断言
 - [ ] polyBERT 嵌入行数 = 结构数，抽 50 行反查一致
 - [ ] `gpu_hours.csv` 与 `openpoly_gpu_index.csv` 的实测墙钟已写全
 - [ ] `docs/RUN_REQUESTS.md` 里，所有需要代跑的项都写清了命令、预计耗时、期望产出
