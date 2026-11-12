@@ -19,9 +19,14 @@ Stage entry 05: batch GPU arm runs (A3 graph sweep / A4 polyBERT transfer arm; s
                                                                     # A4 主表：48 条（冻结 + ridge）
           python scripts/05_run_gpu.py --arm a4_polybert --finetune --require-gpu
                                                                     # A4 对照：48 条微调，写到独立目录
+          python scripts/05_run_gpu.py --config configs/experiments/openpoly_scan.yaml --require-gpu
+                                                                    # B-5：OpenPoly 225 条（3 性质 × 5 档 × 5 折 × 3 种子）
+          python scripts/05_run_gpu.py --config configs/experiments/openpoly_scan.yaml \
+              --tasks op_tm --n-levels 30 --seeds 0 --require-gpu  # B-5 单条：只跑一档一串
     依赖：A3 要 `environment/gnn.yml`；A4 要 `environment/polybert.yml`（那个环境**没有 pandas /
           rdkit**，所以 `arms/graph.py` 与 `chem/features.py` 的顶层依赖已被裁掉，见 D-34）。
-    配置：`configs/arms/<arm>.yaml`（可用 `--config` 换一份，但换一份就是换协议）。
+    配置：`configs/arms/<arm>.yaml`（B-5 用 `configs/experiments/openpoly_scan.yaml`，它同时是臂
+          配置与实验配置，所以 `config_hash` 的语义与 B-3/B-4 一样是单文件字节哈希，见 D-35 ⑥）。
     对外：命令行。所有记录由训练代码落盘，**不许手写**（红线 4）。
     被谁用：人工（D1 夜里跑）、B-5（同一脚本 + `openpoly_scan.yaml`）、CI（`--dry-run`）。
 
@@ -130,6 +135,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tasks", nargs="+", metavar="TASK", help="只跑这些任务（默认跑配置里的全部）")
     parser.add_argument("--folds", nargs="+", metavar="FOLD", help="只跑这些折（默认跑配置里的全部）")
     parser.add_argument("--seeds", nargs="+", type=int, metavar="S", help="只跑这些种子（默认 {0,1,2}）")
+    parser.add_argument(
+        "--n-levels",
+        nargs="+",
+        metavar="LEVEL",
+        help="只跑这些 n 档（30 60 120 240 all；只有带 `n_levels` 的配置如 openpoly_scan.yaml 有意义）。"
+             "档位是 A 冻结的，改档位 = 换协议",
+    )
     parser.add_argument("--limit", type=int, metavar="N", help="每个任务只取前 N 行（冒烟；不进正式产物）")
     parser.add_argument("--max-epochs", type=int, metavar="N", help="覆盖 max_epochs（冒烟用）")
     parser.add_argument("--patience", type=int, metavar="N", help="覆盖早停耐心（0 = 不早停，冒烟用）")
@@ -247,6 +259,14 @@ def _repeat_check(module: Any, config: A.ArmConfig, keys: list[A.RunKey], *, dev
             device=device,
             max_epochs=max_epochs,
             patience=patience,
+            # n 档必须跟着传：不传就等于检查了**另一条 run**——训练行没截断、行序也没打乱，
+            # 实测会把 op_tm/seed0/n30 的 R² 从 0.2658 报成 0.0922（那是 nall 档的行集合），
+            # 而两次之间照样逐位相同，于是"差为 0、通过"看起来完全正常。这正是 B-5 最危险的
+            # 一类错误：检查本身在跑，只是查的不是这条。
+            # The n-level has to travel with it: without it this checks a **different run** - rows
+            # untrimmed and unshuffled - which measured 0.0922 instead of 0.2658 for op_tm/n30 while
+            # still coming out bit-identical twice, so "gap 0, passed" looks perfectly healthy.
+            n_level=key.n_level,
         )
         predictions.append(outcome.y_pred)
         metrics.append({"r2": outcome.record["metrics"]["r2"],
@@ -275,6 +295,12 @@ def _repeat_check(module: Any, config: A.ArmConfig, keys: list[A.RunKey], *, dev
 
     payload = {
         "run_id": key.run_id(),
+        # `run_id` 里已经有 `_n30` 这种后缀，这里再单列一份是为了让人不看文件名也能读：
+        # 一条 `--repeat-check` 的结论只对它自己那一条 run 成立，n 档写错就会张冠李戴。
+        # The run_id already carries the `_n30` suffix; repeating it here is so the level is legible
+        # without parsing a file name - a repeat-check result holds for exactly one run.
+        "n_level": key.n_level,
+        "n_train": int(outcome.record.get("n_train") or 0),
         "repeats": repeats,
         "max_abs_prediction_delta": worst,
         "median_abs_prediction_delta": float(np.median(diff)),
@@ -312,10 +338,22 @@ def _repeat_check(module: Any, config: A.ArmConfig, keys: list[A.RunKey], *, dev
     if mode:
         payload["mode"] = mode
     # 文件名按臂区分：A3 与 A4 的可复现性证据是两份文件，不能互相覆盖。
+    # 有 `experiment` 的配置（B-5）再用实验名打头：它的网格与 A3 的 48 条不同一条 run，
+    # 若沿用 `a3_repeatability.json` 就会把 B-3 的凭据覆盖掉——而覆盖之后文件名照样合法，
+    # 只有内容悄悄变成另一个网格的。
     # File name per arm: A3 and A4 keep separate evidence files, never overwriting each other.
-    arm_name = str(config.raw.get("arm", "a3_graph"))
-    short = "a3" if arm_name == "a3_graph" else "a4"
-    target = out_root / f"{short}{'_' + mode if mode else ''}_repeatability.json"
+    # A config with an `experiment` (B-5) prefixes the experiment name too: its grid shares no run
+    # with A3's 48, and reusing `a3_repeatability.json` would overwrite B-3's evidence - the file
+    # would still look legal, only its content would quietly belong to another grid.
+    experiment = str(config.raw.get("experiment") or "")
+    if experiment:
+        stem = experiment
+    else:
+        arm_name = str(config.raw.get("arm", "a3_graph"))
+        stem = "a3" if arm_name == "a3_graph" else "a4"
+        if mode:
+            stem = f"{stem}_{mode}"
+    target = out_root / f"{stem}_repeatability.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     # `newline="\n"` 不能省：`Path.write_text` 在 Windows 下会把 `\n` 翻成 `\r\n`，
     # 而 `.gitattributes` 钉的是 `* text=auto eol=lf`——写出来是 CRLF，入库变 LF，
@@ -351,7 +389,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = module.load_arm_config(config_path)
         keys = module.enumerate_runs(
-            config, tasks=args.tasks, folds=args.folds, seeds=args.seeds
+            config,
+            tasks=args.tasks,
+            folds=args.folds,
+            seeds=args.seeds,
+            n_levels=args.n_levels,
         )
     except A.ArmError as error:
         LOGGER.error("%s", error)
@@ -439,6 +481,7 @@ def main(argv: list[str] | None = None) -> int:
             tasks=args.tasks,
             folds=args.folds,
             seeds=args.seeds,
+            n_levels=args.n_levels,
             limit=args.limit,
             device=device,
             max_epochs=args.max_epochs,
@@ -450,6 +493,24 @@ def main(argv: list[str] | None = None) -> int:
     except A.ArmError as error:
         LOGGER.error("%s", error)
         return 1
+    # 有 n 档的配置（B-5）跑完顺手刷一份索引：D 的 κ 与 H4 过零点要用它读 n，不必自己去翻 225
+    # 个 JSON。刷的是**全量记录的现状**，不是"这次写了哪些"——所以 `resume` 跳过已有记录时，
+    # 索引依然完整。
+    # A config with n-levels (B-5) also refreshes an index: D reads n from it instead of parsing 225
+    # JSON files. It is built from every record on disk, not just the ones written this time, so a
+    # resumed run still leaves a complete index.
+    if config.raw.get("n_levels"):
+        try:
+            info = module.write_n_index(config) if hasattr(module, "write_n_index") else None
+        except A.ArmError as error:
+            LOGGER.error("%s", error)
+            return 1
+        if info:
+            print(
+                f"索引 {A._repo_relative(info['path'])}：{info['n_runs']} 条"
+                f"（{info['n_tasks']} 性质 × {info['n_levels']} 档 × {info['n_folds']} 折"
+                f" × {info['n_seeds']} 种子）"
+            )
     print(_summary(records))
     return 0
 

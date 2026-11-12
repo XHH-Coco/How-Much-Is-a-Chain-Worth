@@ -182,6 +182,57 @@ GPU_HOURS_COLUMNS = (
     "split_version",
 )
 
+# B-5 的两份索引。`openpoly_gpu_index.csv` 是分工_B §2 B-5 点名的产物
+# （`run_id, property, n_level, fold, seed, wall_clock_s` 六列都在里面，另外多给几列是为了
+# 让 D 不必再开 225 个 JSON）；`openpoly_n_index.csv` 是"每一档到底用了哪些训练行"的凭据，
+# 每 (task, fold, level) 一行，C 的经典臂可以拿它核对两边用的是同一套子集。
+# The two B-5 indexes. The first is the artefact 分工_B names; the six required columns are all
+# there, plus a few more so D need not open 225 JSON files. The second records which training rows
+# each level used, one row per (task, fold, level), so C's classical arm can check the subsets match.
+N_INDEX_COLUMNS = (
+    "run_id",
+    "property",
+    "n_level",
+    "n_train",
+    "n_train_pool",
+    "n_level_saturated",
+    "fold",
+    "fold_index",
+    "seed",
+    "wall_clock_s",
+    "gpu_hours",
+    "r2",
+    "rmse",
+    "mae",
+    "n_test",
+    "n_val",
+    "epochs_run",
+    "early_stopped",
+    "best_epoch",
+    "device",
+    "subset_sha256",
+    "config_hash",
+    "split_version",
+)
+
+SUBSET_INDEX_COLUMNS = (
+    "task",
+    "fold",
+    "n_level",
+    "n_train",
+    "n_train_pool",
+    "n_level_saturated",
+    "n_train_requested",
+    "subset_seed",
+    "subset_sha256",
+    "y_mean",
+    "y_std",
+    "y_min",
+    "y_max",
+    "n_bins_covered",
+    "bin_counts",
+)
+
 
 class ArmError(RuntimeError):
     """A3 臂无法进行时抛这一个；消息里必须写清"缺什么、谁该补"。
@@ -392,32 +443,129 @@ class RunKey:
     # `arm` defaults to A3; the polyBERT arm reuses this same RunKey and the same `run_grid`,
     # swapping only this field, so both arms share one implementation of the grid and its checks.
     arm: str = ARM
+    # n 档（只有 B-5 的 OpenPoly 规模扫描用）：`"30"` / `"60"` / `"120"` / `"240"` / `"all"`。
+    # **None 表示"这个网格没有 n 档这个概念"**（B-3/B-4 的 96 条），与 `"all"` 不是一回事：
+    # 前者 run_id 不带后缀（历史记录逐字不变），后者带 `_nall`（225 条全靠这个后缀一眼可数）。
+    # n-level (only B-5's OpenPoly scan). None means "this grid has no n dimension" and keeps the
+    # run_id byte-identical to the 96 records already on disk; "all" is a real level and appends
+    # `_nall`, which is what makes the 225 OpenPoly files countable with a single grep.
+    n_level: str | None = None
 
     def run_id(self) -> str:
         """`<task>__a3_graph__<fold>__seed<N>`（schema 只允许小写字母数字与下划线）。
         The run id in the schema's shape.
 
         中文：用途：文件名必须等于它，`ls results/raw_runs/ | wc -l` 才能用来对账。
+              有 n 档时折段写成 `<fold>_n<档>`（如 `seed0_n30`、`seed0_nall`）——schema 的正则
+              只有三段 + seed，n 档没地方放，所以**借折段承载**，`fold` 字段本身仍是官方折名
+              （`seed0`），测试集与验证集照旧按官方折取。
               输入：无。输出：字符串。副作用：无。异常：ArmError —— 折名里有非法字符。
-        English: the file name must equal it so `ls | wc -l` reconciles. Raises when the fold name
-        carries a character the schema forbids.
+        English: the file name must equal it so `ls | wc -l` reconciles. With an n-level the fold
+        segment becomes `<fold>_n<level>` because the schema's pattern has exactly three segments
+        plus the seed - the n-level rides along in the fold segment, while the `fold` field itself
+        stays the official fold name (the test/validation sets keep coming from that official fold).
         """
         fold = self.fold.lower()
         bad = [c for c in fold if not (c.isalnum() or c == "_")]
         if bad:
             raise ArmError(f"折名 {self.fold!r} 含 schema 不允许的字符 {bad}：run_id 会不合法")
+        if self.n_level is not None:
+            level = str(self.n_level).lower()
+            bad_level = [c for c in level if not (c.isalnum() or c == "_")]
+            if bad_level:
+                raise ArmError(f"n 档 {self.n_level!r} 含 schema 不允许的字符 {bad_level}")
+            fold = f"{fold}_n{level}"
         return RUN_ID_SEPARATOR.join([self.task, self.arm, fold, f"seed{self.seed}"])
 
 
-def run_id_for(task: str, fold: str, seed: int, *, arm: str = ARM) -> str:
+def run_id_for(task: str, fold: str, seed: int, *, arm: str = ARM, n_level: str | None = None) -> str:
     """按任务/折/种子拼 run_id（不查配置，供测试与对账用）。
     Build a run id from task/fold/seed without touching the config (for tests and reconciliation).
 
-    中文：输入：task、fold、seed、arm（默认 A3）。输出：字符串。副作用：无。
-          异常：ArmError —— 名字不合法。
-    English: Args: task, fold, seed, arm (A3 by default). Returns: a string. Raises on an illegal name.
+    中文：输入：task、fold、seed、arm（默认 A3）、n_level（默认 None = 无 n 档）。
+          输出：字符串。副作用：无。异常：ArmError —— 名字不合法。
+    English: Args: task, fold, seed, arm (A3 by default), n_level (None = no n dimension).
+    Returns: a string. Raises on an illegal name.
     """
-    return RunKey(task=task, benchmark="", fold=fold, seed=seed, arm=arm).run_id()
+    return RunKey(task=task, benchmark="", fold=fold, seed=seed, arm=arm, n_level=n_level).run_id()
+
+
+def n_level_rows(
+    train_rows: "np.ndarray", n_level: str | None, *, seed: int
+) -> tuple["np.ndarray", dict[str, Any]]:
+    """从官方训练行里取出 n 档要用的那些行；档位之间**嵌套**，顺序无偏。
+    Take the rows an n-level uses out of the official training rows; levels nest and stay unbiased.
+
+    中文：
+        用途：B-5 的 OpenPoly 规模扫描要在 30/60/120/240/全部 五个训练集大小上各训一次。三个
+              决定，理由都写在 D-35：
+              ① **不用"取前 n 行"**：官方 `train_index` 是升序的（0,1,2,…），前 n 行就是原始 CSV
+                 的前 n 行，而同一条文献往往连着几十行、测的是同一批样品——那会把"样本量效应"
+                 换成"文献顺序效应"，正好是 H4 要排除的东西（C-3 对 PolyBench 有同款警告）；
+              ② **固定种子打乱后取前缀**：`numpy` 的 `default_rng(seed).permutation` 是唯一随机源，
+                 每行等概率，所以任何前缀都是训练集的无偏子集；种子写死在实验配置里；
+              ③ **嵌套**：`n=30` 的行集合是 `n=60` 的真子集，五档只差"加进去的行"，不换样品——
+                 这样的曲线才能读成"数据变多"的效应。
+              **不做值域分层**，这一条反直觉但要说明：OpenPoly 的训练行本身已经是按 10 个等宽箱
+              分层抽出来的（`rule_replicated` 协议），它的无偏子集不会新增偏差；而 n=30 时按比例
+              分层每箱连 1 行都分不到（Tg 最高那箱全量只有 4 行），分层在低档上只是更精细的噪声。
+              「低 n 端天然覆盖不到全值域」是**要观察的现象**，不是要修掉的缺陷（见 D-35）。
+        输入：train_rows —— 该折该次实际可用的训练行（已剔除建图失败）；n_level —— `"30"`…`"all"`
+              或 None；seed —— 子集种子（来自实验配置）。
+        输出：(取出的行, 说明字典)。说明里有 `n_train_pool` / `n_train_requested` /
+              `n_level_saturated` / `n_subset_seed` / `n_subset_sha256`。
+        数据来源：`splits/**`（只读）。配置来源：实验配置的 `subset.seed`。
+        副作用：无（纯函数）。异常：ArmError —— 档位不是正整数也不是 `all`。
+    English:
+        Five training-set sizes for the OpenPoly learning curve, with three decisions argued in
+        D-35: (1) **no "first n rows"** - the official train_index is ascending, so a prefix is the
+        head of the raw CSV, and one paper's samples sit together - that would trade a sample-size
+        effect for a literature-order effect; (2) **a fixed-seed permutation, then a prefix** - one
+        RNG, every row equally likely, so every prefix is an unbiased subset; (3) **levels nest**, so
+        a level adds rows instead of swapping them. **No value-bin stratification**: the training
+        rows are already a 10-bin stratified draw, and at n=30 the sparsest bin cannot even supply
+        one row - low-n bins being under-covered is the phenomenon H4 measures, not a bug to hide.
+        Returns: (rows, info). Raises ArmError when a level is neither a positive int nor "all".
+    """
+    rows = np.asarray(train_rows, dtype=np.int64)
+    pool = int(rows.size)
+    info: dict[str, Any] = {"n_train_pool": pool}
+    if n_level is None:
+        return rows, info
+    text = str(n_level).strip().lower()
+    if text == "all":
+        requested = pool
+        saturated = False
+    else:
+        try:
+            requested = int(text)
+        except ValueError as error:
+            raise ArmError(f"n 档 {n_level!r} 既不是正整数也不是 `all`") from error
+        if requested <= 0:
+            raise ArmError(f"n 档 {n_level!r} 必须为正（0 行训练的 R² 无定义）")
+        # 请求值顶到池子大小就是"这一档已经是全量"：op_dielectric 的 train 只有 235 行、
+        # op_tm 只有 134 行，所以两者的 240 档都取不满。**如实记 saturated**，不假装取到了 240：
+        # 这两档的 R² 应当与 all 档逐位相同（同一条数据、同一个种子），可以当自检用。
+        # A request at or above the pool means "this level is already everything": dielectric has
+        # 235 training rows and Tm has 134, so neither can fill a 240 level. `saturated` says so
+        # instead of pretending; those runs must score bit-identically to the "all" level.
+        saturated = requested >= pool
+    used = min(requested, pool)
+    order = np.random.default_rng(int(seed)).permutation(pool)
+    picked = rows[order[:used]]
+    digest = hashlib.sha256(np.sort(picked).astype("<i8").tobytes()).hexdigest()
+    info.update(
+        {
+            "n_level": text,
+            "n_train_requested": int(requested),
+            "n_level_saturated": bool(saturated),
+            "n_subset_seed": int(seed),
+            # 排过序再哈希：定的是"哪些行"，与 DataLoader 的批序无关，换台机器也一致。
+            # Hash the sorted rows: this pins *which* rows, independent of batch order or machine.
+            "n_subset_sha256": f"sha256:{digest}",
+        }
+    )
+    return picked, info
 
 
 def enumerate_runs(
@@ -426,25 +574,31 @@ def enumerate_runs(
     tasks: Sequence[str] | None = None,
     folds: Sequence[str] | None = None,
     seeds: Sequence[int] | None = None,
+    n_levels: Sequence[str] | None = None,
 ) -> list[RunKey]:
-    """把配置里的网格展开成 run 列表；可按任务/折/种子打子集（冒烟与三行重跑用）。
-    Expand the configured grid into a run list, filterable by task/fold/seed (smoke and re-runs).
+    """把配置里的网格展开成 run 列表；可按任务/折/种子/n 档打子集（冒烟与三行重跑用）。
+    Expand the configured grid into a run list, filterable by task/fold/seed/n-level.
 
     中文：
         用途：48 条 = 6 个 PolyBench × 1 折 × 3 种子 + 2 个 PB26 × 5 折 × 3 种子。
+              有 `n_levels` 的配置（B-5 的 OpenPoly 扫描）多一个维度：45 条 = 3 性质 × 5 折 ×
+              3 种子，再乘 5 个 n 档 = 225 条。**一个 `n_levels` 键决定有没有这一维**，不靠
+              benchmark 名字猜——猜错了会静默少跑 180 条。
               **折名不做匹配猜测**：`--folds` 给的名字必须在配置里存在，否则报错——
               静默跳过会让人以为"跑完了"，而实际一条没跑。
-        输入：config；tasks / folds / seeds —— 可选白名单。
-        输出：`RunKey` 列表（按配置顺序：先 polybench 后 polybench26）。
+        输入：config；tasks / folds / seeds / n_levels —— 可选白名单。
+        输出：`RunKey` 列表（按配置顺序，n 档在折之外那一层）。
         数据来源：`configs/arms/a3_graph.yaml` 与 `configs/tasks/*.yaml`。
-        配置来源：`runs` 与 `seeds`。副作用：只读。
-        异常：ArmError —— 白名单里出现配置中没有的任务/折。
+        配置来源：`runs`、`seeds`、`n_levels`（可在 `runs.<benchmark>` 里覆盖顶层）。
+        副作用：只读。
+        异常：ArmError —— 白名单里出现配置中没有的任务/折/n 档。
     English:
-        Purpose: 48 = 6 PolyBench x 1 fold x 3 seeds + 2 PB26 x 5 folds x 3 seeds. The fold filter
-        is **not** a prefix match: a name missing from the config raises, because a silent skip
-        looks exactly like "all done" while nothing ran.
-        Returns: RunKeys in config order (polybench first, then polybench26).
-        Raises: ArmError on a filtered task/fold that the config does not contain.
+        Purpose: 48 = 6 PolyBench x 1 fold x 3 seeds + 2 PB26 x 5 folds x 3 seeds. A config with
+        `n_levels` (B-5's OpenPoly scan) gains one dimension: 45 x 5 levels = 225. **Presence of the
+        key decides whether the dimension exists**, never the benchmark name - guessing wrong would
+        silently skip 180 runs. The fold filter is **not** a prefix match: a name missing from the
+        config raises, because a silent skip looks exactly like "all done" while nothing ran.
+        Returns: RunKeys in config order. Raises: ArmError on an unknown task/fold/n-level.
     """
     grid = config.raw["runs"]
     if not isinstance(grid, dict):
@@ -458,10 +612,16 @@ def enumerate_runs(
     wanted_tasks = set(tasks) if tasks else None
     wanted_folds = set(folds) if folds else None
     wanted_seeds = set(seeds) if seeds is not None and len(seeds) else None
+    wanted_levels = {str(x).lower() for x in n_levels} if n_levels else None
+
+    top_levels = config.raw.get("n_levels")
+    if top_levels is not None and (not isinstance(top_levels, list) or not top_levels):
+        raise ArmError(f"`n_levels` 必须是非空列表，现在是 {top_levels!r}")
 
     keys: list[RunKey] = []
     known_tasks: set[str] = set()
     known_folds: set[str] = set()
+    known_levels: set[str] = set()
     for benchmark, block in grid.items():
         if not isinstance(block, dict):
             raise ArmError(f"`runs.{benchmark}` 必须是映射（tasks / folds 两个键）")
@@ -469,6 +629,14 @@ def enumerate_runs(
         block_folds = [str(name) for name in block.get("folds", [])]
         if not block_tasks or not block_folds:
             raise ArmError(f"`runs.{benchmark}` 的 tasks/folds 不能为空")
+        block_levels = block.get("n_levels", top_levels)
+        # `None` 是"这一块没有 n 维"，`"all"` 是"有 n 维且全量档"——两者 run_id 不同形，
+        # 所以这里必须分开，不能把 None 当成一个档位塞进去。
+        # None means "no n dimension here"; "all" is a real level. Their run_ids differ, so the
+        # two can never be collapsed into one value.
+        levels: list[str | None] = (
+            [None] if block_levels is None else [str(x).lower() for x in block_levels]
+        )
         for task in block_tasks:
             task_config = L.load_task_config(task)
             actual = str(task_config["benchmark"])
@@ -477,24 +645,30 @@ def enumerate_runs(
                     f"{task} 在配置里挂在 `runs.{benchmark}` 下，但 configs/tasks 说它是 {actual}"
                 )
             known_tasks.add(task)
-            for fold in block_folds:
-                known_folds.add(fold)
+            for level in levels:
+                if level is not None:
+                    known_levels.add(level)
                 if wanted_tasks is not None and task not in wanted_tasks:
                     continue
-                if wanted_folds is not None and fold not in wanted_folds:
+                if wanted_levels is not None and level not in wanted_levels:
                     continue
-                for seed in config.raw["seeds"]:
-                    if wanted_seeds is not None and int(seed) not in wanted_seeds:
+                for fold in block_folds:
+                    known_folds.add(fold)
+                    if wanted_folds is not None and fold not in wanted_folds:
                         continue
-                    keys.append(
-                        RunKey(
-                            task=task,
-                            benchmark=benchmark,
-                            fold=fold,
-                            seed=int(seed),
-                            arm=arm_name,
+                    for seed in config.raw["seeds"]:
+                        if wanted_seeds is not None and int(seed) not in wanted_seeds:
+                            continue
+                        keys.append(
+                            RunKey(
+                                task=task,
+                                benchmark=benchmark,
+                                fold=fold,
+                                seed=int(seed),
+                                arm=arm_name,
+                                n_level=level,
+                            )
                         )
-                    )
 
     if wanted_tasks is not None:
         unknown = sorted(wanted_tasks - known_tasks)
@@ -504,8 +678,12 @@ def enumerate_runs(
         unknown = sorted(wanted_folds - known_folds)
         if unknown:
             raise ArmError(f"--folds 里这些折不在配置网格中：{unknown}；配置里的是 {sorted(known_folds)}")
+    if wanted_levels is not None:
+        unknown = sorted(wanted_levels - known_levels)
+        if unknown:
+            raise ArmError(f"--n-levels 里这些档不在配置网格中：{unknown}；配置里的是 {sorted(known_levels)}")
     if not keys:
-        raise ArmError("网格为空：检查 --tasks/--folds/--seeds 是否互相排除掉了")
+        raise ArmError("网格为空：检查 --tasks/--folds/--seeds/--n-levels 是否互相排除掉了")
     return keys
 
 
@@ -1100,6 +1278,7 @@ def train_one(
     device: str | None = None,
     max_epochs: int | None = None,
     patience: int | None = None,
+    n_level: str | None = None,
 ) -> TrainOutcome:
     """训一条 run，返回记录草稿与测试集预测（不写盘）。
     Train one run and return the record draft plus test predictions (no writing here).
@@ -1107,25 +1286,29 @@ def train_one(
     中文：
         用途：B-3 的核心。步骤：
               ① 取折（官方索引）→ 需要时切出训练内部 10% 当早停验证；
+              ①' 有 n 档时（B-5）把训练行截到这一档——**只动训练集**，验证集与测试集
+                 在所有档位上逐行相同，否则 R² 会与 n 一起变，H4 的曲线读不出因果；
               ② 建模型（标签标准化只用训练标签）；
               ③ 训练到 ≤`max_epochs` 或早停触发，保留 `val_loss` 最好的一版权重；
               ④ 用最好权重在**官方测试集**上预测一次，算 r2/mae/rmse；
               ⑤ 记录草稿：`run_id`、`split_version`（折文件的字节哈希）、`config_hash`、
                  `device`、`gpu` 块、实测墙钟、`best_epoch`、图失败行数、验证集来源。
               **测试集只在这一步被读一次**，且只用于算指标，不参与任何选择。
-        输入：data —— `TaskData`；config；fold —— 折名；seed —— 模型种子；
-              device —— 覆盖自动选择（测试用）；max_epochs / patience —— 冒烟用覆盖。
+        输入：data —— `TaskData`；config；fold —— 官方折名；seed —— 模型种子；
+              device —— 覆盖自动选择（测试用）；max_epochs / patience —— 冒烟用覆盖；
+              n_level —— 训练集档位（`"30"`…`"all"` / None = 无这一维，B-3/B-4 走 None）。
         输出：`TrainOutcome`。
-        数据来源：`TaskData`。配置来源：`config`。
+        数据来源：`TaskData`。配置来源：`config`（n 档种子取 `subset.seed`）。
         副作用：训练模型、占显存、写日志。异常：ArmError —— 数据与折不配套、全为失败图。
     English:
         The core of B-3: (1) take the official fold, carving the fixed 10% inner validation when the
-        benchmark ships none; (2) build the model (target scaler on training labels only);
-        (3) train to `max_epochs` or until early stopping, keeping the best `val_loss` weights;
-        (4) predict once on the **official test split** and score r2/mae/rmse; (5) draft the record.
-        The test split is read exactly once, for scoring only, and informs no choice.
-        Args: data; config; fold; seed; device (test override); max_epochs/patience (smoke
-        overrides); collect_history. Returns: a TrainOutcome. Side effects: trains, uses GPU, logs.
+        benchmark ships none; (1') with an n-level (B-5) trim the **training rows only** - the
+        validation and test sets are row-for-row identical at every level, otherwise R² would move
+        with n for two reasons at once and the H4 curve would lose its causal reading; (2) build the
+        model (target scaler on training labels only); (3) train to `max_epochs` or until early
+        stopping; (4) predict once on the **official test split**; (5) draft the record.
+        Args: data; config; official fold name; seed; device; max_epochs/patience overrides;
+        n_level (None = no such dimension, as in B-3/B-4). Returns: a TrainOutcome.
         Raises: ArmError when the fold does not fit the data or every graph failed.
     """
     import lightning.pytorch as pl
@@ -1189,6 +1372,22 @@ def train_one(
             f"{data.task_id}/{fold}：去掉建图失败的行后 train/val/test = "
             f"{train_rows.size}/{val_rows.size}/{test_rows.size}，有空的，这条 run 不能跑"
         )
+    # n 档只截**训练**行。验证行与测试行在这里一格都不动：H4 要读的是"训练集变大"的效应，
+    # 测试集若跟着变小，R² 的分子分母同时变，曲线就没有解释力了（D-35）。
+    # The n-level trims **training** rows only. Validation and test rows are untouched here: H4
+    # reads the effect of more training data, and a shrinking test set would move both numerator
+    # and denominator of R² at once, leaving the curve uninterpretable.
+    n_info: dict[str, Any] = {}
+    if n_level is not None:
+        subset_cfg = config.raw.get("subset") or {}
+        if "seed" not in subset_cfg:
+            raise ArmError(
+                f"{config.path.name} 有 n 档但没有 `subset.seed`：子集取法必须钉死一个种子，"
+                "否则同一条 run 换个进程就换一批训练行（D-35）"
+            )
+        train_rows, n_info = n_level_rows(train_rows, n_level, seed=int(subset_cfg["seed"]))
+        if train_rows.size == 0:
+            raise ArmError(f"{data.task_id}/{fold}/n={n_level}：截完训练行为 0，这条 run 不能跑")
 
     pl.seed_everything(int(seed), workers=True)
     mean, std = target_scaler(data.y[train_rows])
@@ -1229,7 +1428,9 @@ def train_one(
     if wait > 0:
         from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 
-        checkpoint_dir = REPO_ROOT / "outputs" / "a3_ckpt" / f"{data.task_id}_{fold}_seed{seed}"
+        checkpoint_dir = REPO_ROOT / "outputs" / "a3_ckpt" / (
+            f"{data.task_id}_{fold}_seed{seed}" + (f"_n{n_level}" if n_level is not None else "")
+        )
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
         monitor = str(train_cfg["monitor"])
         callbacks.append(
@@ -1317,8 +1518,9 @@ def train_one(
         best_epoch = int(min(finite_history, key=lambda row: row["val_loss"])["epoch"]) + 1
 
     split_version, fold_sha = fold_version(data.split, fold)
+    this_run_id = run_id_for(data.task_id, fold, seed, n_level=n_level)
     record: dict[str, Any] = {
-        "run_id": run_id_for(data.task_id, fold, seed),
+        "run_id": this_run_id,
         "status": "ok",
         "benchmark": data.benchmark,
         "task": data.task_id,
@@ -1334,7 +1536,7 @@ def train_one(
         "wall_clock_s": round(wall, 3),
         "device": chosen,
         "env_fingerprint": ENV_FINGERPRINT,
-        "predictions": f"results/aggregate/predictions/{run_id_for(data.task_id, fold, seed)}.parquet",
+        "predictions": f"results/aggregate/predictions/{this_run_id}.parquet",
         "epochs_run": epochs_run,
         "early_stopped": epochs_run < epochs,
         "best_epoch": best_epoch,
@@ -1363,6 +1565,20 @@ def train_one(
     gpu = gpu_block(chosen, cudnn_deterministic=deterministic)
     if gpu is not None:
         record["gpu"] = gpu
+    if n_info:
+        # 五个字段只在有 n 档时出现：`n_train_pool` 是这一折可用的全部训练行（355/235/134），
+        # `n_train_requested` 是档位名义值，`n_train`（上面）是实际喂进去的行数。
+        # 三者不等就说明这一档被池子大小卡住了——op_dielectric 与 op_tm 的 240 档都是这种情况，
+        # 必须让它显形，否则 D 会把 240 画在一个只有 134 行的点上（D-35）。
+        # These five fields appear only when there is an n-level: the pool, the nominal request and
+        # the actual count. When they disagree the level was capped by the pool - exactly what
+        # happens to dielectric and Tm at 240 - and hiding it would put a 240 on a 134-row point.
+        record.update(n_info)
+        record["notes"] = (
+            str(record["notes"])
+            + "；n 档只截训练集，验证集与测试集在 5 个档位上逐行相同（D-35）；"
+            "x 轴请用 `n_train`（实际行数），不要用档位名义值"
+        )
     if fold_sha:
         record["split_fold_sha256"] = fold_sha
     if data.n_failed:
@@ -1563,6 +1779,265 @@ def append_gpu_hours(rows: Sequence[dict[str, Any]], *, path: Path | None = None
     return target
 
 
+def write_n_index(config: ArmConfig) -> dict[str, Any]:
+    """把带 n 档的网格刷成两份索引：一条 run 一行 + 一个 (task, fold, 档位) 一行。
+    Refresh two indexes for an n-level grid: one row per run, and one per (task, fold, level).
+
+    中文：
+        用途：B-5 的 225 条如果只能靠 `ls | wc -l` 对账，D 算 κ 时要开 225 个 JSON，C 想核对
+              "两边用的是不是同一套训练行"也无从下手。所以这里把**磁盘上现有的记录**汇总成：
+              ① `openpoly_gpu_index.csv`——分工_B §2 B-5 点名的产物，六列
+                 （`run_id, property, n_level, fold, seed, wall_clock_s`）都在，另加 R²/RMSE/轮数
+                 等，让 D 不必再开文件；
+              ② `openpoly_n_index.csv`——每 (task, fold, 档位) 一行，写**这一档到底用了哪些行**
+                 （`subset_sha256`）、训了多少（`n_train`）、池子多大（`n_train_pool`）、有没有
+                 被池子卡住（`n_level_saturated`），以及训练行的标签分布与值域箱覆盖。
+              两份都按**全量记录的现状**生成，不是"这次写了哪些"——`resume` 跳过已有记录时索引
+              依然完整。**只收 `status=ok` 且 `config_hash` 与本配置一致的记录**：换过配置的旧
+              记录不在同一协议里，混进来会让 D 以为是同一批数。
+        输入：config。
+        输出：`{path, n_index_path, n_runs, n_tasks, n_levels, n_folds, n_seeds, n_records_seen}`。
+        数据来源：`results/raw_runs/*.json`、`splits/openpoly/**`、`data/processed/features/**.npz`。
+        配置来源：`records.index` / `records.n_index`（缺省用下面的常量）。
+        副作用：写两个 CSV（UTF-8 / LF）。
+        异常：ArmError —— 配置里没有 `n_levels`，或 `n_index` 与 `index` 没配。
+    English:
+        With only `ls | wc -l` to reconcile 225 runs, D would have to open 225 JSON files to get κ,
+        and C could not check that both arms used the same training rows. So this folds the records
+        already on disk into (1) the artefact 分工_B names - the six required columns are all there,
+        plus R²/RMSE/epochs so D need not open files - and (2) one row per (task, fold, level) saying
+        which rows that level used (`subset_sha256`), how many, the pool size, whether the pool
+        capped it, plus the label distribution and value-bin coverage of its training rows. Both are
+        built from **every record on disk** so a resumed run still leaves a complete index, and both
+        take only `status=ok` records whose `config_hash` matches this config - an older record from
+        a different config is not the same protocol.
+        Returns: a dict describing what was written. Raises ArmError when the config has no
+        `n_levels` or the two index paths are not configured.
+        Side effects: writes two CSVs (UTF-8 / LF).
+    """
+    import csv
+
+    if not config.raw.get("n_levels"):
+        raise ArmError(
+            "这份配置没有 `n_levels`：n 索引只对 B-5 的 OpenPoly 规模扫描有意义。"
+            "要生成 48 条的索引请用 C 的汇总脚本"
+        )
+    records_cfg = config.section("records")
+    index_path = REPO_ROOT / str(
+        records_cfg.get("index", "results/aggregate/openpoly_gpu_index.csv")
+    )
+    n_index_path = REPO_ROOT / str(
+        records_cfg.get("n_index", "results/aggregate/openpoly_n_index.csv")
+    )
+    wanted_hash = config_hash(config)
+    arm_name = str(config.raw.get("arm") or ARM)
+    subset_seed = int((config.raw.get("subset") or {}).get("seed", 0))
+
+    runs: list[dict[str, Any]] = []
+    seen = 0
+    for path in sorted(RAW_RUNS_DIR.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:                        # pragma: no cover - 只在半截文件时触发
+            continue
+        seen += 1
+        if payload.get("arm") != arm_name or payload.get("n_level") is None:
+            continue
+        if payload.get("status") != "ok" or payload.get("config_hash") != wanted_hash:
+            continue
+        runs.append(payload)
+    if not runs:
+        raise ArmError(
+            f"`{RAW_RUNS_DIR.name}/` 里没有一条能用（arm={arm_name}、有 n 档、status=ok、"
+            f"config_hash={wanted_hash[:16]}…）：先跑网格再来刷索引"
+        )
+
+    def fmt(value: Any, digits: int = 6) -> str:
+        return "" if value is None else f"{float(value):.{digits}f}"
+
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    with index_path.open("w", encoding="utf-8", newline="\n") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(N_INDEX_COLUMNS), lineterminator="\n")
+        writer.writeheader()
+        for item in sorted(runs, key=lambda row: str(row["run_id"])):
+            metrics = item.get("metrics") or {}
+            writer.writerow(
+                {
+                    "run_id": item["run_id"],
+                    "property": item["task"],
+                    "n_level": item["n_level"],
+                    "n_train": item.get("n_train", ""),
+                    "n_train_pool": item.get("n_train_pool", ""),
+                    "n_level_saturated": str(bool(item.get("n_level_saturated"))).lower(),
+                    "fold": item.get("split_fold", ""),
+                    "fold_index": str(item.get("split_fold", "")).replace("seed", ""),
+                    "seed": item.get("seed", ""),
+                    "wall_clock_s": fmt(item.get("wall_clock_s"), 3),
+                    "gpu_hours": fmt(float(item.get("wall_clock_s") or 0.0) / 3600.0),
+                    "r2": fmt(metrics.get("r2")),
+                    "rmse": fmt(metrics.get("rmse")),
+                    "mae": fmt(metrics.get("mae")),
+                    "n_test": item.get("n_test", ""),
+                    "n_val": item.get("n_val", ""),
+                    "epochs_run": item.get("epochs_run", ""),
+                    "early_stopped": str(bool(item.get("early_stopped"))).lower(),
+                    "best_epoch": item.get("best_epoch", ""),
+                    "device": item.get("device", ""),
+                    "subset_sha256": item.get("n_subset_sha256", ""),
+                    "config_hash": item.get("config_hash", ""),
+                    "split_version": item.get("split_version", ""),
+                }
+            )
+
+    # 子集索引：按 (task, fold, 档位) 去重（三个模型种子用的是同一批训练行，所以三行的
+    # `subset_sha256` 必须完全一样——这一条同时是一个自检：如果种子之间哈希不同，说明子集
+    # 依赖了模型种子，那 n 档就不只是"训练集大小"了）。
+    # One row per (task, fold, level): the three model seeds share the same training rows, so their
+    # `subset_sha256` must be identical - that equality doubles as a self-check that the subset does
+    # not depend on the model seed, which would make the level something other than a size.
+    subsets: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for item in runs:
+        sig = (str(item["task"]), str(item.get("split_fold", "")), str(item["n_level"]))
+        if sig in subsets:
+            if subsets[sig]["n_subset_sha256"] != item.get("n_subset_sha256"):
+                LOGGER.warning(
+                    "%s/%s/n=%s：三个种子的训练行哈希不一致（%s vs %s），档位不只是大小",
+                    sig[0],
+                    sig[1],
+                    sig[2],
+                    subsets[sig]["n_subset_sha256"],
+                    item.get("n_subset_sha256"),
+                )
+            continue
+        subsets[sig] = item
+
+    with n_index_path.open("w", encoding="utf-8", newline="\n") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(SUBSET_INDEX_COLUMNS), lineterminator="\n")
+        writer.writeheader()
+        for sig in sorted(subsets, key=lambda key: (key[0], key[2], key[1])):
+            item = subsets[sig]
+            stats = _subset_label_stats(
+                str(item["task"]), str(item.get("split_fold", "")), item, subset_seed
+            )
+            writer.writerow(
+                {
+                    "task": sig[0],
+                    "fold": sig[1],
+                    "n_level": sig[2],
+                    "n_train": item.get("n_train", ""),
+                    "n_train_pool": item.get("n_train_pool", ""),
+                    "n_level_saturated": str(bool(item.get("n_level_saturated"))).lower(),
+                    "n_train_requested": item.get("n_train_requested", ""),
+                    "subset_seed": subset_seed,
+                    "subset_sha256": item.get("n_subset_sha256", ""),
+                    **stats,
+                }
+            )
+
+    tasks = sorted({str(item["task"]) for item in runs})
+    levels = sorted({str(item["n_level"]) for item in runs}, key=lambda text: (text != "all", text))
+    folds = sorted({str(item.get("split_fold", "")) for item in runs})
+    seeds = sorted({int(item["seed"]) for item in runs})
+    LOGGER.info(
+        "索引已刷新：%d 条 run、%d 个子集（%s）",
+        len(runs),
+        len(subsets),
+        ", ".join(tasks),
+    )
+    return {
+        "path": index_path,
+        "n_index_path": n_index_path,
+        "n_runs": len(runs),
+        "n_records_seen": seen,
+        "n_tasks": len(tasks),
+        "n_levels": len(levels),
+        "n_folds": len(folds),
+        "n_seeds": len(seeds),
+    }
+
+
+def _subset_label_stats(
+    task: str, fold: str, record: dict[str, Any], subset_seed: int
+) -> dict[str, str]:
+    """算一档训练行的标签统计与值域箱覆盖；算不出来就留空，不猜。
+    Label statistics and value-bin coverage for one level's training rows, blank when unknowable.
+
+    中文：
+        用途：H4 要判断"低 n 端 R² 掉下去，是因为样本少还是因为值域没覆盖"。后者只能靠数：
+              这一档的训练行落进了 10 个等宽箱里的几个。**只做事后诊断，不参与训练**——
+              算不出来（缺 npz / 缺折文件 / 两边 y 对不上）就留空并记一条 warning。
+              `n_bins_covered` 与 `bin_counts` 用**该折自己的** `bin_edges`（五个种子各一套），
+              所以同一任务不同折的箱不完全可比；这是数据事实，不加注释会被读错。
+        输入：task；fold（`seed0`…）；record（提供档位与 `n_train`）；subset_seed（与训练同一个）。
+        输出：六个字符串字段。数据来源：`splits/openpoly/`、`data/processed/features/`。
+        副作用：读盘。异常：无（失败即留空）。
+    English:
+        H4 has to separate "R² falls because there are fewer rows" from "R² falls because the value
+        range is not covered"; the second is counted, not asserted: into how many of the ten
+        equal-width bins this level's training rows fall. Diagnostics only - never feeds training -
+        and blank (with a warning) when the arrays are missing or disagree. Bins use **that fold's
+        own** `bin_edges`, which differ per seed, so the same task's folds are not strictly
+        comparable; that is a fact about the data, not an oversight.
+    """
+    blank = {
+        "y_mean": "",
+        "y_std": "",
+        "y_min": "",
+        "y_max": "",
+        "n_bins_covered": "",
+        "bin_counts": "",
+    }
+    try:
+        with np.load(REPO_ROOT / "data" / "processed" / "features" / f"{task}.npz") as pack:
+            y = np.asarray(pack["y"], dtype=np.float64)
+        split_path = REPO_ROOT / "splits" / "openpoly" / task / f"rule_replicated_{fold}.json"
+        payload = json.loads(split_path.read_text(encoding="utf-8"))
+        edges = np.asarray(payload["bin_edges"], dtype=np.float64)
+        index = np.concatenate(
+            [
+                np.asarray(payload["train_index"], dtype=np.int64),
+                np.asarray(payload["val_index"], dtype=np.int64),
+                np.asarray(payload["test_index"], dtype=np.int64),
+            ]
+        )
+        # 自检：三份索引合起来必须正好覆盖 0..n-1，否则 y 的行序与折文件不是一个坐标系，
+        # 算出来的箱覆盖就是编的。
+        # Self-check: the three index arrays must cover 0..n-1 exactly, otherwise the labels and the
+        # split are not in the same coordinate system and any bin count would be fiction.
+        if index.size != y.size or not np.array_equal(np.sort(index), np.arange(y.size)):
+            raise ArmError("三份索引没覆盖全部行")
+        rows = np.asarray(payload["train_index"], dtype=np.int64)
+        picked, _info = n_level_rows(rows, str(record["n_level"]), seed=subset_seed)
+        # 训练时先剔除建图失败的行再截断，这里做不到（要点图才知道），所以按行数核对：
+        # 对不上就返回空，而不是拿一个"差不多的"集合去算覆盖数。
+        # The trainer drops parse failures before trimming; we cannot know those without building
+        # graphs, so compare counts and return blank rather than compute coverage on a near-miss set.
+        if picked.size != int(record.get("n_train") or -1):
+            raise ArmError(f"重放得到 {picked.size} 行，记录说 {record.get('n_train')} 行")
+        values = y[picked]
+        n_bins = max(len(edges) - 1, 1)
+        counts = np.bincount(
+            np.clip(np.digitize(values, edges[1:-1]), 0, n_bins - 1), minlength=n_bins
+        )
+        return {
+            "y_mean": f"{float(np.mean(values)):.6f}",
+            "y_std": f"{float(np.std(values, ddof=1)) if values.size > 1 else 0.0:.6f}",
+            "y_min": f"{float(np.min(values)):.6f}",
+            "y_max": f"{float(np.max(values)):.6f}",
+            "n_bins_covered": str(int((counts > 0).sum())),
+            "bin_counts": " ".join(str(int(c)) for c in counts),
+        }
+    except (OSError, KeyError, ArmError, ValueError) as error:
+        LOGGER.warning(
+            "%s/%s/n=%s 的标签统计算不出来（%s），索引里留空",
+            task,
+            fold,
+            record.get("n_level"),
+            error,
+        )
+        return blank
+
+
 # ---- 9. 记录校验与整轮编排 / Record validation and the whole grid ----
 
 
@@ -1598,7 +2073,11 @@ def record_problems(record: dict[str, Any]) -> list[str]:
         problems.append(f"arm={arm_name!r} 不在 schema 的枚举 {list(KNOWN_ARMS)} 里")
         return problems
     expected = run_id_for(
-        str(record["task"]), str(record.get("split_fold", "")), int(record["seed"]), arm=arm_name
+        str(record["task"]),
+        str(record.get("split_fold", "")),
+        int(record["seed"]),
+        arm=arm_name,
+        n_level=record.get("n_level"),
     )
     if run_id != expected:
         problems.append(f"run_id {run_id!r} 与 task/fold/seed 拼出来的 {expected!r} 不一致")
@@ -1635,6 +2114,31 @@ def record_problems(record: dict[str, Any]) -> list[str]:
         expected_pred = f"results/aggregate/predictions/{run_id}.parquet"
         if str(record.get("predictions")) != expected_pred:
             problems.append(f"predictions 应为 {expected_pred}，现在是 {record.get('predictions')!r}")
+        # n 档的三条自洽关系（B-5）。这三条**都会真的被违反**：档位名写成名义值、实际行数被池子
+        # 卡住却标 unsaturated、或者反过来标了 saturated 却没顶到池子。任何一条错，D 画出来的
+        # 学习曲线就会把"没有的数据"算成一个点（D-35）。
+        # Three self-consistency rules for an n-level (B-5), each of which does get violated: a level
+        # named by its nominal value, a capped level not marked saturated, or the reverse. Any of
+        # them puts a point on the curve that the data does not support.
+        if record.get("n_level") is not None:
+            pool = record.get("n_train_pool")
+            requested = record.get("n_train_requested")
+            used = record.get("n_train")
+            saturated = record.get("n_level_saturated")
+            if not isinstance(pool, int) or not isinstance(requested, int) or not isinstance(used, int):
+                problems.append("有 n 档就必须记 n_train_pool / n_train_requested / n_train（三个整数）")
+            else:
+                if used != min(requested, pool):
+                    problems.append(
+                        f"n_train={used} 应等于 min(n_train_requested {requested}, n_train_pool {pool})"
+                    )
+                if bool(saturated) != bool(requested >= pool and str(record["n_level"]) != "all"):
+                    problems.append(
+                        f"n_level_saturated={saturated!r} 与 requested {requested} / pool {pool} "
+                        f"/ level {record['n_level']!r} 不自洽"
+                    )
+            if not str(record.get("n_subset_sha256", "")).startswith("sha256:"):
+                problems.append("有 n 档就要记 n_subset_sha256（哪些训练行必须可核对）")
     return problems
 
 
@@ -1644,6 +2148,7 @@ def run_grid(
     tasks: Sequence[str] | None = None,
     folds: Sequence[str] | None = None,
     seeds: Sequence[int] | None = None,
+    n_levels: Sequence[str] | None = None,
     limit: int | None = None,
     device: str | None = None,
     max_epochs: int | None = None,
@@ -1682,7 +2187,7 @@ def run_grid(
     """
     builder = builder or build_task_data
     trainer = trainer or train_one
-    keys = enumerate_runs(config, tasks=tasks, folds=folds, seeds=seeds)
+    keys = enumerate_runs(config, tasks=tasks, folds=folds, seeds=seeds, n_levels=n_levels)
     raw_dir = (out_root / "raw_runs") if out_root else RAW_RUNS_DIR
     pred_dir = (out_root / "predictions") if out_root else PREDICTIONS_DIR
     hours_path = (out_root / "gpu_hours.csv") if out_root else GPU_HOURS_PATH
@@ -1724,6 +2229,7 @@ def run_grid(
                 device=device,
                 max_epochs=max_epochs,
                 patience=patience,
+                n_level=key.n_level,
             )
             write_predictions(outcome, directory=pred_dir)
             path = write_run_record(outcome.record, directory=raw_dir)

@@ -1,0 +1,120 @@
+# OpenPoly 规模扫描（B-5）· 冻结配置 v1
+# OpenPoly scale scan (B-5) - frozen config v1
+#
+# 冻结于 2026-11-12。**本文件的字节哈希就是这 225 条记录的 `config_hash`**，所以跑之前改一个
+# 空格，225 条全部作废。
+# Frozen on 2026-11-12. This file's byte hash is `config_hash` in all 225 records, so editing even a
+# space before a run invalidates every one of them.
+#
+# 这份文件同时是"臂配置"和"实验配置"。为什么不拆成两份？D-33 ① 说 B-5 复用同一个脚本、只换
+# `configs/experiments/openpoly_scan.yaml` 的 n 档网格。若把架构抄一份到实验配置、超参又留在
+# `configs/arms/a3_graph.yaml`，`config_hash` 就得由两份文件合成，而 B-3/B-4 已入库的 96 条里
+# `config_hash` 是单文件哈希——两种语义混在一列，D 的区间就没法按 config_hash 分组了。
+# 于是这里放**完整的一份**，并用 `tests/test_openpoly_scan.py` 逐键断言它的 `architecture` 与
+# `training` 和 `configs/arms/a3_graph.yaml` **完全相同**——"不许另调超参"因此是机器核对的，
+# 不是靠人眼看（与 C-3 验收④同款做法）。
+# This single file is both the arm config and the experiment config. Splitting them would force
+# `config_hash` to be a hash of two files, while the 96 records already on disk use a single-file
+# hash - two meanings in one column would break grouping by config_hash. A test asserts that the
+# `architecture` and `training` sections here are key-for-key identical to a3_graph.yaml, so
+# "no hyper-parameter may be retuned" is machine-checked rather than eyeballed.
+
+arm: a3_graph
+experiment: openpoly_scan
+version: "1.0"
+frozen_at: "2026-11-12"
+owner: B
+
+# ---- 架构：与 A3 完全相同，一个字都没改 ----
+# Architecture: identical to A3, character for character. Source: chemprop 2.1.0 `train` defaults.
+architecture:
+  implementation: chemprop.models.MPNN
+  message_passing: BondMessagePassing
+  aggregation: NormAggregation
+  depth: 3                     # 消息传递步数（分工_B §2 B-3 明写）
+  hidden: 300                  # 消息与 FFN 的隐层（同上；12 GB 上 600 会 OOM）
+  aggregation_norm: 100        # chemprop 默认；除的是"求和除以 100"，不是可调参数
+  dropout: 0.0                 # chemprop 默认
+  batch_norm: false            # chemprop 默认（--batch-norm 是开关，默认关）
+  activation: relu             # chemprop 默认
+  undirected: false            # chemprop 默认；键特征已经正反各一份，不要再合并
+  atom_feature_dim: 72         # B-1 的 graph.py 与 chemprop featurizer 逐位对拍过
+  bond_feature_dim: 14         # 同上
+  ffn_hidden: 300
+  ffn_layers: 1
+  output_transform: unscale    # 用 train 的均值/标准差反变换回原单位（chemprop 默认做法）
+
+# ---- 训练：与 A3 完全相同 ----
+# Training: identical to A3. `max_epochs 100 / patience 15` 在 n=30 这种一档只有 30 行的任务上
+# 会让单条跑满 100 轮，这是要付的钱；**不能因为"这么大的 n 用不着 100 轮"就改小**——那会让
+# 不同 n 档的早停预算不同，学习曲线就不是同一条尺子量的了（D-35）。
+training:
+  loss: rmse
+  batch_size: 64               # n=30 时整档只有 1 个 batch；不改，理由同上
+  max_epochs: 100
+  patience: 15
+  monitor: val_loss
+  warmup_epochs: 2
+  init_lr: 1.0e-4
+  max_lr: 1.0e-3
+  final_lr: 1.0e-4
+  target_scaling: train_zscore # 标签标准化只用 train 的均值/标准差；n 档下"train"就是这一档
+  val_fraction_if_missing: 0.10
+  val_split_seed: 20261121
+
+# ---- n 档：本实验唯一比 A3 多出来的维度 ----
+# The n dimension: the only thing this experiment adds to A3.
+# 5 档 × 3 性质 × 5 折 × 3 种子 = 225 条。
+# 档位是 A 冻结的（分工_B §2 B-5"档位是 A 冻结的"），C 的经典臂用同一套，谁先跑完都不许改。
+# The levels are fixed by A: C's classical arm uses the same grid, and neither side may move them.
+n_levels: [30, 60, 120, 240, all]
+subset:
+  # 取法：固定种子打乱官方 train_index，再取前 n 行。**不是"取前 n 行"**——官方 train_index 是
+  # 升序的，前缀就是原始 CSV 的前 n 行，而同一条文献的样品挨在一起，那会把"样本量效应"换成
+  # "文献顺序效应"。理由与实测见 D-35。
+  # How a level is drawn: shuffle the official train_index with a fixed seed, then take a prefix.
+  # NOT "the first n rows" - the official index is ascending, so a prefix is the head of the raw CSV
+  # and one paper's samples sit together; that swaps a sample-size effect for a paper-order effect.
+  rule: shuffle_prefix
+  seed: 20261122               # 与 val_split_seed 20261121 刻意不同数，免得被当成同一条随机流
+  nested: true                 # n=30 的行集合是 n=60 的真子集：五档只差"加进去的行"
+constraints:
+  max_n: 443                   # 分工_B §2 B-5 验收②：一律 n ≤ 443，不许外推
+  no_extrapolation: true
+  train_only: true             # 只截训练集；验证集与测试集在 5 个档位上逐行相同（H4 的前提）
+
+# ---- 设备：与 A3 相同 ----
+device:
+  prefer: cuda
+  per_process_memory_fraction: 0.90
+  cudnn_deterministic: true
+  num_workers: 0
+
+# ---- 运行网格：225 条 = 3 性质 × 5 折 × 3 种子 × 5 档 ----
+# The grid: 225 = 3 properties x 5 folds x 3 model seeds x 5 levels.
+seeds: [0, 1, 2]
+runs:
+  openpoly:
+    folds: [seed0, seed1, seed2, seed3, seed4]
+    tasks:
+      - op_tg                          # 443 行 → train 355 / val 44 / test 44
+      - op_dielectric_constant_total   # 295 行 → train 235 / val 30 / test 30
+      - op_tm                          # 168 行 → train 134 / val 17 / test 17
+
+# ---- 预算（Proposal §7.4：4–11 GPU-h；按单张 RTX 4070 12 GB 计量）----
+budget:
+  predicted_gpu_hours: [4.0, 11.0]
+  per_run_minutes: [0.5, 3.0]
+  note: >-
+    分工_B §2 B-5 验收④：实测墙钟超过 §7.4 预测的 1.5 倍（即单 run 超过 4.5 分钟）立刻报
+    triage (i)，不许跑完再说。n=30 的档位只有 1 个 batch/epoch，却仍有 100 轮预算，
+    这一档很可能撞上限——撞了照实记，不改 max_epochs（改了 5 档就不是同一把尺子）。
+
+# ---- 记录 ----
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  index: results/aggregate/openpoly_gpu_index.csv
+  n_index: results/aggregate/openpoly_n_index.csv
+  env_fingerprint: results/env_fingerprints/env_gnn.json

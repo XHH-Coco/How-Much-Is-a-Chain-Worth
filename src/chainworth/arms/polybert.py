@@ -490,6 +490,7 @@ def train_one(
     device: str | None = None,
     max_epochs: int | None = None,
     patience: int | None = None,
+    n_level: str | None = None,
 ) -> A.TrainOutcome:
     """跑一条 (a) 的 run：冻结嵌入 → ridge 头 → 在官方测试集上打分。
     Run one (a) run: frozen embeddings, a ridge head, scored once on the official test split.
@@ -542,6 +543,18 @@ def train_one(
         torch.use_deterministic_algorithms(deterministic)
 
     val_cfg = config.section("validation")
+    # A4 的网格没有 n 档：B-5 的规模扫描只做 GNN 那 225 条（分工_B §2 B-5），polyBERT 的
+    # 嵌入是**按结构预算好的**，截训练行并不省任何编码时间，做出来也回答不了 H4 的问题。
+    # 这条守卫存在的意义是：万一哪天有人把 `n_levels` 抄进 A4 的配置，会当场报错而不是
+    # 悄悄跑出 225 条"名字带 n 档、实际全量"的记录。
+    # A4 has no n dimension: B-5 scans only the GNN arm, and polyBERT's embeddings are precomputed
+    # per structure, so trimming training rows saves no encoding time. The guard is here so that a
+    # copy-pasted `n_levels` fails loudly instead of producing 225 records that claim a level.
+    if n_level is not None:
+        raise A.ArmError(
+            "A4 的网格没有 n 档：n 档只属于 B-5 的 OpenPoly 扫描（分工_B §2 B-5），"
+            "要跑规模扫描请用 --arm a3_graph --config configs/experiments/openpoly_scan.yaml"
+        )
     spec_fold = data.fold(fold)
     train_index = np.asarray(spec_fold.train_index, dtype=np.int64)
     val_index = np.asarray(spec_fold.val_index, dtype=np.int64)
