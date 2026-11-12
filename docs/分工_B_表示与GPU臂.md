@@ -114,6 +114,21 @@
 > A3/A4 的训练代码（B-3/B-4）。清单命名从分工书的 `feature_manifest.csv` 改为
 > `task_features_manifest.csv`——A-6 已有一份 `features_manifest.csv`，两份同名会互相覆盖（D-29）。
 
+### B-1.5 · 补五张调和表并扩表征（1.5 pH｜CPU + 25 秒 GPU｜**已交付 2026-11-12**）
+
+| 项 | 内容 |
+|:--|:--|
+| **为什么要加这一步** | B-1 / B-2 只覆盖 10 个 PolyBench 任务，因为 A-3 只调和了那 10 张表（它自己的交付文档 §6 第 2 条登记过），A-6 又只认调和表。**但 B-3 的 48 条里有 30 条在 PB26、B-5 的 225 条全在 OpenPoly**——不补这张表，这两块数据条件一天都不成立 |
+| **怎么做** | 五张表走同一条 `harmonise_task()`：`python scripts/01_harmonise.py --task pb26_polymetrix_tg --task pb26_homopolymer_density --task op_tg --task op_tm --task op_dielectric_constant_total` → `02_features.py --source all` → `03b_assemble.py` → `03c_polybert.py`。**没有新增脚本** |
+| **产出** | 5 份调和表（不入库）+ `harmonised_manifest.csv` 15 行 + 13 条新决策；结构表 11,494 → **18,152**；描述符表 10 → 15 份；特征矩阵 10 → **15 份 / 30,733 行**；polyBERT 11,494 → **18,152 × 600** |
+| **验收标准** | ① 443 / 168 / 295 与 `configs/tasks/op_*.yaml` 的 `n_labels` 及 A-7 复核表**三处独立一致**；② 7,367 / 1,800 与 PB26 官方 `manifest.json` 的 `n_rows` 一致（折索引就是 CSV 行号，一行不能少）；③ A-3 四条 + A-6 深层全过；④ B-1 五条 + B-2 五检全过 |
+
+> 【三条不能搞错的口径】① **OpenPoly 三个任务不许去重**——443 行只对应 304 个结构，去重会让官方折索引整体前移，测试集静默换样品（`TaskSpec.dedupe=False`，D-32）；② 调和表要按 A-4 冻结的 `target_column` 原名再存一份标签列，否则 `load_rows()` 取不到列（`TaskSpec.label_export_columns`）；③ 结构表扩容后 `structure_id` 整体平移，**跨版本只能按 `psmiles_canonical` join**，A-6 的 stale 检查会自动重写老任务的特征表。
+>
+> 【顺手修的真 bug】B-1 的"同结构多行特征必须一致"自检用 `np.array_equal(block, block[:1])`，块有两行以上时是形状不等、会假报不一致；PolyBench 每任务已去重所以从没触发，OpenPoly 不去重一上来就踩响。已改成广播首行再比，并把 `op_tg`/`op_tm` 写进测试取样名单。
+>
+> 凭据见 [`交付_P2_B15_补行表与扩表征.md`](交付_P2_B15_补行表与扩表征.md)。
+
 ### B-2 · polyBERT 嵌入（2.0 pH｜GPU 建议，CPU 可跑）
 
 | 项 | 内容 |
@@ -149,6 +164,8 @@
 > **为什么值得单列 11 pH**：真正花时间的不是 48 次运行，而是把官方图管线调通（featurizer 版本、wPSMILES 权重怎么进图、early stopping 的监控量选哪个）。**48 次运行省不下多少，管线调错一次就是半天。**
 >
 > 【本机】 **一张 `NVIDIA GeForce RTX 4070`，12,282 MiB（12 GB），驱动 591.86，capability 8.9，46 个 SM**（实测于 2026-11-12，D-30；P0 指纹里那张「Laptop 8 GB」录错了，已重录）。所以上一段按 12 GB 写的降级梯**照用不改**：`hidden 300 + batch 64` 先试，OOM 再 `batch 32 + 累积 2`（墙钟 ≈1.2×）。注意 `set_per_process_memory_fraction(0.9)` ≈ 11.0 GB 比实测空闲可用量（10.6 GB）还高，它不是 OOM 保险。
+>
+> 【前置已就绪 2026-11-12】B-1.5 已把 PB26 两个任务的调和表、结构特征与图补齐：`pb26_polymetrix_tg` 7,367 行 / 7,367 图、`pb26_homopolymer_density` 1,800 行 / 1,800 图，**行数等于官方 `manifest.json` 的 `n_rows`**，5 折索引全部落在表内（`03b_assemble.py --verify` 与 `pytest tests` 都在守这条）。48 条里那 30 条不再是"没数据"，只差训练器本身。
 
 ### B-4 · A4 polyBERT 迁移臂（3.5 pH｜GPU 建议）
 
@@ -174,6 +191,8 @@
 | **验收标准** | ① 225 条齐全，缺的写 `blocked_no_gpu` 并说明是哪条；② 一律 **n ≤ 443**，不许外推；③ 每 run 都落 `predictions/<run_id>.parquet`（D 要拿它算 bootstrap 与过零点，没有预测这 225 条等于白跑）；④ 实测墙钟写进索引，超 §7.4 预测 1.5× 就立刻报 |
 
 > 【边界】 同一网格上的 **经典臂 225 fits 归 C**（`分工_C` 的 C-3）。你只管 GNN 这 225 条。两批用的是**同一套 n 档与折索引**，所以谁先跑完都别改档位——档位是 A 冻结的。
+>
+> 【前置已就绪 2026-11-12】B-1.5 已补齐 OpenPoly 三个性质的调和表：`op_tg` **443 行**、`op_tm` **168 行**、`op_dielectric_constant_total` **295 行**，与 `configs/tasks/op_*.yaml` 的 `n_labels` 和 A-7 复核表三处一致；`row_id` 是 0..n−1 的连续位置，与 `splits/openpoly/<task>/rule_replicated_seed*.json` 的 `test_index` 同一坐标系。**这三个任务没有去重**（Tg 443 行只对应 304 个结构，去重会让折索引错位，D-32），所以同一结构的多个样本行会带着不同标签出现——这是数据事实，不是装配错误。
 
 ---
 

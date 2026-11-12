@@ -19,3 +19,13 @@ pb_t3_dlt,Dielectric loss tangent,93,*c1ccc2c(c1)C(=O)N(C2=O)c1ccc(cc1)Oc1ccc(cc
 pb_t3_dlt,Dielectric loss tangent,204,*c1ccc2c(-c3nc4c(n3C2=O)ccc(c4)c2ccc3c(c2)n2C(=O)c4c(-c2n3)ccc(c4)C(=O)*)c1,*c1ccc2c(-c3nc4c(n3C2=O)ccc(c4)c2ccc3c(c2)n2C(=O)c4c(-c2n3)ccc(c4)C(=O)*)c1,0.01,0.01,0.01,0.01,无量纲,True
 pb_t3_dmp_sm,Dynamic mechanical properties storage modulus,12,*CC(c1ccccc1)(C)*,*CC(c1ccccc1)(C)*,0.751,0.751,0.751,0.751,GPa,True
 pb_t3_dmp_sm,Dynamic mechanical properties storage modulus,296,*c1ccc(cc1)Oc1ccc(cc1)C(=O)c1ccc(cc1)Oc1ccc(cc1)c1c2C(=O)N(C(=O)c2c(c2c1cccc2)*)c1ccccc1,*c1ccc(cc1)Oc1ccc(cc1)C(=O)c1ccc(cc1)Oc1ccc(cc1)c1c2C(=O)N(C(=O)c2c(c2c1cccc2)*)c1ccccc1,2.5,2.5,2.5,2.5,GPa,True
+pb26_polymetrix_tg,PolyMetriX Tg,1294,[*]CC([*])(C)C(=O)OCCCCCCCCCCOc1ccc(/N=N/c2ccc(F)cc2)cc1,[*]CC([*])(C)C(=O)OCCCCCCCCCCOc1ccc(/N=N/c2ccc(F)cc2)cc1,322.15,322.15,322.15,322.15,K,True
+pb26_polymetrix_tg,PolyMetriX Tg,6235,[*]c1ccc(OCCCCCCOc2ccc(C([*])(C)C)cc2)cc1,[*]c1ccc(OCCCCCCOc2ccc(C([*])(C)C)cc2)cc1,309.15,309.15,309.15,309.15,K,True
+pb26_homopolymer_density,MD_5000 homopolymer density,39,*CC(*)c1ccc(C(=O)OCC)cc1,*CC(*)c1ccc(C(=O)OCC)cc1,1.0759977714499998,1.0759977714499998,1.0759977714499998,1.0759977714499998,g/cm3,True
+pb26_homopolymer_density,MD_5000 homopolymer density,1552,[*]c1cc([N+](=O)[O-])c([*])cc1NC(C)=O,[*]c1cc([N+](=O)[O-])c([*])cc1NC(C)=O,1.21193395575,1.21193395575,1.21193395575,1.21193395575,g/cm3,True
+op_tg,OpenPoly Tg,35,[*]NCCCCCC([*])=O,[*]NCCCCCC([*])=O,357.4459259,357.4459259,357.4459259,357.4459259,K,True
+op_tg,OpenPoly Tg,132,[*]OC1=CC=C(C(C)(C2=CC=C(OC3=CC=C(S(=O)(C4=CC=C([*])C=C4)=O)C=C3)C=C2)C)C=C1,[*]OC1=CC=C(C(C)(C2=CC=C(OC3=CC=C(S(=O)(C4=CC=C([*])C=C4)=O)C=C3)C=C2)C)C=C1,458.4194915,458.4194915,458.4194915,458.4194915,K,True
+op_tm,OpenPoly Tm,68,[*]OCCCOC([*])=O,[*]OCCCOC([*])=O,310.476087,310.476087,310.476087,310.476087,K,True
+op_tm,OpenPoly Tm,72,[*]NCCCCCCCCCCCC([*])=O,[*]NCCCCCCCCCCCC([*])=O,452.7014925,452.7014925,452.7014925,452.7014925,K,True
+op_dielectric_constant_total,OpenPoly dielectric constant (total),447,*C(=O)C(=S)C(=O)c1ccc(*)s1,*C(=O)C(=S)C(=O)c1ccc(*)s1,6.69,6.69,6.69,6.69,无量纲,True
+op_dielectric_constant_total,OpenPoly dielectric constant (total),482,*C(=S)C(=O)c1ccc(-c2ccc(*)s2)cc1,*C(=S)C(=O)c1ccc(-c2ccc(*)s2)cc1,5.85,5.85,5.85,5.85,无量纲,True

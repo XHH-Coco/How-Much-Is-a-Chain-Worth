@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import csv
 
+import pandas as pd
 import pytest
 
 from chainworth.io.harmonise import (
@@ -36,6 +37,7 @@ from chainworth.io.harmonise import (
     append_unit_decisions,
     build_decisions,
     harmonise_task,
+    spec_source_path,
     verify_outputs,
 )
 
@@ -270,7 +272,22 @@ def test_each_task_label_is_recomputable(spec):
     """
     frame, outcome = harmonise_task(spec)
     assert len(frame) == outcome.rows_out
-    assert frame["smiles_canonical"].is_unique
+    if spec.dedupe:
+        assert frame["smiles_canonical"].is_unique
+    else:
+        # 声明不去重的任务（OpenPoly）：行的唯一判据是"标签非空就留一行"。这里从原始 CSV
+        # **独立重数一遍**，因为去重会让行数变小，而官方折索引按第 k 行寻址，行数一变测试集
+        # 就静默换成另一批样品——这是唯一便宜的守门人。
+        # A no-dedupe task (OpenPoly): the only rule is "one row per non-null label". The count is
+        # recomputed independently from the raw CSV, because deduping would shrink the table while
+        # the official folds keep addressing "the k-th row" - the cheapest guard for a silently
+        # swapped test set.
+        raw = pd.read_csv(spec_source_path(spec), dtype=str, keep_default_na=False, encoding="utf-8")
+        nonnull = int(
+            pd.to_numeric(raw[spec.label_column].astype(str).str.strip(), errors="coerce").notna().sum()
+        )
+        assert outcome.rows_out == nonnull
+        assert frame["source_row"].is_monotonic_increasing, "行序必须保持发布顺序"
     assert set(frame["label_unit"]) == {spec.target_unit}
     for raw_value, stored in zip(frame["label_raw"], frame["label"]):
         assert stored == pytest.approx(spec.convert(float(raw_value)))

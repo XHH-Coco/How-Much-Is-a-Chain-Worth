@@ -152,6 +152,47 @@ def test_labels_come_from_the_configured_target_column() -> None:
         assert np.array_equal(pack["y"], rows["label"].to_numpy(dtype="float64"), equal_nan=True)
 
 
+@needs_structures
+def test_b1_5_tasks_expose_their_target_column_under_its_own_name() -> None:
+    """B-1.5 补的五个任务：调和表里必须有 A-4 冻结配置点名的那个列名。
+    The five tasks B-1.5 added must carry the column name A-4's frozen config points at.
+
+    中文：
+        用途：A-3 的输出列统一叫 `label`，而 A-4 的 `configs/tasks/*.yaml` 里 `target_column`
+              写的是原始列名（`Tg_K` / `density` / `Tg (K)` …），配置文件是冻结物不能改。
+              所以调和表要按原名再存一份（`TaskSpec.label_export_columns`）。这条断言守的是
+              "两份数一模一样"——若哪天有人只更新了一边，`load_rows()` 会取到一列看似正常、
+              实际没换算过的数，而模型照样训练、R² 照样出来。
+        数据来源：`configs/tasks/*.yaml`、`data/interim/harmonised/`。
+        异常：AssertionError —— 缺列，或两列不逐位相等。
+
+    English:
+        Purpose: A-3's output column is always `label`, while A-4's frozen `configs/tasks/*.yaml`
+        names the raw column (`Tg_K`, `density`, `Tg (K)`, ...) and cannot be edited. The
+        harmonised table therefore keeps a copy under the raw name (`label_export_columns`). This
+        asserts the two are identical: if someone ever updates only one side, `load_rows()` would
+        pick a column that looks fine, was never converted, and the model would still train.
+        Data source: the frozen task configs and the harmonised tables.
+        Raises: AssertionError on a missing column or a value mismatch.
+    """
+    for task_id in (
+        "pb26_polymetrix_tg",
+        "pb26_homopolymer_density",
+        "op_tg",
+        "op_tm",
+        "op_dielectric_constant_total",
+    ):
+        config = L.load_task_config(task_id)
+        frame = pd.read_parquet(L.harmonised_path(task_id))
+        column = str(config["target_column"])
+        assert column in frame.columns, f"{task_id} 的调和表没有配置点名的 {column!r}"
+        assert np.array_equal(
+            frame[column].to_numpy(dtype="float64"),
+            frame["label"].to_numpy(dtype="float64"),
+            equal_nan=True,
+        ), f"{task_id} 的 {column!r} 与 label 不逐位相等"
+
+
 # --------------------------------------------------------------------------- #
 # ② 特征逐位来自 A-6 / features are bit-identical to A-6's output
 # --------------------------------------------------------------------------- #
@@ -191,41 +232,75 @@ def test_repeated_structure_gets_one_feature_vector() -> None:
     中文：
         用途：任务内通常零重复（A-3 已按结构去重），但 OpenPoly 有 57 组重复标签（D-26）。
               装配若按行取数而不是按键 join，这些行会各拿一份"恰好不同"的特征，而不会报错。
+        口径：比较时要把首行**广播成整块形状**。`np.array_equal(block, block[:1])` 在块有两行
+              以上时是形状不等（(k,205) vs (1,205)），会假报不一致——这个坑在真实数据上踩过一次。
     English:
         Purpose: tasks usually have no internal duplicates (A-3 deduplicates by structure), but
         OpenPoly has 57 duplicated label groups (D-26). If assembly read rows instead of joining on
         the key, those rows would each get a slightly different vector - with no error.
+        Note: the first row must be **broadcast to the block's shape**. Comparing `block` with
+        `block[:1]` is a shape mismatch for k >= 2 ((k,205) vs (1,205)) and reports a false
+        inconsistency; this trap was hit on real data once.
     """
-    for task_id in _sample_tasks(3):
+    # `op_tg` 一定有重复结构（443 行 / 304 结构），必须点名进来：随机抽 3 个任务可能一个重复都没有，
+    # 那样这个测试就成了空转。`_sample_tasks` 之外的这三个任务都要过。
+    # `op_tg` must be named: it certainly has duplicates (443 rows / 304 structures). A random
+    # sample of three tasks can easily contain none, which would make this test vacuous.
+    for task_id in ("op_tg", "op_tm", *_sample_tasks(3)):
         pack = F.load_pack(task_id)
         counts = pd.Series(pack["psmiles"]).value_counts()
         for key, count in counts.items():
             if not key or count < 2:
                 continue
             index = np.flatnonzero(pack["psmiles"] == key)
-            assert np.array_equal(pack["desc"][index], pack["desc"][index][:1], equal_nan=True)
+            block = pack["desc"][index]
+            assert np.array_equal(block, np.broadcast_to(block[0], block.shape), equal_nan=True)
+            bits = pack["fp"][index]
+            assert np.array_equal(bits, np.broadcast_to(bits[0], bits.shape))
 
 
 # --------------------------------------------------------------------------- #
 # ③ 边界：拒绝、裁切、失败计数 / boundaries: refusals, trimming, failure counts
 # --------------------------------------------------------------------------- #
-def test_polybench26_and_openpoly_assembly_is_refused_with_a_reason() -> None:
-    """PolyBench26 / OpenPoly 的任务装配必须**明确拒绝**，并说清缺的是调和表。
-    PolyBench26 / OpenPoly assembly must be **refused** with the missing artefact named.
+def test_polybench26_and_openpoly_assembly_lands_on_the_official_row_counts() -> None:
+    """PolyBench26 / OpenPoly 现在能装配，且行数**恰好等于官方划分的行数**。
+    PolyBench26 / OpenPoly now assemble, and the row count equals the official split's.
 
     中文：
-        用途：这两类任务的标签在 `data/raw/` 的原始 CSV 里、结构也不在 A-6 的表里。静默返回空矩阵
-              会让 B-3 在半夜拿到一堆 NaN 才开始查；所以它们必须当场失败，且消息指向 A-3 没有为
-              它们产出调和表这件事。
+        用途：这三类任务在 B-1 时是"明确拒绝"的（缺调和表，B-1 交付文档把它列为未做项）。
+              B-1.5 补了调和表之后，这条测试的语义要反过来：不再要求报错，而是要求**行数对得上**。
+              为什么这是最关键的一条：官方折索引按"第 k 行"寻址，调和表一旦多删或少删一行，
+              折索引就会静默指向别的样品——行数相等是这件事唯一便宜的守门人。
+        数据来源：`data/interim/harmonised/` 与 `splits/`（都用盘上真实产物，不造假数据）。
+        异常：AssertionError —— 行数与官方 n_total 不符，或某折索引越界。
+
     English:
-        Purpose: those tasks' labels live in raw CSVs and their structures are absent from A-6's
-        table. Silently returning an empty matrix means B-3 discovers a wall of NaN at midnight;
-        failing here, naming the missing harmonised table, is the honest outcome.
+        Purpose: these two benchmarks were "refused on purpose" during B-1 (no harmonised table);
+        B-1.5 added the tables, so this test flips to asserting the **row counts match**. That is
+        the cheapest guard for the failure that matters: the official folds address "the k-th row",
+        so a table that drops one row too many silently points the fold at other samples.
+        Data source: the real artefacts under data/interim/harmonised and splits.
+        Raises: AssertionError when a row count differs from the official n_total or an index
+        falls outside the table.
     """
-    for task_id in ("pb26_polymetrix_tg", "op_tg"):
-        with pytest.raises(L.AssemblyError) as error:
-            L.load_rows(task_id)
-        assert "调和表" in str(error.value)
+    expected = {
+        "pb26_polymetrix_tg": 7367,
+        "pb26_homopolymer_density": 1800,
+        "op_tg": 443,
+        "op_tm": 168,
+        "op_dielectric_constant_total": 295,
+    }
+    for task_id, n_rows in expected.items():
+        rows = L.load_rows(task_id)
+        assert len(rows) == n_rows, f"{task_id} 行数 {len(rows)} != {n_rows}"
+        # 行号必须是 0..n-1 的位置序列：官方折索引用的就是这个坐标系。
+        # Row ids must be the position sequence 0..n-1: that is the coordinate system the official
+        # folds use.
+        assert rows.index.tolist() == list(range(n_rows)), f"{task_id} 的 row_id 不是连续位置"
+        split = L.load_split(task_id)
+        assert not L.check_split_matches_rows(split, len(rows)), task_id
+        for fold in split.folds:
+            assert int(fold.test_index.max()) < n_rows
 
 
 def test_limit_split_keeps_the_coordinate_system_and_refuses_when_too_small() -> None:

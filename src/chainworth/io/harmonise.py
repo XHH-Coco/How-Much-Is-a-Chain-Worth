@@ -8,9 +8,11 @@ Harmonise the raw PolyBench CSVs into one table per task, with every unit decisi
           ④ 把每一条判定追加进 `data/manifests/unit_decisions.csv`。
     依赖：data/raw/polybench/<数据集名>.csv（A-2 交付，39 份 md5 已核）；
           data/manifests/polybench_expected_files.csv（A-2 的 39 行标准表）。
+          B-1.5 补的五个任务不走上面的路径：它们由 `TaskSpec.source_path` 各自指名
+          （`data/raw/polybench26/**` 与 `data/raw/openpoly/**`），SMILES 列名也不同。
     配置：无 yaml——本阶段的"配置"就是本文件里的 `TASK_SPECS` 注册表（A-4 的
           configs/tasks/*.yaml 反过来引用这里产出的 unit_decisions.csv，不要循环依赖）。
-    对外：TASK_SPECS、EXCLUDED_TASKS、harmonise_all()、verify_outputs()。
+    对外：TASK_SPECS、EXCLUDED_TASKS、harmonise_all()、verify_outputs()、spec_source_path()。
     被谁用：scripts/01_harmonise.py（阶段入口 01）、tests/test_harmonise.py。
 
 English:
@@ -20,10 +22,12 @@ English:
     row can be traced back; (4) append one decision row per judgement into
     `data/manifests/unit_decisions.csv`.
     Depends on: data/raw/polybench/<dataset>.csv (delivered by A-2, all 39 md5 verified) and
-    data/manifests/polybench_expected_files.csv (A-2's 39-row reference table).
+    data/manifests/polybench_expected_files.csv (A-2's 39-row reference table). The five tasks
+    B-1.5 added are not under that path: each names its own table via `TaskSpec.source_path`
+    (data/raw/polybench26/** and data/raw/openpoly/**) and uses a different SMILES column name.
     Config: no yaml - the "config" at this stage is the `TASK_SPECS` registry below. A-4's
     configs/tasks/*.yaml reference the produced unit_decisions.csv, never the other way round.
-    Public API: TASK_SPECS, EXCLUDED_TASKS, harmonise_all(), verify_outputs().
+    Public API: TASK_SPECS, EXCLUDED_TASKS, harmonise_all(), verify_outputs(), spec_source_path().
     Callers: scripts/01_harmonise.py (stage entry 01), tests/test_harmonise.py.
 """
 
@@ -59,6 +63,12 @@ LOGGER = logging.getLogger("chainworth.harmonise")
 
 REPO_ROOT = Path(__file__).resolve().parents[3]          # src/chainworth/io/harmonise.py -> 仓库根
 RAW_DIR = REPO_ROOT / "data" / "raw" / "polybench"
+# B-1.5 补的五个任务的源表：它们不在 data/raw/polybench 下，文件名也不等于性质名。
+# The five tables B-1.5 adds live outside data/raw/polybench, and their file names are not the
+# property names.
+OPENPOLY_SOURCE = "data/raw/openpoly/data/final_polymer_properties_fromliterature.csv"
+PB26_TG_SOURCE = "data/raw/polybench26/Datasets/PSMILES/PolyMetriX/Tg/Tg.csv"
+PB26_DENSITY_SOURCE = "data/raw/polybench26/Datasets/PSMILES/MD_5000/density/homopolymer_density.csv"
 INTERIM_DIR = REPO_ROOT / "data" / "interim" / "harmonised"
 MANIFEST_DIR = REPO_ROOT / "data" / "manifests"
 DECISIONS_PATH = MANIFEST_DIR / "unit_decisions.csv"
@@ -141,6 +151,35 @@ class TaskSpec:
     # (原始列名, 调和后列名)；这些是"测试条件"，不是标签，单独保留以免丢失实验语境。
     # (raw column, harmonised column); test conditions, not labels - kept so the context survives.
     condition_columns: tuple[tuple[str, str], ...] = ()
+    # ---- 以下五个字段是 B-1.5 加的，默认值让 A-3 原有的 14 个配方**行为逐位不变** ----
+    # ---- The five fields below were added by B-1.5; the defaults leave A-3's 14 recipes intact ----
+    # 源表在仓库里的相对路径。空串表示沿用 PolyBench 的老约定 `data/raw/polybench/<数据集名>.csv`；
+    # PolyBench26 与 OpenPoly 的表既不在那个目录、文件名也不等于性质名，必须显式给。
+    # Repo-relative path of the source table. Empty keeps A-3's old convention
+    # `data/raw/polybench/<dataset_name>.csv`; PolyBench26 and OpenPoly live elsewhere and their
+    # file names are not the property name, so they must say it.
+    source_path: str = ""
+    # SMILES 列名。PolyBench 叫 `SMILES`，PolyBench26 叫 `smiles`，OpenPoly 叫 `PSMILES`。
+    # The SMILES column. PolyBench: `SMILES`; PolyBench26: `smiles`; OpenPoly: `PSMILES`.
+    smiles_column: str = "SMILES"
+    # 聚合物名列。PolyBench 有 `polymer_name`，OpenPoly 叫 `Name`，PolyBench26 没有这一列。
+    # The polymer-name column: `polymer_name` in PolyBench, `Name` in OpenPoly, absent in PB26.
+    name_column: str = "polymer_name"
+    # 任务内是否按规范 SMILES 去重。**默认 True（A-3 的口径）**；OpenPoly 必须为 False——
+    # 它的官方划分按「发布顺序的第 k 行」索引，去重会让 443 行变成 304 行，折索引整体错位。
+    # Whether to dedupe on canonical SMILES inside the task. Default True (A-3's rule). OpenPoly
+    # must pass False: its official split indexes "the k-th published row", so deduping 443 rows
+    # down to 304 shifts every fold index - a failure that raises nothing and only shows up as a
+    # swapped test set.
+    dedupe: bool = True
+    # 额外按**原名**再存一份的原始列。A-4 冻结的 `target_column` 用的是原始列名（`Tg_K`、
+    # `density`、`Tg (K)`），而本模块的输出列叫 `label`；不复制一份，B-1 的 `load_rows()`
+    # 就取不到列。只在需要时给，老配方一律为空，输出表因此不变。
+    # Raw columns to also keep under their own names. A-4's frozen `target_column` uses the raw
+    # name (`Tg_K`, `density`, `Tg (K)`) while this module's output column is `label`; without a
+    # copy, B-1's `load_rows()` cannot find the column. Empty for every legacy recipe, so their
+    # output schema is unchanged.
+    label_export_columns: tuple[str, ...] = ()
 
 
 @dataclass
@@ -426,6 +465,118 @@ TASK_SPECS: tuple[TaskSpec, ...] = (
             "（数十 GPa）的 DMA 储能模量全区间，与 GPa 口径自洽；`property_log` 逐行等于 ln(DMPSM)"
         ),
     ),
+    # ---- B-1.5 补的五个任务（PolyBench26 × 2 + OpenPoly × 3）----
+    # ---- The five tasks B-1.5 adds (PolyBench26 x2 + OpenPoly x3) ----
+    # 为什么以前没有：A-3 只调了 data/raw/polybench 下的 10 张表（它自己的交付文档 §6 第 2 条
+    # 登记过这件事），而 B-3 的 30 条 PB26 run 与 B-5 的 225 条 OpenPoly run 都要这五张表的标签
+    # 与行序。补法与那 10 张完全一样：同一个 harmonise_task、同一份决策表、同一条验收。
+    # Why they were missing: A-3 only harmonised the ten tables under data/raw/polybench (its own
+    # delivery note registers this), while B-3's 30 PB26 runs and B-5's 225 OpenPoly runs need the
+    # labels and row order of these five. They are added the same way: one harmonise_task, one
+    # decision table, one set of acceptance checks.
+    TaskSpec(
+        task_id="pb26_polymetrix_tg",
+        dataset_name="PolyMetriX Tg",
+        role="main",
+        label_column="Tg_K",
+        label_raw_unit="K",
+        target_unit="K",
+        rule="identity：源列已是开尔文，按发布值原样保留，**不得再加 273.15**",
+        convert=_identity,
+        rationale=(
+            "源表列名直接是 `Tg_K`，且官方的 `DATA_PROVENANCE` 记明它取自 `labels.Exp_Tg(K)`；"
+            "数值 134.2 ~ 768.1 K、中位 410.1、缺失 0 行，与高分子 Tg 的开尔文区间一致"
+            "（PE ≈ 150 K、聚酰亚胺 ≈ 650 ~ 700 K）。若误当成摄氏再 +273.15，中位会变成 683 K"
+            "（约 410 ℃），高于绝大多数聚合物的分解温度——所以这里必须 identity（D-18）"
+        ),
+        source_path=PB26_TG_SOURCE,
+        smiles_column="smiles",
+        name_column="",              # 该表没有聚合物名列 / no polymer-name column
+        label_export_columns=("Tg_K",),
+    ),
+    TaskSpec(
+        task_id="pb26_homopolymer_density",
+        dataset_name="MD_5000 homopolymer density",
+        role="main",
+        label_column="density",
+        label_raw_unit="g/cm3",
+        target_unit="g/cm3",
+        rule="identity：按发布单位 g/cm3 原样保留，不换算",
+        convert=_identity,
+        rationale=(
+            "源表列名 `density`，取自 MD_5000 的均聚物分子动力学密度；数值 0.803 ~ 2.328、"
+            "中位 1.202，与聚合物密度的文献区间吻合（PE ≈ 0.92、PVC ≈ 1.4、PTFE ≈ 2.2 g/cm3）。"
+            "量级只在 g/cm3 下说得通：若当成 kg/m3 则只有 0.8 ~ 2.3，比空气重不到两倍，"
+            "任何凝聚态聚合物都不可能；故不换算"
+        ),
+        source_path=PB26_DENSITY_SOURCE,
+        smiles_column="smiles",
+        name_column="",
+        label_export_columns=("density",),
+    ),
+    TaskSpec(
+        task_id="op_tg",
+        dataset_name="OpenPoly Tg",
+        role="boundary",
+        label_column="Tg (K)",
+        label_raw_unit="K",
+        target_unit="K",
+        rule="identity：列名自带单位 (K)，按发布值原样保留，不换算",
+        convert=_identity,
+        rationale=(
+            "发布列表头就写作 `Tg (K)`，单位由发布方声明；741 行里 443 行有值，"
+            "取值 146 ~ 589 K、中位 346.3，与实验 Tg 区间一致（PDMS ≈ 150 K、聚砜 ≈ 460 K）。"
+            "**本任务不去重**：同一结构常有多条文献记录且标签互相矛盾，而官方划分按"
+            "「发布顺序第 k 行」索引，去重会让 443 行变 304 行、折索引整体错位（D-26）"
+        ),
+        source_path=OPENPOLY_SOURCE,
+        smiles_column="PSMILES",
+        name_column="Name",
+        dedupe=False,
+        label_export_columns=("Tg (K)",),
+    ),
+    TaskSpec(
+        task_id="op_tm",
+        dataset_name="OpenPoly Tm",
+        role="boundary",
+        label_column="Tm (K)",
+        label_raw_unit="K",
+        target_unit="K",
+        rule="identity：列名自带单位 (K)，按发布值原样保留，不换算",
+        convert=_identity,
+        rationale=(
+            "发布列表头写作 `Tm (K)`；741 行里 168 行有值，取值 289.4 ~ 627.1 K、中位 436.5，"
+            "与半结晶聚合物熔点区间一致（PE ≈ 410 K、PTFE ≈ 600 K）。若当成摄氏则中位 436 ℃，"
+            "高于聚四氟乙烯的熔点，物理上说不通。**不去重**的理由同 `op_tg`（D-26）"
+        ),
+        source_path=OPENPOLY_SOURCE,
+        smiles_column="PSMILES",
+        name_column="Name",
+        dedupe=False,
+        label_export_columns=("Tm (K)",),
+    ),
+    TaskSpec(
+        task_id="op_dielectric_constant_total",
+        dataset_name="OpenPoly dielectric constant (total)",
+        role="boundary",
+        label_column="Dielectric Constant Total",
+        label_raw_unit="无量纲",
+        target_unit="无量纲",
+        rule="identity：无量纲量（相对介电常数），按发布值原样保留",
+        convert=_identity,
+        rationale=(
+            "列名 `Dielectric Constant Total` 是**相对介电常数**（ε_r = ε/ε0），按定义无量纲，"
+            "这是物理定义而非猜测；741 行里 295 行有值，取值 2.61 ~ 7.69、中位 4.45，"
+            "与聚合物介电常数的常见区间相符（PE ≈ 2.3、PET ≈ 3.2、聚酰亚胺 ≈ 3.5、PVDF 可到 10 以上）。"
+            "同表另有 `Dielectric Constant Electronic` / `Ionic` 两列是它的分项，"
+            "同一行上可能不相等，留作证据不参与标签。**不去重**的理由同 `op_tg`（D-26）"
+        ),
+        source_path=OPENPOLY_SOURCE,
+        smiles_column="PSMILES",
+        name_column="Name",
+        dedupe=False,
+        label_export_columns=("Dielectric Constant Total",),
+    ),
 )
 
 EXCLUDED_TASKS: tuple[ExcludedTask, ...] = (
@@ -553,6 +704,28 @@ def _numeric(series: pd.Series) -> pd.Series:
 # ---- 6. 单个任务的调和 / Harmonise one task ----
 
 
+def spec_source_path(spec: TaskSpec) -> Path:
+    """给出一个任务的原始表路径：显式给了就用它，否则回落到 PolyBench 的老约定。
+    Resolve a task's raw table: the explicit path if given, else PolyBench's old convention.
+
+    中文：
+        用途：路径拼装集中一处。`harmonise_task()` 与 `build_spotcheck()` 都从原始表回查，
+              两处若各拼一遍，"抽检读的表"和"调和读的表"就可能不是同一份。
+        输入：spec —— 任务配方。
+        输出：Path，指向 data/raw 下的原始 CSV。
+        数据来源：spec.source_path（仓库相对）或 data/raw/polybench/<数据集名>.csv。
+        配置来源：spec 本身。副作用：无。异常：无（文件不存在由调用方在打开时报）。
+    English:
+        Purpose: one place that builds the path. `harmonise_task()` and `build_spotcheck()` both
+        read the raw table; two separate builders could disagree about which file that is.
+        Args: spec. Returns: a Path under data/raw. Data source: spec.source_path or the old
+        PolyBench convention. Config: the spec. Side effects: none. Raises: none.
+    """
+    if spec.source_path:
+        return REPO_ROOT / spec.source_path
+    return RAW_DIR / f"{spec.dataset_name}.csv"
+
+
 def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.DataFrame, TaskOutcome]:
     """按配方把一个任务的原始 CSV 调成 parquet 表，并把过程数字记进 TaskOutcome。
     Turn one task's raw CSV into the parquet table and record every intermediate count.
@@ -580,7 +753,7 @@ def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.Data
         Raises: FileNotFoundError when the CSV is missing; KeyError when a declared column is
         absent (usually a dataset version change); ValueError when nothing survives.
     """
-    source = RAW_DIR / f"{spec.dataset_name}.csv"
+    source = spec_source_path(spec)
     frame = _read_raw_table(source)
     if limit is not None:
         frame = frame.head(limit)
@@ -588,7 +761,7 @@ def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.Data
 
     # ---- 1. 列校验：宁可当场炸，也不要在缺列时算出一张"看起来正常"的表 ----
     # ---- 1. Column check: fail loudly rather than produce a plausible-looking table ----
-    for needed in ("SMILES", spec.label_column):
+    for needed in (spec.smiles_column, spec.label_column):
         if needed not in frame.columns:
             raise KeyError(
                 f"{spec.dataset_name} 缺少列 {needed!r}；现有表头 {list(frame.columns)}。"
@@ -597,7 +770,7 @@ def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.Data
 
     frame = frame.assign(
         source_row=range(len(frame)),
-        smiles_raw=frame["SMILES"].astype(str).str.strip(),
+        smiles_raw=frame[spec.smiles_column].astype(str).str.strip(),
     )
 
     # ---- 2. SMILES 规范化和不可解析行剔除 / Canonicalise SMILES, drop unparsable ----
@@ -614,7 +787,8 @@ def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.Data
     # ---- 4. 去重：键是 (task_id, 规范 SMILES)，只在任务内部去 ----
     # ---- 4. Dedupe on (task_id, canonical SMILES), within the task only ----
     before_dedupe = len(frame)
-    frame = frame.drop_duplicates(subset=["smiles_canonical"], keep="first").copy()
+    if spec.dedupe:
+        frame = frame.drop_duplicates(subset=["smiles_canonical"], keep="first").copy()
     outcome.n_duplicates = before_dedupe - len(frame)
 
     # ---- 5. 单位换算（只改数值，不改行数） / Unit conversion (values only, never rows) ----
@@ -622,13 +796,20 @@ def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.Data
     outcome.n_values_converted = int((frame["label"] != frame["label_raw"]).sum())
 
     # ---- 6. 组装输出列：每个数字都带得回原表 / Assemble output: every number traces back ----
+    source_relative = (
+        spec.source_path
+        if spec.source_path
+        else f"data/raw/polybench/{spec.dataset_name}.csv"
+    )
     output = pd.DataFrame(
         {
             "task_id": spec.task_id,
             "dataset_name": spec.dataset_name,
-            "source_file": f"data/raw/polybench/{spec.dataset_name}.csv",
+            "source_file": source_relative,
             "source_row": frame["source_row"].astype("int32"),
-            "polymer_name": frame["polymer_name"].astype(str) if "polymer_name" in frame.columns else "",
+            "polymer_name": (
+                frame[spec.name_column].astype(str) if spec.name_column in frame.columns else ""
+            ),
             "smiles_raw": frame["smiles_raw"],
             "smiles_canonical": frame["smiles_canonical"],
             "label": frame["label"].astype("float64"),
@@ -637,6 +818,13 @@ def harmonise_task(spec: TaskSpec, *, limit: int | None = None) -> tuple[pd.Data
             "label_raw_unit": spec.label_raw_unit,
         }
     )
+    for raw_column in spec.label_export_columns:
+        # 原始标签列按原名再存一份：A-4 冻结的 `target_column` 用的是原始名，B-1 按它取列。
+        # 与 `label_raw` 数值相同、语义不同（一个是"原始读数"、一个是"按任务配置取到的那一列"）。
+        # Keep the raw label column under its own name: A-4's frozen `target_column` uses the raw
+        # name and B-1 reads by it. Same numbers as `label_raw`, different meaning (raw reading vs
+        # the column the task config points at).
+        output[raw_column] = frame["label_raw"].astype("float64")
     for raw_column, new_column in spec.condition_columns:
         if raw_column in frame.columns:
             output[new_column] = _numeric(frame[raw_column]).astype("float64")
@@ -807,6 +995,25 @@ def build_decisions(outcome: TaskOutcome, *, decided_at: str) -> list[dict[str, 
     )
 
     # ---- 2. 去重（每个任务一条，删 0 行也要留痕） / Dedupe (one per task, even when 0 rows go) ----
+    if spec.dedupe:
+        dedupe_rule = "键 = (task_id, RDKit 规范 SMILES)，仅任务内部去重，保留首次出现"
+        dedupe_evidence = (
+            f"原始 {outcome.rows_in} 行，规范后唯一键 {outcome.rows_out} 个，删 {outcome.n_duplicates} 行。"
+            "跨任务重复不删——同一结构被测了不同性质是合法数据（DECISIONS D-14）；"
+            "全库 42,169 行只有 15,728 个唯一 SMILES，若全局去重会删掉 26,441 条合法样本。"
+        )
+    else:
+        # OpenPoly 走这条：官方划分按「发布顺序第 k 行」索引，去重会让行号整体错位。
+        # OpenPoly takes this branch: its split indexes "the k-th published row", so deduping
+        # would shift every index.
+        dedupe_rule = "**不去重**：保留同一结构的每一条文献记录，行序即发布顺序"
+        dedupe_evidence = (
+            f"原始 {outcome.rows_in} 行全部保留（其中 {outcome.n_invalid_label} 行因该性质无标签而剔除，"
+            f"那发生在去重之前、原因是缺标签而不是重复）。本任务**不得去重**：官方划分"
+            f"（`splits/openpoly/<task>/rule_replicated_seed*.json`）的 `test_index` 是"
+            f"「发布顺序的第 k 行」位置索引，去重会让行号整体前移、测试集静默换成另一批样品。"
+            f"同一结构的多条记录原样共存是 D-26 定的口径（分母按行记，去重后的结构数另行登记）。"
+        )
     rows.append(
         _decision_row(
             task_id=spec.task_id,
@@ -814,14 +1021,10 @@ def build_decisions(outcome: TaskOutcome, *, decided_at: str) -> list[dict[str, 
             property_name="smiles_canonical",
             raw_unit="",
             target_unit="",
-            rule="键 = (task_id, RDKit 规范 SMILES)，仅任务内部去重，保留首次出现",
+            rule=dedupe_rule,
             n_rows_affected=outcome.n_duplicates,
             n_values_converted=0,
-            evidence=(
-                f"原始 {outcome.rows_in} 行，规范后唯一键 {outcome.rows_out} 个，删 {outcome.n_duplicates} 行。"
-                "跨任务重复不删——同一结构被测了不同性质是合法数据（DECISIONS D-14）；"
-                "全库 42,169 行只有 15,728 个唯一 SMILES，若全局去重会删掉 26,441 条合法样本。"
-            ),
+            evidence=dedupe_evidence,
             decided_at=decided_at,
         )
     )
@@ -1134,7 +1337,7 @@ def write_harmonised_manifest(outcomes: Sequence[TaskOutcome], path: Path) -> No
             previous = {row["task_id"]: row for row in csv.DictReader(handle)}
 
     now = datetime.now().astimezone().isoformat(timespec="seconds")
-    rows: list[dict[str, object]] = []
+    fresh: dict[str, dict[str, object]] = {}
     for outcome in outcomes:
         spec = outcome.spec
         parquet_relative = (
@@ -1148,23 +1351,40 @@ def write_harmonised_manifest(outcomes: Sequence[TaskOutcome], path: Path) -> No
             "source_sha256"
         ) == outcome.source_sha256:
             built_at = old["built_at"]
-        rows.append(
-            {
-                "task_id": spec.task_id,
-                "dataset_name": spec.dataset_name,
-                "role": spec.role,
-                "source_file": f"data/raw/polybench/{spec.dataset_name}.csv",
-                "source_sha256": outcome.source_sha256,
-                "rows_in": outcome.rows_in,
-                "rows_out": outcome.rows_out,
-                "n_labels": outcome.rows_out,
-                "label_raw_unit": spec.label_raw_unit,
-                "label_unit": spec.target_unit,
-                "parquet_file": parquet_relative,
-                "parquet_sha256": outcome.parquet_sha256,
-                "built_at": built_at,
-            }
-        )
+        fresh[spec.task_id] = {
+            "task_id": spec.task_id,
+            "dataset_name": spec.dataset_name,
+            "role": spec.role,
+            "source_file": (
+                spec.source_path or f"data/raw/polybench/{spec.dataset_name}.csv"
+            ),
+            "source_sha256": outcome.source_sha256,
+            "rows_in": outcome.rows_in,
+            "rows_out": outcome.rows_out,
+            "n_labels": outcome.rows_out,
+            "label_raw_unit": spec.label_raw_unit,
+            "label_unit": spec.target_unit,
+            "parquet_file": parquet_relative,
+            "parquet_sha256": outcome.parquet_sha256,
+            "built_at": built_at,
+        }
+
+    # 只跑了部分任务时，其余任务的旧行必须原样留下：清单是全库的账本，不是本次运行的日志。
+    # 顺序按注册表，所以"补 5 个任务"是追加在末尾，老 10 行既不丢也不重排。
+    # A partial run must keep the other tasks' rows: the manifest is the library's ledger, not a
+    # log of this run. Order follows the registry, so "adding five tasks" appends at the end and
+    # the ten old rows are neither dropped nor re-ordered.
+    rows: list[dict[str, object]] = []
+    for spec in TASK_SPECS:
+        if spec.task_id in fresh:
+            rows.append(fresh[spec.task_id])
+        elif spec.task_id in previous:
+            rows.append(dict(previous[spec.task_id]))
+    # 注册表里没有、但清单里有的行（例如将来删掉某个任务）也要留下，否则会凭空消失。
+    # Rows in the manifest that the registry no longer knows about stay too, so nothing vanishes.
+    for task_id, row in previous.items():
+        if task_id not in {spec.task_id for spec in TASK_SPECS}:
+            rows.append(dict(row))
     _write_csv_atomic(rows, path, HARMONISED_MANIFEST_COLUMNS)
 
 
@@ -1172,8 +1392,8 @@ def write_harmonised_manifest(outcomes: Sequence[TaskOutcome], path: Path) -> No
 
 
 def select_specs(task_ids: Sequence[str] | None = None) -> tuple[TaskSpec, ...]:
-    """按任务 ID 选配方；不给就全选（6 个主表 + 4 个预备队）。
-    Pick recipes by task id; with no argument, all of them (6 main + 4 reserve).
+    """按任务 ID 选配方；不给就全选（A-3 的 10 个 + B-1.5 的 5 个 = 15 个）。
+    Pick recipes by task id; with no argument, all of them (A-3's ten plus B-1.5's five).
 
     中文：
         用途：`--task` 的落地口；写错 ID 当场报错并列出可选值，避免"以为跑了其实没跑"。
@@ -1391,8 +1611,20 @@ def verify_outputs(
             (left == right) or (left != left and right != right) for left, right in zip(expected, frame["label"])
         ):
             problems.append(f"{spec.task_id}: label 与 convert(label_raw) 不一致（换算规则与表里数据脱节）")
-        if not frame["smiles_canonical"].is_unique:
+        if spec.dedupe and not frame["smiles_canonical"].is_unique:
             problems.append(f"{spec.task_id}: smiles_canonical 任务内有重复，去重没生效")
+        if not spec.dedupe:
+            # 声明"不去重"的任务，真正要守的是**行序没被动过**：官方折索引按发布顺序的第 k 行
+            # 寻址，任何重排（去重、排序、按标签筛过再拼回去）都会让它静默换样品。
+            # "有没有重复结构"不是判据——OpenPoly 的介电常数 295 行本来就一条重复都没有。
+            # For a no-dedupe task the property that matters is that the **row order is untouched**:
+            # the official folds address "the k-th published row", so any reordering (dedupe,
+            # sorting, filtering then re-concatenating) silently swaps samples. "Has duplicates" is
+            # not the test - OpenPoly's 295 dielectric rows legitimately contain none.
+            if not frame["source_row"].is_monotonic_increasing:
+                problems.append(
+                    f"{spec.task_id}: 声明不去重，但 `source_row` 不是升序——行序被动过，官方折索引会错位"
+                )
         if set(frame["label_unit"]) != {spec.target_unit}:
             problems.append(f"{spec.task_id}: label_unit 列不是 {spec.target_unit}")
 
@@ -1451,7 +1683,7 @@ def build_spotcheck(
             problems.append(f"{spec.task_id}: 清单里没有这一行")
             continue
         frame = pd.read_parquet(REPO_ROOT / record["parquet_file"])
-        raw_frame = _read_raw_table(RAW_DIR / f"{spec.dataset_name}.csv")
+        raw_frame = _read_raw_table(spec_source_path(spec))
         take = min(per_task, len(frame))
         positions = rng.choice(len(frame), size=take, replace=False)
         for position in sorted(int(value) for value in positions):
@@ -1461,11 +1693,11 @@ def build_spotcheck(
             raw_label = float(str(raw_row[spec.label_column]).strip())
             recomputed = spec.convert(raw_label)
             checks = {
-                "smiles": str(row["smiles_raw"]) == str(raw_row["SMILES"]).strip(),
+                "smiles": str(row["smiles_raw"]) == str(raw_row[spec.smiles_column]).strip(),
                 "label_raw": float(row["label_raw"]) == raw_label,
                 "conversion": float(row["label"]) == recomputed,
-                "name": str(row["polymer_name"]) == str(raw_row.get("polymer_name", "")).strip()
-                if "polymer_name" in raw_frame.columns
+                "name": str(row["polymer_name"]) == str(raw_row.get(spec.name_column, "")).strip()
+                if spec.name_column in raw_frame.columns
                 else True,
             }
             all_match = all(checks.values())
@@ -1474,7 +1706,7 @@ def build_spotcheck(
                     "task_id": spec.task_id,
                     "dataset_name": spec.dataset_name,
                     "source_row": source_row,
-                    "smiles_in_csv": str(raw_row["SMILES"]).strip(),
+                    "smiles_in_csv": str(raw_row[spec.smiles_column]).strip(),
                     "smiles_in_parquet": str(row["smiles_raw"]),
                     "label_raw_in_csv": raw_label,
                     "label_raw_in_parquet": float(row["label_raw"]),

@@ -776,7 +776,16 @@ def verify_features(task_ids: Sequence[str] | None = None, *, sample: int = 100)
         repeated = [key for key, count in duplicates.items() if key and count > 1]
         for key in repeated[:20]:
             index = np.flatnonzero(pack["psmiles"] == key)
-            if not np.array_equal(pack["desc"][index], pack["desc"][index][:1], equal_nan=True):
+            block = pack["desc"][index]
+            # 必须把首行**广播成整块的形状**再比：`np.array_equal(block, block[:1])` 在块有
+            # 两行以上时是形状不等（(k,205) vs (1,205)），会假报"不一致"——PolyBench 的 10 个
+            # 任务每任务内已去重，这个分支从没被触发过；OpenPoly 不去重（D-26）才把它暴露出来。
+            # The first row must be **broadcast to the block's shape**: comparing `block` with
+            # `block[:1]` is a shape mismatch for k >= 2 ((k,205) vs (1,205)) and reports a false
+            # inconsistency. PolyBench dedupes inside every task, so this branch never ran; OpenPoly
+            # deliberately does not dedupe (D-26) and surfaced it.
+            expected = np.broadcast_to(block[0], block.shape)
+            if not np.array_equal(block, expected, equal_nan=True):
                 problems.append(f"{task_id}：结构 {key[:24]}… 的多行特征不一致")
                 break
 
