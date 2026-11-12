@@ -126,6 +126,16 @@
 > 【注意】 这项 **CPU 也能做完**，只是慢。没有 GPU 就挂着过夜，不要把自己卡死在这儿，也不要把 `--limit 200` 的试跑结果当成全量交上来。
 >
 > 【为什么在你手上】 它和 A4 臂是同一套权重、同一个环境、同一批 PSMILES。放在 A 那边，你和 A 会各自下载一次 7.3 GB、各自踩一次 transformers 版本坑。
+>
+> 【状态】 **已交付 2026-11-12**：11,494 结构 × 600 维，float32，**GPU 17.5 秒**（RTX 4070，`device=cuda`），
+> 行序按 `psmiles_canonical` 升序、与 A-6 的行号解耦，`--verify --recompute 50` 重算偏差 < 1e-4。
+> 产物 `data/processed/polybert/{embeddings.npy,index.parquet,manifest.json}`（不入库，26.3 MiB）+
+> `data/manifests/polybert_manifest.csv` + 12 个分片（可续跑）；入口 `scripts/03c_polybert.py`。
+> **三条与分工书不同的事**：① 权重**只有 97 MB 不是 7.3 GB**，且官方 `kuelumbus/polyBERT` 已
+> `RepoNotFound`，改用三方互校（两份 safetensors 逐字节相同 + 一份 bin 逐张量相同）的副本，
+> 来源与哈希写死并**加载时核验**（D-31）——这条要进论文的可复现性说明；② 输入串必须把 `*` 换成
+> `[*]`，裸 `*` 会静默变成 `<unk>`（嵌入照样出、只是废的）；③ 只覆盖 11,494 个 PolyBench 结构，
+> PB26/OpenPoly 的结构还没进 A-6 结构表。凭据见 [`交付_P2_B2_polyBERT嵌入.md`](交付_P2_B2_polyBERT嵌入.md)。
 
 ### B-3 · A3 官方图神经网络主扫（11.0 pH｜**GPU 必需**｜关键）
 
@@ -148,6 +158,11 @@
 | **怎么做** | **两种模式都要写**：(a) **冻结嵌入 + ridge 头**（几十分钟，CPU 也能跑）；(b) **微调**（2.5–4 GPU-h）。默认跑 (a)，时间够再跑 (b) |
 | **产出** | `configs/arms/a4_polybert.yaml` + 两条（或一条）run 记录 + `docs/DECISIONS.md` 里一条决策记录：为什么跑/不跑微调 |
 | **验收标准** | ① 嵌入行与结构一一对应（抽 50 个结构反查，见 B-2）；② (a) 与 (b) 若都跑了，同一 split/seed 上比较，差异写进主表备注；③ 若只跑 (a)，**必须**在决策记录里写明触发了 §7.4 的 triage (ii)，并在汇报材料上标注——**不许悄悄降级** |
+
+> 【前置已就绪】B-2 的 `data/processed/polybert/{embeddings.npy,index.parquet}` 已于 2026-11-12 就位
+> （11,494 × 600，按规范式排序）。读法：`embeddings.npy` 的第 k 行对应 `index.parquet` 的 `row=k`，
+> 用 `psmiles_canonical` 与 B-1 的 `features/<task>.npz` 对齐——**不要按行号直接拼**，两个文件的
+> 行序来源不同（B-1 按 `row_id`、B-2 按规范式）。
 
 ### B-5 · OpenPoly 扫描的 GPU 部分（2.0 pH｜**GPU 必需**｜关键）
 
