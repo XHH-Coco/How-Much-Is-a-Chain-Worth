@@ -20,7 +20,8 @@
 | `configs/arms/a4_polybert.yaml` | 冻结的臂配置：表示来源与哈希、ridge 头、微调段、网格、预算 | 1 |
 | `results/raw_runs/<task>__a4_polybert__<fold>__seed<N>.json` | 一条 run 一份记录（主表，`mode=frozen_ridge`） | 48 |
 | `results/aggregate/predictions/<同名>.parquet` | 测试集预测，两列 `row_id` / `y_pred` | 48 |
-| `results/aggregate/gpu_hours.csv` | 实测墙钟（与 A3 共用一张表，按 `run_id` 覆盖，现 96 行） | 见文件 |
+| `results/aggregate/gpu_hours.csv` | 实测墙钟（与 A3 共用一张表，按 `run_id` 覆盖；现 96 行 = 0.698 GPU-h） | 见文件 |
+| `results/aggregate/a4_finetune/gpu_hours.csv` | 微调的墙钟（**单列一处**，48 行 = 2.6835 GPU-h；查总花销要两处相加 = 3.38 GPU-h） | 48 |
 | `results/aggregate/a4_repeatability.json` | 冻结臂同 seed 两次的可复现性实测（验收④） | 1 |
 | `results/aggregate/a4_finetune_repeatability.json` | **微调**同 seed 两次的可复现性实测（验收④；跨进程另测一次，见 §4） | 1 |
 | `results/aggregate/a4_finetune/` | 微调（对照）的记录、预测、墙钟——**刻意不写进 `raw_runs/`** | 48 条 |
