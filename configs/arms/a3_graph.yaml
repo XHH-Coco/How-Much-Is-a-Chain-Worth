@@ -1,0 +1,105 @@
+# A3 图臂（官方 polymer_chemprop 口径）· 冻结配置 v1
+# A3 graph arm (official polymer_chemprop convention) - frozen config v1
+#
+# 冻结于 2026-11-12。**本文件的字节哈希就是 run 记录里的 `config_hash`**
+# （`results/raw_runs/_schema.json`），所以：跑之前改一个空格，48 条 run 的 config_hash 全部作废。
+# 要改超参 = 换版本号 + 全表重跑，不能"这个任务多调两次"（分工_B §5 冻结项）。
+#
+# Frozen on 2026-11-12. **This file's byte hash is `config_hash` in every run record**, so editing
+# even a space before a run invalidates all 48 of them. Changing a hyper-parameter means a new
+# version and a full re-run - never "two extra trials for this one task" (division B section 5).
+#
+# 每一条超参的来源都在下面写清：**没有一个数是"我调的"**（红线 2：A3 是官方标准配置，
+# 不是"我调到最好的一版"）。
+# Every value states where it came from; none of them is "something I tuned" (red line 2: A3 is the
+# official standard configuration, not the best version I could find).
+
+arm: a3_graph
+version: "1.0"
+frozen_at: "2026-11-12"
+owner: B
+
+# ---- 架构：chemprop 2.1.0 的默认 MPNN，只把深度/宽度写死 ----
+# Architecture: chemprop 2.1.0's default MPNN with depth/width made explicit.
+# 来源：`chemprop.cli.main` 的 `train` 子命令默认值（本机 2.1.0 实测读出）：
+#   --message-hidden-dim 300 / --depth 3 / --dropout 0.0 / --aggregation norm /
+#   --aggregation-norm 100 / --batch-norm 关 / --undirected 关 / --ffn-hidden-dim 300 /
+#   --ffn-num-layers 1
+# Source: the defaults of chemprop 2.1.0's `train` subcommand, read on this machine.
+architecture:
+  implementation: chemprop.models.MPNN
+  message_passing: BondMessagePassing
+  aggregation: NormAggregation
+  depth: 3                     # 消息传递步数（分工_B §2 B-3 明写）
+  hidden: 300                  # 消息与 FFN 的隐层（同上；12 GB 上 600 会 OOM）
+  aggregation_norm: 100        # chemprop 默认；除的是"求和除以 100"，不是可调参数
+  dropout: 0.0                 # chemprop 默认
+  batch_norm: false            # chemprop 默认（--batch-norm 是开关，默认关）
+  activation: relu             # chemprop 默认
+  undirected: false            # chemprop 默认；键特征已经正反各一份，不要再合并
+  atom_feature_dim: 72         # B-1 的 graph.py 与 chemprop featurizer 逐位对拍过
+  bond_feature_dim: 14         # 同上
+  ffn_hidden: 300
+  ffn_layers: 1
+  output_transform: unscale    # 用 train 的均值/标准差反变换回原单位（chemprop 默认做法）
+
+# ---- 训练：官方 Noam 式学习率 + 早停 ----
+# Training: the official Noam-like schedule plus early stopping.
+training:
+  loss: rmse                   # criterion 用 RMSE；MSE 与 RMSE 只差常数因子，报的指标不受影响
+  batch_size: 64               # 分工_B §2 B-3；12 GB 上 OOM 时按 §7 降到 32 + 累积 2
+  max_epochs: 100              # 分工_B §2 B-3 的 "≤100 epoch"
+  patience: 15                 # 同上；监控 val_loss（= 原单位 RMSE）
+  monitor: val_loss
+  warmup_epochs: 2             # chemprop 默认
+  init_lr: 1.0e-4              # chemprop 默认；分工_B 的 "lr 1e-3" 指 max_lr
+  max_lr: 1.0e-3
+  final_lr: 1.0e-4
+  target_scaling: train_zscore # 标签标准化只用 train 的均值/标准差（验收④：不许用全量统计量）
+  # PolyBench 官方只发 70/30、没有验证集，早停必须有一份"训练集内部"的留出：
+  # 固定 10%、固定种子，**三个模型种子共用同一份留出**，只让初始化和批序随种子变。
+  # 这份留出永远不碰测试集，也不参与报指标（红线 3：调参只能在 train 内部）。
+  val_fraction_if_missing: 0.10
+  val_split_seed: 20261121
+
+# ---- 设备 ----
+# Device. 一进程一卡；显存比例按分工_B §2 B-3 验收⑤。
+device:
+  prefer: cuda                 # 没有卡时自动退到 cpu（分工_B §4 交接协议第 2 条：不许写死 GPU）
+  per_process_memory_fraction: 0.90
+  cudnn_deterministic: true
+  num_workers: 0               # 图已在内存里，多进程只会把 collate 变成 IPC
+
+# ---- 运行网格：48 条 ----
+# The grid: 48 runs = 6 x 3 + 2 x 5 x 3.
+seeds: [0, 1, 2]
+runs:
+  polybench:
+    folds: [official_70_30]
+    tasks:
+      - pb_t1_tg                 # 表 A 第 1 行，8,055 行
+      - pb_t1_tm                 # 表 A 第 2 行，3,796 行
+      - pb_t2_modulus            # 表 A 第 3 行，1,034 行
+      - pb_t2_permeability       # 表 A 第 4 行，711 行
+      - pb_t3_dielectric_loss    # 表 A 第 5 行，279 行
+      - pb_t3_iwlt               # 表 A 第 6 行，228 行
+  polybench26:
+    folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    tasks:
+      - pb26_polymetrix_tg       # 表 B 第 7 行，7,367 行
+      - pb26_homopolymer_density # 表 B 第 8 行，1,800 行
+
+# ---- 预算（来自 Proposal §7.4，按单张 RTX 4070 12 GB 计量）----
+budget:
+  predicted_gpu_hours: [3.0, 5.0]
+  per_run_minutes: [1, 8]
+  note: >-
+    实测墙钟超过上界 1.5 倍（即单 run 超过 12 分钟）立刻走 triage (i)：先查 batch 与
+    num_workers，再考虑砍种子到 {0}，并在交付文档里标注。不许悄悄改成"跑一半就交"。
+
+# ---- 记录 ----
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  env_fingerprint: results/env_fingerprints/env_gnn.json

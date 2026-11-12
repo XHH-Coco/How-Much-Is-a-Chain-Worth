@@ -1,0 +1,31 @@
+{
+  "run_id": "pb_t1_tg__a3_graph__official_70_30__seed0",
+  "repeats": 2,
+  "max_abs_prediction_delta": 0.0,
+  "median_abs_prediction_delta": 0.0,
+  "p99_abs_prediction_delta": 0.0,
+  "n_over_threshold": 0,
+  "n_test": 2417,
+  "deltas": [
+    0.0
+  ],
+  "per_repeat_metrics": [
+    {
+      "r2": 0.8840909602834374,
+      "rmse": 37.28373645049596,
+      "epochs_run": 78
+    },
+    {
+      "r2": 0.8840909602834374,
+      "rmse": 37.28373645049596,
+      "epochs_run": 78
+    }
+  ],
+  "threshold": 0.001,
+  "passed": true,
+  "cudnn_deterministic": true,
+  "deterministic_algorithms": true,
+  "device": "cuda",
+  "checked_at": "2026-11-12T09:59:14+0800",
+  "note": "同配置、同折、同种子重复训练；预测是原单位，差值就是验收④要的那个数。两个确定性开关都必须为 true：只钉 cudnn 时本臂实测中位差 0.56 K、超过阈值的点占 99.96%，因为 chemprop 的图聚合是 CUDA 上的 scatter_reduce 原子加；两条都钉则逐位相同"
+}

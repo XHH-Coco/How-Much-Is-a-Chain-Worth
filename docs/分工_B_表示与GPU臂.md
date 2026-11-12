@@ -166,6 +166,24 @@
 > 【本机】 **一张 `NVIDIA GeForce RTX 4070`，12,282 MiB（12 GB），驱动 591.86，capability 8.9，46 个 SM**（实测于 2026-11-12，D-30；P0 指纹里那张「Laptop 8 GB」录错了，已重录）。所以上一段按 12 GB 写的降级梯**照用不改**：`hidden 300 + batch 64` 先试，OOM 再 `batch 32 + 累积 2`（墙钟 ≈1.2×）。注意 `set_per_process_memory_fraction(0.9)` ≈ 11.0 GB 比实测空闲可用量（10.6 GB）还高，它不是 OOM 保险。
 >
 > 【前置已就绪 2026-11-12】B-1.5 已把 PB26 两个任务的调和表、结构特征与图补齐：`pb26_polymetrix_tg` 7,367 行 / 7,367 图、`pb26_homopolymer_density` 1,800 行 / 1,800 图，**行数等于官方 `manifest.json` 的 `n_rows`**，5 折索引全部落在表内（`03b_assemble.py --verify` 与 `pytest tests` 都在守这条）。48 条里那 30 条不再是"没数据"，只差训练器本身。
+>
+> 【状态】 **已交付 2026-11-12**：**48 条一条不缺**，全部 `device=cuda`（RTX 4070），`config_hash` 单一、16 个 `split_version`、图失败 0、预测行数逐条对得上、48 条逐条过 `record_problems()`。
+> 合计 **41.8 分钟 = 0.696 GPU-h**（预算 3–5 GPU-h）；单 run 1.6–146.5 秒。
+> R²：`pb26_homopolymer_density` **0.9776 ± 0.0052**、`pb26_polymetrix_tg` **0.8932 ± 0.0073**、
+> `pb_t1_tg` **0.8857 ± 0.0015**、`pb_t1_tm` 0.6660、`pb_t2_modulus` 0.0153、
+> `pb_t3_iwlt` 0.0187、`pb_t2_permeability` −0.0097、`pb_t3_dielectric_loss` −0.0087（后四个见末条）。
+> 产物 `configs/arms/a3_graph.yaml`（冻结 v1）+ 48 条记录 + 48 份预测 + `gpu_hours.csv`；
+> 入口 `scripts/05_run_gpu.py`（README §4.2.1 原本就把 05 留给"GNN 臂的 GPU 批量"，所以没挤 04b）。
+> **五条验收全过**，其中第 ④ 条值得单说：**同 seed 两次逐位相同（最大差 0.0，2,417 个点全等）**，
+> 不是"小于 1e-3"。做到它的代价是墙钟 ×1.92（21.8 → 41.8 分钟），换 P4 那行"逐位相同"名副其实。
+> **三条与分工书/预期不同的事**：① 分工书只要 `cudnn.deterministic`，但那条**管不到 chemprop 的图聚合**
+> （`scatter_reduce` 在 CUDA 上走原子加），只钉它时同 seed 两次差 **65 K**；第二条腿
+> `use_deterministic_algorithms` 还必须与 `Trainer(deterministic=)` 同值，否则会被 Lightning **主动关掉**
+> （D-33 ⑦）——所以第 ④ 条的"GPU 非确定性允许"在这台机器上**不需要**，做到了更强的一条；
+> ② 标签标准化少一层会让预测放大 180 倍（R² −189,524），`UnscaleTransform` 在 training 时原样返回是根因；
+> ③ 四个条件敏感任务 R² 接近 0 是**任务性质**（缺温度/频率/时间），不是管线坏；改对数目标已报 **Q-10**，
+> 诊断里只有 permeability 真的跨过去（−0.03 → 0.61），**没有单方面改**。
+> 凭据见 [`交付_P2_B3_A3图神经网络主扫.md`](交付_P2_B3_A3图神经网络主扫.md)。
 
 ### B-4 · A4 polyBERT 迁移臂（3.5 pH｜GPU 建议）
 

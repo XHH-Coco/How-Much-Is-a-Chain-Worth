@@ -22,6 +22,8 @@
 | （示例，勿当真实请求）`pb_t1_tg__a3_graph__seed{0,1,2}` | `python -m chainworth.train --config configs/arms/a3_graph.yaml --task pb_t1_tg --seeds 0 1 2` | 0.2 | `sha256:1a9d…` | `results/raw_runs/` | 11-13 20:00 |
 
 > 示例行保留在表里，新增请求往下追加；**不要删示例行的"（示例，勿当真实请求）"标记**。
+>
+> **本机有卡，B-1 / B-2 / B-3 都是自跑，不经这张表。** 这张表为空**不代表没跑过**——B-3 的 48 条、B-2 的 18,152 个结构嵌入都在本机 `NVIDIA GeForce RTX 4070` 上跑完，凭据在各自的交付文档（`docs/交付_P2_B3_A3图神经网络主扫.md` §5）与 `results/` 里。表里没有请求行，是因为没有"没卡的人"要请人代跑；等 C 的 04 批量需要 GPU 时才往这里加。
 
 ---
 
