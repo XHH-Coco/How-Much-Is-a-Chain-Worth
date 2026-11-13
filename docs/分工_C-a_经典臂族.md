@@ -62,7 +62,7 @@
 |:--|:--|:--|
 | 15 个任务的特征矩阵 | `data/processed/features/<task>.npz`（合计 11 MiB） | 每**测量**一行：`row_id` + `y` + `psmiles` + 205 描述符 float64 + 2048 位指纹 uint8；**行序 = `row_id` = `splits/` 的 `row_position` 同一坐标系** |
 | 逐份哈希与列序说明 | `data/manifests/task_features_manifest.csv` | `pack_sha256` 逐份；读之前先核，核不过就停（别自己重算） |
-| 结构层画像（A5 要用） | `data/processed/structures/psmiles.parquet`（18,152 结构 + wPSMILES） | 重复单元数、wPSMILES 权重从这儿取，**不要从 SMILES 里自己解析** |
+| 结构层画像（**A5 目前用不上**） | `data/processed/structures/psmiles.parquet`（18,152 结构 + `wpsmiles` + `n_stars`） | **这里没有重复单元数，也没有可用权重**（D-46：`\|1\|` 全部为 1、权重段 18,036 行逐字相同的 `1:1`、116 行支化结构无 wpsmiles；一行 = 一个重复单元，无序列列）。A5 的替代口径见 [`docs/交付_C-a_经典臂族.md`](交付_C-a_经典臂族.md) §9 |
 | 官方划分 | `splits/polybench/*/official_70_30.json`（10 份）、`splits/polybench26/*/seed_42/`（PB26 5 折） | 只读。`official_70_30` 只有 `test_index`（无 val），PB26 的 `fold_NN.npz` 里有 `train_pool / val / test` |
 | run 记录的字段契约 | `results/raw_runs/_schema.json` | **你的记录必须过这份 jsonschema**；`arm` 的枚举里 `a1_floor / a2_conventional / a5_chain` 都已就位 |
 | B 已落的 546 条 | `results/raw_runs/*.json` | 抄格式、抄 `split_version` 写法（`<12 位 hex>@splits/...`），**不要抄数值** |
@@ -105,7 +105,7 @@
 
 | 项 | 内容 |
 |:--|:--|
-| **拿什么** | A2 的输入 + `psmiles.parquet` 的 `wPSMILES` 与重复单元数；Proposal §6 的 A5 定义 |
+| **拿什么** | A2 的输入 + 链列；**但 `psmiles.parquet` 里没有 repeat count、wPSMILES 权重全为 `1:1`（D-46）**，三条注入用什么替代待 C 组定（交付文档 §9）；Proposal §6 的 A5 定义 |
 | **怎么做** | 三条注入**各自可单独开关**：**A5a** 重复次数（重复单元数作为显式特征）、**A5b** wPSMILES 权重、**A5c** 多单元序列拼接；外加 **A5all**（三条全开）与**打乱对照**（把链列在 train 内随机置换后重跑）。学习器、超参、划分、种子**与 A2 完全相同**。分布：A5all 跑满 16 个单元（进主表），A5a/b/c 与打乱对照只在 **2 个代表任务**上跑全（`pb_t1_tg` 单折 + `pb26_polymetrix_tg` 5 折 = 6 单元） |
 | **产出** | `src/chainworth/arms/chain_info.py`、`configs/arms/a5_chain.yaml`、四组 run 记录、`results/aggregate/scramble_control.csv`（一任务一臂一行：`with_chain / scrambled / delta / delta_after_scramble`） |
 | **验收标准** | ① **同学习器同超参**：`a5_chain.yaml` 与 `a2_conventional.yaml` **解析后除输入段外逐键相同**（写成断言，不是肉眼比对）；② 记录里新增 `a2_config_hash` 字段，值 = `configs/arms/a2_conventional.yaml` 的字节 sha256（`_schema.json` 的 `additionalProperties: true` 允许加字段，**但只许加不许改**）；③ 只开一条也能跑（三个开关相互独立）；④ **打乱对照必须跑、必须如实报**：若打乱后增益没有下降，说明增益来自"多了几列"而不是"链信息"；⑤ 与 A3 的增益能在同 split/seed 上直接相减 |
