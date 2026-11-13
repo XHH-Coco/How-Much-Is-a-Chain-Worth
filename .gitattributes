@@ -21,3 +21,14 @@ Makefile text eol=lf
 *.pt   binary
 *.pth  binary
 *.ckpt binary
+
+# 入库入口包（D-38）：这三种是二进制，别让 text=auto 去碰它们。
+# Committed data package (D-38): binary, never touch these with line-ending conversion.
+*.npz     binary
+*.parquet binary
+*.sqlite3 binary
+
+# MD_5000 的 canonical 表**字节就是验收靶子**（D-21 的 canonical_sha256）：任何行尾转换都会让
+# sha256 与官方对不上，所以这几份按 -text 处理，不归一化。
+# The canonical tables' bytes are the acceptance target (D-21): no normalisation, ever.
+data/raw/polybench26/**/*.csv -text

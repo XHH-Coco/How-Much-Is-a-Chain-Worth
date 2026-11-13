@@ -41,6 +41,10 @@ English:
 证明"你重出来的和我的一样"。行序**不是**随便排的：第 k 行就是 `row_id=k`，与
 `splits/polybench/*/official_70_30.json` 的 `test_index` 同一个坐标系——这是 C 与 D 都依赖的那条。
 
+**例外（D-38，2026-11-13）**：C 组要用的 **11 份**（8 个主表任务 + 3 个 OpenPoly）已随仓库交付，
+见 `data/manifests/committed_data_manifest.csv`；备用队那 4 份仍靠本脚本重建
+（`--tasks pb_t1_td`）。上面那段话对那 4 份依然成立。
+
 The `.npz` files are **not** in the repository. Run `python scripts/03b_assemble.py` to rebuild
 them (about a minute); `--verify` proves the rebuild matches by manifest hashes plus a 100-structure
 bit-for-bit comparison against stage 02's output. Row order is not arbitrary: row k is `row_id=k`,

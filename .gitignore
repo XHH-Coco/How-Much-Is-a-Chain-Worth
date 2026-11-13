@@ -10,6 +10,47 @@ data/external/*
 !data/processed/.gitkeep
 !data/external/.gitkeep
 
+# ---- 入库的"入口包"：C 组真读的那 19 MB（2026-11-13，D-38）---------------
+# 破例的理由不是"方便"，是"复现会卡住"：新组员要自己重下 653 MB，得先撞 figshare 的 403
+# （manifests/SOURCES.md 坑十）与 PMC 的工作量证明（坑二十五）；而 C 组真正读的只有这 19 MB。
+# 判断标准仍是硬规则 1 那一句：**别人克隆后拿不到它，复现就卡住**。
+# 许可：全部 CC BY 4.0（OPoly26 / OMersBench / PolyBench 平台，须署名）；**不含** GTRC 的
+# polyVERSE EA/IP——架构迁移那部分不入库，由 C-b 从上游自取。
+# 清单与哈希：data/manifests/committed_data_manifest.csv；复核：python scripts/00b_data_package.py --verify
+!data/processed/features/
+!data/processed/features/*.npz
+!data/processed/structures/
+!data/processed/structures/psmiles.parquet
+
+# raw 里只要那一个目录：先放行目录、再挡回它的全部子项、只放行下一层——逐层这样写。
+# 不能只写 `!.../Datasets/`：放行一个目录等于放行它下面的**一切**（实测这一条会连带
+# 261 MB 的 PSMILES/wPSMILES 与 66 MB 的 jsonl）。gitignore 是"最后一条匹配"说了算。
+# One directory only: allow the dir, re-block its children, allow the next level - repeat per level.
+# Allowing a directory allows everything under it, so each level needs its own pair of rules.
+!data/raw/polybench26/
+data/raw/polybench26/*
+!data/raw/polybench26/Datasets/
+data/raw/polybench26/Datasets/*
+!data/raw/polybench26/Datasets/PSMILES/
+data/raw/polybench26/Datasets/PSMILES/*
+!data/raw/polybench26/Datasets/PSMILES/MD_5000/
+data/raw/polybench26/Datasets/PSMILES/MD_5000/*
+!data/raw/polybench26/Datasets/PSMILES/MD_5000/Cp/
+
+# 白名单只放"已经决定入库的那几份"：缓存、限量跑产物、以及 C 组不读的四份备用队任务，
+# 一律在上面的 `!` 之后再挡回去（gitignore 是**最后一条匹配**说了算）。
+# Cache, --limit artefacts and the four reserve task packs team C never reads are re-ignored here.
+data/processed/features/*.partial.*
+data/processed/features/*.tmp
+data/processed/features/pb_t1_td.npz
+data/processed/features/pb_t2_tssab.npz
+data/processed/features/pb_t3_dlt.npz
+data/processed/features/pb_t3_dmp_sm.npz
+data/processed/structures/.descriptor_cache.sqlite3
+data/processed/structures/*.partial.*
+data/processed/structures/*.tmp
+data/raw/polybench26/Datasets/PSMILES/MD_5000/Cp/*.partial.*
+
 # 限量跑的清单是调试产物，不是证据：`--limit` 只许写 *.partial.csv，完整清单才入库。
 # A --limit run writes *.partial.csv as a debugging artefact; only the full manifest is evidence.
 data/manifests/*.partial.csv

@@ -34,9 +34,16 @@ English:
 
 就得到同一批文件；`--verify` 用清单里的 sha256 与重算两条路证明"你重出来的和我的一样"。
 
+**一个例外（D-38，2026-11-13）**：`structures/psmiles.parquet` 已随仓库交付（C-a 的 A5 要读
+wPSMILES 与重复单元数），清单见 `data/manifests/committed_data_manifest.csv`；
+`descriptors/<task>.parquet`（34 MB）与缓存仍靠本脚本重建。
+
 The parquet files are **not** in the repository (`data/processed/*` is gitignored). After cloning,
 run `python scripts/02_features.py --source all` to rebuild the same files; `--verify` proves the
 rebuild is identical via the manifest hashes and a full recomputation.
+
+**One exception (D-38)**: `structures/psmiles.parquet` ships with the repository (A5 needs the
+wPSMILES and repeat-unit columns); the descriptor tables and the cache are still rebuilt here.
 """
 
 from __future__ import annotations
