@@ -19,7 +19,7 @@
 | `configs/arms/a1_floor.yaml` | A1 地板：空输入 + Dummy 均值；`trials: 0`（被问"调了多少次参"答案是 0） | 1 · 3,098 B · `871836748cd8…` |
 | `configs/arms/a2_conventional.yaml` | A2 经典：2,253 列 + XGBoost；搜索空间 / 预算 / 分组 CV 全写在里面 | 1 · 6,324 B · `7d29768afc09…` |
 | `configs/arms/a5_chain.yaml` | A5 链信息：**草案，未冻结**（`status: draft_blocked_pending_data`） | 1 · 8,368 B（不计入冻结） |
-| `configs/experiments/main_table.yaml` | 144 口径唯一出处：16 单元 × 3 臂 × 3 种子 | 1 · 3,589 B · `409f73d16c7b…` |
+| `configs/experiments/main_table.yaml` | 96 口径唯一出处：16 单元 × 2 臂 × 3 种子（v2，2026-11-14 按 D-48 撤除 A5） | 1 · 5,372 B · `06cd9e1efe82…` |
 | `src/chainworth/arms/{floor,conventional}.py` | A1 与 A2 的全部逻辑（输入构造 + 学习器 + 分组 CV + 记录） | 2 |
 | `src/chainworth/arms/chain_info.py` | **未创建**：A5 在数据口径定下来之前不开工，不往仓库里放半成品 | 0 |
 | `scripts/04_run_cpu.py` | 入口：`run` / `search` / `repeatability` / `sensitivity` / `control` / `nullcal` | 1 |
@@ -49,7 +49,7 @@
 
 ---
 
-## 2. 144 是怎么算出来的（只引 `main_table.yaml`）
+## 2. 96 是怎么算出来的（只引 `main_table.yaml` v2）
 
 | 基准 | 任务 | 折 | 种子 | 每臂 run 数 |
 |:--|:--|:--|:--|--:|
@@ -57,9 +57,11 @@
 | PolyBench26 | `pb26_polymetrix_tg` / `pb26_homopolymer_density` | `fold_00` … `fold_04` | 0/1/2 | 2 × 5 × 3 = **30** |
 | | | | 合计 | **48 / 臂** |
 
-- **144 = 16 单元 × 3 臂 × 3 种子**，每臂只放一个学习器（A1 = Dummy 均值、A2 = XGBoost、A5 = XGBoost）。
+- **96 = 16 单元 × 2 臂 × 3 种子**，每臂只放一个学习器（A1 = Dummy 均值、A2 = XGBoost）。
   RF 与 kNN 走"学习器敏感性"，**不进主表**，已在同一网格上跑完（§10）。
-- **本轮已交 96 条**（A1 + A2）；剩下的 48 条是 A5，**被数据卡住，没有跑**。主表因此只有两列有数。
+- **本轮已交 96 条**（A1 48 + A2 48），主表两列都有数。原 v1 的 144 口径含 A5，**A5 已按 D-48 撤除**
+  （三条链输入在数据里不存在，D-47），状态是 `not_constructible_data_unavailable`，不是"增益为零"。
+  96 条记录在改口径之前就已产出，故这次 v1→v2 **没有重跑任何一条 run**。
 - PolyBench 的"×3"是**模型初始化种子**，不是三份划分（D-20：官方 70/30 只有一份，换 seed 返回字节相同）。
 - PB26 训练用 `train_pool`、评估用 `test`；`val` 列存在但**主表口径不用它**（分工_C-a §2 C-a-2；
   记录里 `n_val` 为空、`n_train` 就是 `train_pool` 的行数）。
@@ -149,7 +151,7 @@ sd 恰好为 0.0000 的**两条**不是"特别稳"，而是"这组超参没有�
 | ② | 任一 run 记录过 `_schema.json` | 96 条逐条 `jsonschema.validate`：**0 不合格** | **通过** |
 | ③ | `--limit` 只写 `*.partial.*` | `--limit` 走独立冒烟路径（`_run_smoke`），产物固定写 `results/aggregate/partial/*.partial.{json,parquet}`；`results/raw_runs/` 里无 `*.partial.*` | **通过** |
 | ④ | 同 seed 两遍 r2 差 < 1e-9 | `a2_repeatability.json`：`max_abs_prediction_delta = 0.0`，r2 两遍都是 `0.8862028074232996` | **通过** |
-| ⑤ | `expected_runs` 与口径一致 | `main_table.yaml`：`per_arm: 48`、`total: 144`；本轮实际 96 = 48 + 48 | **通过**（144 含尚未跑的 A5） |
+| ⑤ | `expected_runs` 与口径一致 | `main_table.yaml` **v2**：`per_arm: 48`、`total: 96`；本轮实际 **96 = 48 + 48**，逐格对得上 | **通过**（v1 的 144 含 A5；A5 按 D-48 撤除，状态 `not_constructible_data_unavailable`） |
 
 ### C-a-2（A1 + A2 全量）
 
@@ -237,14 +239,15 @@ sd 恰好为 0.0000 的**两条**不是"特别稳"，而是"这组超参没有�
    现在要拍板的是**怎么用**：Tg/Tm 两行可直接并排（A2 比平台最佳树高 +0.0042 / +0.0044）；
    另外四行官方在 `ln` 空间，要不要为了能比而**四臂同时改对数目标**——这就是 Q-10，仍归 C 组与仓库所有者。
 
-> **Q-02 已按分工书 §2 的建议口径定为 144**（`main_table.yaml`，每臂一个学习器），待 C-b / C-c / D 会签；
-> 若有人要改成"多学习器进主表"，那是换 `main_table.yaml` 版本号 + 全表重跑，**不许只改数字**。
+> **Q-02 已按 D-48 定为 96**（`main_table.yaml` v2：16 单元 × 2 臂 × 3 种子；A5 撤除），待 C-b / C-c / D 会签；
+> 母本 150 fits 与 96 的差 54 = A5 撤除 −48 + 每臂一个学习器 −6（后 6 条的出处仍未在母本里找到）。
+> 若有人要改回"多学习器进主表"或恢复 A5，那是换 `main_table.yaml` 版本号 + 全表重跑，**不许只改数字**。
 
 ---
 
 ## 10. 学习器敏感性：RF / kNN（附加表，不进主表）
 
-**为什么要这张表**：主表每臂只放一个学习器（Q-02 的 144 口径）。若"经典臂"的数字其实是 XGBoost 的功劳，
+**为什么要这张表**：主表每臂只放一个学习器（Q-02 的 96 口径）。若"经典臂"的数字其实是 XGBoost 的功劳，
 主表结论就只是"选对了一个学习器"。这张表在**同一网格**上换两个经典学习器，看哪些结论会变、哪些不会。
 
 **口径**（`configs/experiments/learner_sensitivity.yaml`，A2 的冻结配置一个字节都没动）：

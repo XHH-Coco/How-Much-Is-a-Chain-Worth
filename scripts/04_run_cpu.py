@@ -308,7 +308,7 @@ def _sensitivity(
         用途：回答"A2 的结论是不是 XGBoost 特有的"。RF 不调参（固定成官方 RDKit_RF 的 100 树），
               kNN 走 8 点网格搜索；两者的折、种子、划分与主表**逐条相同**，所以可以直接并排读。
               **不写 `results/raw_runs/`**：`_schema.json` 的 arm 枚举里没有"敏感性"，写进去会让
-              C-c 的 144 条对不上；这里只落 `learner_sensitivity*.csv`。
+              C-c 的 96 条对不上；这里只落 `learner_sensitivity*.csv`。
         输入：tasks（None = A2 网格里的全部）；learners；seeds（None = 敏感性配置的 seeds）；
               dry_run —— 只打印计划，不训练。
         输出：写 CSV，返回 0。副作用：训练（内存中）、写两张 CSV。

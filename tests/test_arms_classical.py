@@ -5,7 +5,8 @@ record validity, and prediction row counts.
 中文：
     用途：把分工_C-a 的验收标准变成 `pytest`，四组：
           ① **纯函数（不需要数据）**：
-             - `main_table.yaml` 的 `expected_runs` = 16 单元 × 3 臂 × 3 种子 = 144，且分臂 48 各一；
+             - `main_table.yaml` 的 `expected_runs` = 16 单元 × 2 臂 × 3 种子 = 96，且分臂 48 各一
+               （A5 撤除，见 D-48）；
              - A5 的 `learner` / `search` / `seeds` / `runs` 与 A2 **逐键相同**（C-a-3 验收①：
                "同学习器同超参"是机器判的，不是肉眼比对的）；
              - A1/A2 的网格各 48 条，臂名与 run_id 形状符合 `_schema.json`。
@@ -21,8 +22,9 @@ record validity, and prediction row counts.
 
 English:
     Purpose: turn division C-a's acceptance criteria into pytest cases in two groups: (1) pure
-    functions - the main table is 16 x 3 x 3 = 144 with 48 per arm, A5's learner/search/seeds/runs
-    are key-for-key identical to A2, and both grids hold 48 runs with schema-shaped ids; (2) with
+    functions - the main table is 16 x 2 x 3 = 96 with 48 per arm (A5 withdrawn, D-48), A5's
+    learner/search/seeds/runs are key-for-key identical to A2, and both grids hold 48 runs with
+    schema-shaped ids; (2) with
     the assembly pack present (skipped otherwise) - A2 is bit-identical across two same-seed runs,
     A1's three seeds agree exactly, records validate against the frozen JSON schema, and prediction
     lengths and row ids match the official test index.
@@ -61,9 +63,10 @@ def _data_available(task: str) -> bool:
 # ---- ① 纯函数 / Pure functions ----
 
 
-def test_main_table_expected_runs_is_144() -> None:
-    """主表口径：16 单元 × 3 臂 × 3 种子 = 144，且三臂各 48。
-    The main table is 16 units x 3 arms x 3 seeds = 144, with 48 per arm.
+def test_main_table_expected_runs_is_96() -> None:
+    """主表口径：16 单元 × 2 臂 × 3 种子 = 96，且两臂各 48；A5 只作为"不可构造"的排除项出现。
+    The main table is 16 units x 2 arms x 3 seeds = 96, with 48 per arm; A5 appears only as an
+    excluded, not-constructible arm (D-48).
     """
     payload = yaml.safe_load(
         (REPO_ROOT / "configs" / "experiments" / "main_table.yaml").read_text(encoding="utf-8")
@@ -73,11 +76,50 @@ def test_main_table_expected_runs_is_144() -> None:
     assert n_units == units["total"] == 16
     arms = payload["arms"]
     seeds = payload["seeds"]
-    assert len(arms) == 3 and len(seeds) == 3
+    assert sorted(arms) == ["a1_floor", "a2_conventional"] and len(seeds) == 3
+    assert "a5_chain" not in arms
+    excluded = payload["excluded_arms"]["a5_chain"]
+    assert excluded["in_main_table"] is False and excluded["runs"] == 0
+    # 措辞是口径的一部分：A5 是"没运行过"，不是"增益为零"。
+    assert excluded["missing_reason"] == "not_constructible_data_unavailable"
     expected = payload["expected_runs"]
     assert expected["per_arm"] == n_units * len(seeds) == 48
-    assert expected["total"] == n_units * len(arms) * len(seeds) == 144
+    assert expected["total"] == n_units * len(arms) * len(seeds) == 96
     assert sum(expected["breakdown"].values()) == expected["total"]
+
+
+# 8 个 BCUT2D 描述符在每一个 pack 上都是 100% NaN（D-48）：RDKit 对重复单元边界的
+# `*` 哑原子算 BCUT2D 直接返回 NaN。名单一变就红——这是换特征版本时的保险。
+BCUT2D_ALL_NAN = {
+    "BCUT2D_MWHI",
+    "BCUT2D_MWLOW",
+    "BCUT2D_CHGHI",
+    "BCUT2D_CHGLO",
+    "BCUT2D_LOGPHI",
+    "BCUT2D_LOGPLOW",
+    "BCUT2D_MRHI",
+    "BCUT2D_MRLOW",
+}
+
+
+def test_bcut2d_columns_are_all_nan_in_every_pack() -> None:
+    """每个 pack 里"整列全 NaN"的描述符必须恰好是这 8 个 BCUT2D（D-48）。
+    In every pack, the set of all-NaN descriptor columns must be exactly these eight.
+    """
+    packs = sorted((REPO_ROOT / "data" / "processed" / "features").glob("*.npz"))
+    if not packs:
+        pytest.skip("缺装配产物：data/processed/features/ 下一个 pack 都没有")
+    for path in packs:
+        payload = np.load(path, allow_pickle=True)
+        desc = payload["desc"]
+        columns = [str(c) for c in payload["desc_columns"]]
+        assert desc.shape[1] == 205, f"{path.name}: 描述符列数 {desc.shape[1]}，应为 205"
+        all_nan = {
+            columns[i] for i in range(len(columns)) if np.isnan(desc[:, i]).all()
+        }
+        assert all_nan == BCUT2D_ALL_NAN, (
+            f"{path.name}: 全 NaN 列是 {sorted(all_nan)}，与 D-48 的名单不符"
+        )
 
 
 def test_a5_reuses_a2_learner_and_search() -> None:

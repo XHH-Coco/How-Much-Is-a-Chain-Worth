@@ -41,7 +41,7 @@ English:
    `r2` 必须逐位相同（差 < 1e-9）。`n_jobs` 是随机源这件事分工_C §2 已点名。
    Determinism: one job, a fixed seed, the hist tree method; same seed twice must be bit-identical.
 3. **主表一臂一个学习器。** A2 主表只放 XGBoost；随机森林与 kNN 的数是"学习器敏感性"，
-   另存一张表、不进主表（分工_C §2 的口径框，144 条 = 16 单元 × 3 臂 × 3 种子）。
+   另存一张表、不进主表（分工_C §2 的口径框，96 条 = 16 单元 × 2 臂 × 3 种子；A5 撤除见 D-48）。
    One learner per arm in the main table: A2 contributes XGBoost only; the forest and kNN feed a
    separate sensitivity table.
 """
@@ -696,9 +696,9 @@ def write_index(records: Sequence[dict[str, Any]], *, path: Path | None = None) 
     Maintain `a1_a2_index.csv`, the single entry point C-c uses to fill the three columns.
 
     中文：
-        用途：C-c 只读这一个文件，不去翻 144 个 JSON。按 `run_id` 覆盖，重跑不会留两行。
+        用途：C-c 只读这一个文件，不去翻 96 个 JSON。按 `run_id` 覆盖，重跑不会留两行。
         输入：records；path。输出：写出的路径。数据来源：run 记录。副作用：读旧文件、写新文件。
-    English: C-c reads this file instead of 144 JSONs; rows are replaced by run_id.
+    English: C-c reads this file instead of 96 JSONs; rows are replaced by run_id.
     """
     target = Path(path) if path is not None else INDEX_PATH
     existing: dict[str, dict[str, Any]] = {}
