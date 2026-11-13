@@ -12,7 +12,7 @@ random forest (sensitivity).
     划分从哪来：`splits/` 的官方索引，只读。任何 `train_test_split` 都不许出现在评估路径上。
     调参：Murcko 骨架分组的 5 折 CV，**只在训练行内**，预算 ≤30 trials（写在本模块读的 yaml 里）。
     依赖：numpy / pandas / pyarrow / scikit-learn / xgboost / rdkit / PyYAML
-          （`environment/core.yml`；本机用同版本的 venv 跑，见 docs/DECISIONS 的 D-39）。
+          （`environment/core.yml`；本机用同版本的 venv 跑，见 docs/DECISIONS 的 D-40）。
     配置：`configs/arms/a2_conventional.yaml`（冻结后它的字节哈希就是 `config_hash`）。
     对外：`TaskData`、`build_task_data()`、`murcko_groups()`、`search_task()`、`train_one()`、
           `run_arm()`、`write_index()`、`TaskOutcome`。
@@ -664,7 +664,7 @@ def train_one(
         "notes": (
             "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows "
             "only; test split never used for selection; interpreter Python "
-            f"{sys.version.split()[0]} (D-39: packages match env_core.json, interpreter patch differs)"
+            f"{sys.version.split()[0]} (D-40: packages match env_core.json, interpreter patch differs)"
         ),
     }
     if entry is not None and not overrides:

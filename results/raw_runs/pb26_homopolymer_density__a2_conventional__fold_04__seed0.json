@@ -32,7 +32,7 @@
   "pack_sha256": "sha256:1d437dce0d4d0ce734b51d14d1c2ee2d95b4b41d22f788385fc55413c780e5aa",
   "started_at": "2026-11-13T10:52:38+08:00",
   "finished_at": "2026-11-13T10:52:42+08:00",
-  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.12.10 (D-39: packages match env_core.json, interpreter patch differs)",
+  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.12.10 (D-40: packages match env_core.json, interpreter patch differs)",
   "search_cv_r2": 0.9380770775,
   "search_trials": 30
 }

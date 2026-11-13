@@ -155,7 +155,7 @@ def train_one(
         "finished_at": finished,
         "notes": (
             "floor arm: constant training-mean prediction; no random source, seeds identical; "
-            f"interpreter Python {sys.version.split()[0]} (D-39)"
+            f"interpreter Python {sys.version.split()[0]} (D-40)"
         ),
     }
     return C.TaskOutcome(record=record, row_id=data.row_id[test_index], y_pred=y_pred)

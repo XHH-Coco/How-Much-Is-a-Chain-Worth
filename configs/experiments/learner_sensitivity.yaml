@@ -2,7 +2,7 @@
 # Learner sensitivity: an extra table, never in the main table; A2's frozen config is untouched.
 #
 # 为什么单独一个文件：RF / kNN 的超参名与 XGBoost 不同（`n_estimators` 对 `colsample_bytree`），
-# 塞进 a2_conventional.yaml 会让它的字节哈希变掉、A2 的 48 条记录当场对不上（D-40 的教训）。
+# 塞进 a2_conventional.yaml 会让它的字节哈希变掉、A2 的 48 条记录当场对不上（D-41 的教训）。
 # Why a separate file: RF/kNN parameter names differ from XGBoost's; editing the frozen A2 YAML
 # would change its byte hash and invalidate all 48 A2 records.
 #

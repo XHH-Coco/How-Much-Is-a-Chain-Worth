@@ -24,7 +24,7 @@ Stage entry 04: hyper-parameter search and batch runs for the classical arms (A1
           python scripts/04_run_cpu.py control --variants baseline train_size no_fingerprints learner_rf official_recipe
                         # PB26 受控对照 → pb26_controlled_control.csv
     依赖：`environment/core.yml` 的同版本包（numpy / pandas / pyarrow / scikit-learn / xgboost /
-          rdkit / PyYAML）。本机用 `DSC6020/env_core` 的 venv（D-39）。
+          rdkit / PyYAML）。本机用 `DSC6020/env_core` 的 venv（D-40）。
     配置：`configs/arms/a1_floor.yaml`、`configs/arms/a2_conventional.yaml`、
           `configs/experiments/main_table.yaml`（expected_runs 的唯一出处）。
     对外：命令行。记录只能由训练代码落盘，**不许手写**（红线 4）。
@@ -738,7 +738,7 @@ def _nullcal(
     中文：
         用途：A5 被数据卡住（0 条记录）时，给 D 的图 4 一个"3 列零信息"的地板。
               三个条件跑在同一份官方折、同一批测试行、同一组 A2 超参上，逐折配对求差。
-              写 `null_calibration.csv` 与 `_summary.json`，**不写 `raw_runs/`**（D-44 / D-45）。
+              写 `null_calibration.csv` 与 `_summary.json`，**不写 `raw_runs/`**（D-45 / D-46）。
         输入：tasks（None = 配置里的两个任务）；conditions（None = 全部）；seeds；dry_run。
         输出：写 CSV + JSON，返回 0。副作用：训练、写两个文件。
     English:

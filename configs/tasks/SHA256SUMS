@@ -1,14 +1,18 @@
-# configs/tasks 冻结指纹 v3 | 2026-11-12 | 格式：<hash>  <file>（18 份任务配置；本表自身不登记）
+# configs/tasks 冻结指纹 v4 | 2026-11-13 | 格式：<hash>  <file>（18 份任务配置；本表自身不登记）
+# v4 相对 v3 只改了 1 份：pb26_arch_transfer_ea.yaml 出 v2（D-39）——arms 由
+#   [a2_conventional, a3_graph] 改为 [a2_conventional, a5_chain]，其余字节未动；
+#   该文件 v1 从未被任何 run 引用，无重跑。
+#   其余 17 份一个字节没动。
 # v3 相对 v2 只改了 3 份 OpenPoly 配置（D-24 改判）：split_status → rule_replicated、
 #   split_ref 改为划分目录、split_protocol 改为 replicated_8_1_1_stratified10、
 #   eval_unit 把 "5 folds" 写明为 "5 replicated folds (split seeds 0-4)"，notes 补一句"不是作者那一份"。
 #   其余 15 份一个字节没动，字段与数字也没变。
 # 验：cd configs/tasks && sha256sum -c SHA256SUMS
-# 改任何一份 yaml = 冻结物被改 = 该阶段重做；要改就出 v4，并在 docs/DECISIONS.md 记一条。
+# 改任何一份 yaml = 冻结物被改 = 该阶段重做；要改就出 v5，并在 docs/DECISIONS.md 记一条。
 c581bcca9a2d4c13a8f2d0c2fb4357f5bb59ade6c243ef99801b4cc95c32a876 *op_dielectric_constant_total.yaml
 ec3a3930ec0742f6f9fed1556d796f0e3cf9021c2d9d6813142ed1da8ba95f91 *op_tg.yaml
 286d5896f4e3ddb602eea35921c4727b7b7ddda1b525c3ee6b498c031d20ad31 *op_tm.yaml
-e90d9e220f7dcd1b404610d10b3a72825b1258e085b7c9c1c4d1a325aad129e1 *pb26_arch_transfer_ea.yaml
+31a7cdfbaa764e5ab09b5bb37fbc101fe585102f2578c277fec3dc14375b86d9 *pb26_arch_transfer_ea.yaml
 86969debf82b5a2ebf5cb1e4038f2d6761f4197f662c996316206c9e0cc9daa3 *pb26_homopolymer_density.yaml
 b383db95d155098039b9ced603b803a73c35313db4ba1b18ad626e0eee9f1f82 *pb26_polymetrix_tg.yaml
 d9b9071523db3bec0a1d63b24fb4e2b939f11eff649064c63897db04445f5a83 *pb26_scaling_cp.yaml

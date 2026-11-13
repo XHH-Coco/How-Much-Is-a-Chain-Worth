@@ -190,9 +190,9 @@ P2 与 P3 能改成陈述句，是因为这次真的读到了官方文件（官�
 
 ## 4. 还缺什么（按优先级）
 
-1. ~~PolyBench 六个任务的排行榜快照~~ **已解决（D-43）**：`data/raw/external/polybench_leaderboard.json`
+1. ~~PolyBench 六个任务的排行榜快照~~ **已解决（D-44）**：`data/raw/external/polybench_leaderboard.json`
    + `external_polybench_sources.csv`（sha256、取回时间、论文 DOI）+ `polybench_split_sizes.json`。
-2. ~~PB26 的受控对照~~ **已解决（D-44，§2.1b）**：训练量 / 特征 / 学习器三项分别量化，
+2. ~~PB26 的受控对照~~ **已解决（D-45，§2.1b）**：训练量 / 特征 / 学习器三项分别量化，
    `official_recipe` 复现官方 RMSE 到 0.06%（Tg）与 0.6%（密度）。
 3. **仍未解决**：① Q-10 四个重尾任务的 `ln` 尺度要不要全臂统一（决定 PolyBench 四格能否填数）；
    ② PolyBench 的行身份（平台不回行号，除非拿到平台的预测行索引映射）；

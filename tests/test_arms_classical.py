@@ -441,9 +441,9 @@ def test_null_calibration_covers_six_units_and_three_conditions() -> None:
 
 
 def test_structure_table_still_has_no_chain_length() -> None:
-    """D-46 的机器闸门：A5 被卡住的原因是结构表里没有链长。
+    """D-47 的机器闸门：A5 被卡住的原因是结构表里没有链长。
     如果哪天 A 补了重复次数 / 可用权重，这条会红——那正是 A5 可以解冻的信号。
-    D-46 as a gate: the structure table has no chain length. If A ever adds a repeat count or
+    D-47 as a gate: the structure table has no chain length. If A ever adds a repeat count or
     usable weights, this test turns red - that is the signal that A5 can be unblocked.
     """
     import pandas as pd

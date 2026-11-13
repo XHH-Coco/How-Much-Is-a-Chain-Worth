@@ -11,7 +11,7 @@
 #   constant3  —— 追加 3 个常数（0 / 1 / −1）：只加维度、不加任何变化
 #   shuffled3  —— 追加 3 列真实描述符（取方差最大的前 3 列），各自独立整列置换：
 #                 边际分布与真特征相同，但与标签的互信息为 0
-# 只写 results/aggregate/ 下的独立文件，不写 results/raw_runs/（D-44）。
+# 只写 results/aggregate/ 下的独立文件，不写 results/raw_runs/（D-45）。
 # 本文件与 a2_conventional.yaml 无关：A2 的字节哈希不变，96 条记录不受影响。
 
 version: "1.0"
