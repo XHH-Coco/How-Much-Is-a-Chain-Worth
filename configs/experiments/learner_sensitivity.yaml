@@ -1,0 +1,38 @@
+# 学习器敏感性（C-a 的附加表，**不进主表**、不改 A2 的冻结配置一个字节）
+# Learner sensitivity: an extra table, never in the main table; A2's frozen config is untouched.
+#
+# 为什么单独一个文件：RF / kNN 的超参名与 XGBoost 不同（`n_estimators` 对 `colsample_bytree`），
+# 塞进 a2_conventional.yaml 会让它的字节哈希变掉、A2 的 48 条记录当场对不上（D-40 的教训）。
+# Why a separate file: RF/kNN parameter names differ from XGBoost's; editing the frozen A2 YAML
+# would change its byte hash and invalidate all 48 A2 records.
+#
+# 任务与折、种子不在这里重复：一律读 a2_conventional.yaml 的 `runs` 与 `seeds`，避免两处口径打架。
+
+version: "1.0"
+created: 2026-11-13
+owner: C-a
+table: results/aggregate/learner_sensitivity.csv
+params_table: results/aggregate/learner_sensitivity_params.csv
+
+learners:
+  rf:
+    search: false
+    fixed: {n_estimators: 100, max_depth: null, min_samples_leaf: 1}
+    note: >-
+      不调参：100 树 + 训练行中位数填充，就是官方 RDKit_RF 的设定
+      （Models/RDKit_RF/train_rf_scaling.py）。实测 5,638×2,253 上一次拟合约 52 秒，
+      5 折 × 8 候选 × 8 任务要两小时以上，超本次预算。
+      口径代价要写明：A2 的 XGBoost 调过 30 次，RF 没调，所以 RF 的数偏低，
+      **不能读成"RF 更差"**——只说明"不调参的森林在这套输入上大概是什么水平"。
+  knn:
+    search: true
+    trials: 8
+    space:
+      n_neighbors: [5, 15]
+      weights: [uniform, distance]
+      p: [1, 2]
+    note: >-
+      3 维网格只有 8 个点，全跑（8 trials）。距离度量前中位数填充 + 只在训练行 fit 标准化，
+      这是分工_C §7 点名的 kNN 坑；不做这两步会得到"经典方法不行"的假结论。
+
+seeds: [0, 1, 2]

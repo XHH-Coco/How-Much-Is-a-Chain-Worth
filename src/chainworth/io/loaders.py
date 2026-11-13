@@ -556,7 +556,11 @@ def _openpoly_split(task_id: str, config: dict[str, Any]) -> SplitSpec:
         protocol=str(config.get("split_protocol") or "replicated_8_1_1_stratified10"),
         ref=_relative(directory),
         sha256=combined,
-        n_total=int(json.loads((directory / "rule_replicated_seed0.json").read_text())["n_total"]),
+        n_total=int(
+            json.loads(
+                (directory / "rule_replicated_seed0.json").read_text(encoding="utf-8")
+            )["n_total"]
+        ),
         row_order="原始 CSV 的发布顺序行号（不是 A-3 调和表位置）",
         folds=tuple(folds),
     )

@@ -1,0 +1,3 @@
+name,endpoint,local_path,n_bytes,sha256,retrieved_at_utc,paper_doi
+leaderboard,http://202.98.16.11/api/com_result_data,data/raw/external/polybench_leaderboard.json,10210667,fce27fd0d539e82a3424ff492eaccca7494bcd43911924ba0e0045c5aa98f1be,2026-11-13T09:28:34Z,10.1021/polymscitech.6c00094
+r2_bands,http://202.98.16.11/api/com_test_r2,data/raw/external/polybench_r2_bands.json,4566,ed5afa1bb14f4c1f81271f71d1cb481349f939b9806bcbb5931a5645254144a9,2026-11-13T09:28:34Z,10.1021/polymscitech.6c00094

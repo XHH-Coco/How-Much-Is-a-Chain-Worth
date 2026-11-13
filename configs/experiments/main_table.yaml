@@ -1,0 +1,82 @@
+# 主表单元格口径 · 唯一出处（v1，2026-11-13 定死）
+# The main-table cell convention - the single source of truth (v1, fixed 2026-11-13)
+#
+# 这份文件只做一件事：**把"主表一共多少条"算清楚，并写下来**。之后所有文档、所有交付说明只引
+# 这里的 `expected_runs` 一个数，不许在别处另算一遍（分工_C-a §2 口径框：不许倒推）。
+# This file does one thing: work out how many rows the main table has and write it down. Every
+# later document cites this one number; nobody recomputes it elsewhere.
+
+experiment: main_table
+version: "1.0"
+frozen_at: "2026-11-13"
+owner: C-a
+status: frozen
+
+# ---- 1. 评估单元 = 16 ----
+# Evaluation units = 16: six PolyBench tasks on their single official 70/30 split, plus two
+# PolyBench26 tasks on each of five official folds.
+units:
+  polybench:
+    folds_per_task: 1
+    tasks:
+      - pb_t1_tg
+      - pb_t1_tm
+      - pb_t2_modulus
+      - pb_t2_permeability
+      - pb_t3_dielectric_loss
+      - pb_t3_iwlt
+    subtotal: 6
+  polybench26:
+    folds_per_task: 5
+    tasks:
+      - pb26_polymetrix_tg
+      - pb26_homopolymer_density
+    subtotal: 10
+  total: 16
+
+# ---- 2. 三个经典臂 ----
+# 每臂**只放一个学习器**进主表。这是 144 与母本"150 fits"差 6 条的唯一来源：
+# 若 A1 放两个地板、或 A2/A5 各放两个学习器，条数就不再是 16×3×3。
+arms:
+  a1_floor:        {learner: dummy_mean, in_main_table: true}
+  a2_conventional: {learner: xgboost,    in_main_table: true}
+  a5_chain:        {learner: xgboost,    in_main_table: true}
+sensitivity_learners:
+  a2_conventional: [rf, knn]
+  note: >-
+    rf / knn 的数另存"学习器敏感性"表，**不进主表**。主表里 A2 与 A5 必须同学习器同超参，
+    否则 A5 减 A2 就不是"信息"的差（H3）。
+
+# ---- 3. 种子与条数 ----
+seeds: [0, 1, 2]
+expected_runs:
+  per_arm: 48           # 16 单元 × 3 种子
+  total: 144            # 16 单元 × 3 臂 × 3 种子
+  breakdown:
+    a1_floor: 48
+    a2_conventional: 48
+    a5_chain: 48
+  formula: "6 (PolyBench) + 2x5 (PolyBench26) = 16 units; 16 x 3 arms x 3 seeds = 144"
+  discrepancy_note: >-
+    母本 §7.1 写 "150 fits"、C-1 又写 "96 classical + 48 GNN"。按现在的配置算出来是 144，
+    差 6 条，只可能来自"哪个学习器进主表"。本文件的口径是**每臂一个学习器**：
+    A1=Dummy、A2=XGBoost、A5=XGBoost。改口径 = 换本文件版本号并全表重跑，不许只改数字。
+
+# ---- 4. 单元格定义 ----
+cell:
+  metric: r2                     # 记录里的 metrics.r2；mae / rmse 一并落盘但不进主表的判据
+  aggregation: mean_over_seeds   # 主表一格 = 同一 (任务, 折, 臂) 三个种子的均值
+  spread: sample_std_3_seeds     # 另一列给样本标准差（n=3），D 画误差棒用
+  prediction_file: results/aggregate/predictions/<run_id>.parquet
+  missing_cell: blocked_no_gpu   # 缺格留灰标 blocked_no_gpu，**不许填 0、不许填均值**
+  index_for_cc: results/aggregate/a1_a2_index.csv
+  index_note: >-
+    C-c 只读 a1_a2_index.csv 填表，不去翻 144 个 JSON；每一格都能点回 run_id。
+
+# ---- 5. 与 A3/A4 的关系 ----
+# A3/A4 的 48+48 条由 B 交付，不在本文件的 expected_runs 里（那两列的口径见分工_B）。
+# 主表五列 = A1 / A2 / A5（C）+ A3 / A4（B）；后两列的条数由 B 的文件自己声明。
+other_arms:
+  a3_graph: {owner: B, runs: 48}
+  a4_polybert: {owner: B, runs: 48}
+  note: 五列同任务、同折、同种子，才能逐格相减。

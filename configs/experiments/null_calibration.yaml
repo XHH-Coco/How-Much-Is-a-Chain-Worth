@@ -1,0 +1,47 @@
+# 零信息对照：给"多 3 列"一个可比的 R² 地板（A5 被数据卡住时的替代证据）
+# Null calibration: an R² floor for "three extra columns" while A5 is blocked on missing data.
+#
+# 为什么需要它：A5 相对 A2 多 3 条链列，任何模型都可能因为维度变化而移动一点分数。
+# 没有这个地板，"A5 比 A2 高 0.02"就分不清是链信息还是多了几列（分工_C-a_经典臂族.md C-a-3
+# 论证打乱对照的理由）。A5 目前 0 条记录，先用本对照把"3 列零信息能带来多少 R²"量出来，
+# D 画图 4 时至少有一根可参照的地板。
+#
+# 三个条件都跑在同一份官方折、同一批测试行、同一个 seed、同一组 A2 超参上：
+#   baseline   —— 原样，用作配对零点（应与 raw_runs 的 A2 seed0 逐位相同）
+#   constant3  —— 追加 3 个常数（0 / 1 / −1）：只加维度、不加任何变化
+#   shuffled3  —— 追加 3 列真实描述符（取方差最大的前 3 列），各自独立整列置换：
+#                 边际分布与真特征相同，但与标签的互信息为 0
+# 只写 results/aggregate/ 下的独立文件，不写 results/raw_runs/（D-44）。
+# 本文件与 a2_conventional.yaml 无关：A2 的字节哈希不变，96 条记录不受影响。
+
+version: "1.0"
+created: 2026-11-13
+owner: C-a
+status: frozen
+table: results/aggregate/null_calibration.csv
+summary: results/aggregate/null_calibration_summary.json
+
+# 与分工书 C-a-3 的消融口径一致：pb_t1_tg 单折 + pb26_polymetrix_tg 五折 = 6 个评估单元
+tasks:
+  - pb_t1_tg
+  - pb26_polymetrix_tg
+
+seeds: [0]
+
+conditions:
+  baseline:
+    action: none
+    note: 原样 A2；与 raw_runs 同任务同折 seed0 逐折相等（自检）
+  constant3:
+    action: constants
+    values: [0.0, 1.0, -1.0]
+    note: 3 个常数列；XGBoost 理论上会全部忽略，Δ 应 ≈ 0
+  shuffled3:
+    action: shuffle
+    n_columns: 3
+    source: descriptor_top_variance
+    rng_salt: 20261113
+    note: >-
+      取训练行内方差最大的 3 个描述符列（只在训练行上排序，不看 test），
+      每列用固定种子独立置换全部行；边际分布保留，与标签的关联被打散。
+      置换范围是全部行（不是仅 train），因为这是"零信息地板"，不是 A5 的打乱对照本身。

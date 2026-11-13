@@ -1,0 +1,127 @@
+# A2 经典臂（标准秤）· 冻结配置 v1
+# A2 conventional arm (the standard scale) - frozen config v1
+#
+# 冻结于 2026-11-13。**本文件的字节哈希就是 run 记录里的 `config_hash`**，所以跑之前改一个空格，
+# 已有的 run 全部对不上。要改 = 换版本号 + 全表重跑（分工_C-a §5 冻结项）。
+# Frozen on 2026-11-13. **This file's byte hash is `config_hash` in every record**, so editing even
+# a space invalidates the runs already on disk. Changing anything means a new version and a full
+# re-run (division C-a section 5).
+#
+# A2 只给**重复单元**的描述符与指纹，不给任何链的信息；它是 A5 的母版：
+# A5 = 本文件的输入 + 链列，学习器与超参**逐键相同**（`tests/test_arms_classical.py` 断言）。
+# A2 sees repeat-unit descriptors and bits only, never chain information. It is A5's template:
+# A5 adds chain columns while `learner` and every hyper-parameter stay key-for-key identical.
+
+arm: a2_conventional
+version: "1.0"
+frozen_at: "2026-11-13"
+owner: C-a
+
+# ---- 输入：B-1 的装配产物，只读 ----
+# Input: B-1's assembly artefact, read-only.
+input:
+  source: data/processed/features/<task>.npz
+  manifest: data/manifests/task_features_manifest.csv   # 读之前核 pack_sha256，核不过就停
+  columns:
+    descriptors: 205        # RDKit 描述符，float64 → 读入后转 float32（省一半内存，XGBoost 内部也用它）
+    fingerprint_bits: 2048  # 摩根指纹位，uint8 → float32
+  total_columns: 2253
+  row_order: row_id          # = 任务行位置 = splits 的 train_index/test_index 同一坐标系
+  standardize: none          # 树模型不需要；kNN/RF 的标准化在 Pipeline 内做，且只在训练行上 fit
+  nan_policy:
+    xgboost: native          # XGBoost 原生把 NaN 当"缺失方向"，不填全局值
+    rf: median_in_train      # RandomForestRegressor 不接受 NaN：中位数只在训练行上 fit
+    knn: median_in_train     # 同上，且距离度量前再标准化（StandardScaler 也只在训练行上 fit）
+  nan_note: >-
+    205 个描述符在 pb_t1_tg 上有 3.9% 的格子缺失（64,458 / 8,055×205）。填全局中位数会把
+    测试集的分布信息带进训练，所以 XGBoost 走原生缺失值；走 Pipeline 的两个学习器只在训练行上 fit。
+
+# ---- 学习器 ----
+# Learners. 主表一臂只放一个学习器（分工_C-a §2 的口径框），其余进"学习器敏感性"表。
+learner:
+  main: xgboost
+  sensitivity: [rf, knn]
+  params: {}                 # 空 = 从 results/aggregate/a2_best_params.csv 取本任务的冻结超参
+  fixed:
+    n_jobs: 1                # 线程调度会改变浮点求和顺序：n_jobs 是随机源（分工_C-a §2）
+    tree_method: hist
+    random_state: from_seed  # = run 的 seed
+  sensitivity_note: >-
+    rf / knn 的数**不进主表**，另存一张学习器敏感性表。kNN 先在训练行上中位数填充、再标准化，
+    距离才可比；不做这两步会得到"经典方法不行"的假结论（分工_C-a §7 的坑）。
+
+# ---- 超参搜索：Murcko 分组 CV，只在训练行内，≤30 trials ----
+# Hyper-parameter search: Murcko-grouped CV inside the training rows only, at most 30 trials.
+search:
+  method: deterministic_random        # 固定种子抽不重复候选；顺序 = 笛卡尔积行号，可复算
+  search_seed: 20261113
+  trials: 30
+  cv:
+    scheme: murcko_group_kfold        # Bemis–Murcko 骨架分组，验证折的骨架不出现在训练折里
+    folds: 5
+    pool: first_fold_train_rows       # 只用第一个折的训练行；测试集一次都不碰
+    pool_note: >-
+      PolyBench 一折；PolyBench26 用 fold_00 的训练行选超参，然后**冻结给全部五折与三个种子**。
+      代价要写明：fold_01..04 的测试行在 fold_00 的训练行里，所以后四折的 CV 乐观一点；
+      这是全队共用一套超参的必然折中，记录里 `search_fold` 如实写着。
+  selection: argmax_mean_r2           # 五折 R² 的均值最大者；并列取试验编号小的
+  space:
+    n_estimators: [200, 400, 600]
+    max_depth: [3, 5, 7]
+    learning_rate: [0.03, 0.05, 0.1]
+    subsample: [0.7, 0.85, 1.0]
+    colsample_bytree: [0.4, 0.7, 1.0]
+    min_child_weight: [1, 5, 20]
+    reg_lambda: [1.0, 10.0]
+  budget:
+    candidates: 1944                  # 3×3×3×3×3×3×2
+    trials: 30
+    per_trial_folds: 5
+    total_fits: 150
+    measured_note: >-
+      pb_t1_tg（8,055 行 × 2,253 列）单折拟合约 4–8 秒（200–600 棵树、深度 3–7、n_jobs=1），
+      整轮搜索约 15–20 分钟。超预算不改空间：先砍 trials 到 20 并在交付文档标注。
+
+# ---- 运行网格：48 条 = 6 个 PolyBench × 3 种子 + 2 个 PB26 × 5 折 × 3 种子 ----
+# 与 A3/A4 **逐条对齐**（同任务、同折、同种子），否则主表三列不能相减。
+seeds: [0, 1, 2]
+runs:
+  polybench:
+    folds: [official_70_30]
+    tasks:
+      - pb_t1_tg
+      - pb_t1_tm
+      - pb_t2_modulus
+      - pb_t2_permeability
+      - pb_t3_dielectric_loss
+      - pb_t3_iwlt
+  polybench26:
+    folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    tasks:
+      - pb26_polymetrix_tg
+      - pb26_homopolymer_density
+
+# ---- 设备 ----
+# 本臂 0 条 GPU 记录（分工_C-a §4）。写死 cpu，不跟随机器有没有卡。
+device:
+  prefer: cpu
+  note: 经典臂在 CPU 上跑；device 由脚本填成 "cpu"，与 A3/A4 的 "cuda" 不混。
+
+# ---- 预算（分工_C-a §4）----
+budget:
+  predicted_gpu_hours: [0.0, 0.0]
+  per_run_minutes: [0.02, 0.5]
+  note: >-
+    单条 run 是"一次 fit + 一次 predict"；48 条约 20 分钟，搜索另计 15–20 分钟/任务。
+    gpu_hours.csv 按 B-3 的口径一律记 `gpu_hours = wall_clock_s / 3600`（`graph.append_gpu_hours`
+    的文档写明 CPU 上也记这一列），`device=cpu` 标明它不是 GPU 时间；D 核总工时请只取
+    `wall_clock_s`，不要把 CPU 行的 gpu_hours 加进 GPU 预算。
+
+# ---- 记录 ----
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  best_params: results/aggregate/a2_best_params.csv
+  index: results/aggregate/a1_a2_index.csv
+  env_fingerprint: results/env_fingerprints/env_core.json

@@ -1,0 +1,80 @@
+# A1 地板臂（瞎猜有多差）· 冻结配置 v1
+# A1 floor arm (how bad guessing is) - frozen config v1
+#
+# 冻结于 2026-11-13。**本文件的字节哈希就是 run 记录里的 `config_hash`**。
+# Frozen on 2026-11-13. **This file's byte hash is `config_hash` in every record.**
+#
+# 地板臂只回答一个问题：**不看结构，只报训练集均值，指标有多差**。它不读特征矩阵（一个字节都不读），
+# 所以它也是特征流水线的对照：A1 的数随特征变化，说明有东西漏进了标签。
+# The floor answers one question: never looking at the structure, just predicting the training mean,
+# how bad is the metric? It reads no feature matrix at all, which also makes it a control for the
+# feature pipeline: if A1 moves when features change, something leaked into the labels.
+
+arm: a1_floor
+version: "1.0"
+frozen_at: "2026-11-13"
+owner: C-a
+
+# ---- 输入：没有输入 ----
+# Input: none. 只要标签与官方划分。
+input:
+  source: data/processed/features/<task>.npz   # 只取 y 与 row_id，不读 desc / fp
+  columns: 0
+  row_order: row_id
+
+# ---- 学习器 ----
+learner:
+  main: dummy_mean            # 主表只有这一个；预测值 = 训练行标签的算术平均
+  sensitivity: []             # 见下方 open_questions（kNN 地板要先定义"在什么空间量距离"）
+  fixed:
+    random_state: none        # 均值没有随机性：三个种子的数逐位相同，记录里如实写
+
+# ---- 超参搜索：没有可调超参 ----
+search:
+  method: none
+  trials: 0
+  space: {}
+  note: >-
+    地板臂没有超参可调。`trials: 0` 不是"没写"，而是"写下 0 次"——被问"调了多少次参"时答案是 0。
+
+# ---- 运行网格：与 A2/A5 逐条对齐 ----
+seeds: [0, 1, 2]
+runs:
+  polybench:
+    folds: [official_70_30]
+    tasks:
+      - pb_t1_tg
+      - pb_t1_tm
+      - pb_t2_modulus
+      - pb_t2_permeability
+      - pb_t3_dielectric_loss
+      - pb_t3_iwlt
+  polybench26:
+    folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    tasks:
+      - pb26_polymetrix_tg
+      - pb26_homopolymer_density
+
+device:
+  prefer: cpu
+  note: 地板臂只做一次均值，CPU 上微秒级。
+
+budget:
+  predicted_gpu_hours: [0.0, 0.0]
+  per_run_minutes: [0.001, 0.01]
+
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  index: results/aggregate/a1_a2_index.csv
+  env_fingerprint: results/env_fingerprints/env_core.json
+
+# ---- 待全组决定的口径 ----
+# Open questions — a team decision, not mine to make alone.
+open_questions:
+  knn_floor: >-
+    分工_C-a §0 写 A1 = 空输入 + {Dummy 均值, kNN}。但空输入下任意两行的距离都是 0，
+    kNN 预测退化为邻居均值，与 Dummy 等价；要让 kNN 有意义，得先定义它在什么空间里量距离
+    （原始 PSMILES 编辑距离？分子图核？A2 的描述符空间？——第三种就不是"空输入"了，
+    也不再是地板，而是 A2 的另一个学习器）。这一条**没有自己决定**，留在这里等 C 组定。

@@ -1,0 +1,61 @@
+# PB26 受控对照：把"我们与官方 RDKit_RF 的差"拆成 训练量 / 模型 / 特征 三项
+# PB26 controlled control: decompose the gap against the official RDKit_RF into training size,
+# model and feature set.
+#
+# 为什么能拆：官方 `scaling_results` 用的是**同一份** seed_42 五折划分（10/10 折逐数组相等，
+# results/aggregate/official_split_check.json），而且训练子集是 `train = train_pool[:train_size]`
+# （官方 Datasets/Dataset_construction_datasets/create_scaling_splits.py，钉在 83655bc）。
+# 我们的 train_index 与官方 train_pool 逐位相同，所以"前 N 行"就是官方的那 N 行——这里没有猜测。
+
+version: "1.0"
+created: 2026-11-13
+owner: C-a
+table: results/aggregate/pb26_controlled_control.csv
+summary: results/aggregate/pb26_controlled_control_summary.json
+
+source:
+  repo: rlearsch/PolymerBenchmark2026
+  commit: 83655bc25901a8cabe3a1e5474b7ec26f01b919f
+  file: scaling_results/all/scaling_results_detailed.csv
+  column: train_size
+  size_rule: "train_pool[:train_size]"
+  size_rule_source: Datasets/Dataset_construction_scripts/create_scaling_splits.py
+  official_rmse_from: results/aggregate/official_baseline_summary.json
+
+official_train_size:
+  pb26_polymetrix_tg: 3000
+  pb26_homopolymer_density: 1000
+
+# 五个变体：baseline 什么都不改，三个变体各改一项，official_recipe 三项一起改
+# （用来验算整条对比链能不能复现官方数）。
+variants:
+  baseline:
+    changes: []
+    learner: xgboost
+    features: all
+    note: >-
+      不动任何一项：A2 的 XGBoost + 全量特征 + 完整训练池（5,893 / 1,440 行）。
+      它的数应与 results/raw_runs 里同任务同折 seed 0 的 A2 记录逐位相同（自检用）；
+      其余三个单改变体的 Δ 都以它为 0 点。
+  train_size:
+    changes: [train_rows]
+    learner: xgboost
+    features: all
+    note: 只改训练量：全量特征 + A2 的 XGBoost + 官方的前 N 行
+  no_fingerprints:
+    changes: [features]
+    learner: xgboost
+    features: descriptors_only
+    note: 只改特征：去掉 2,048 位指纹，只留 205 个描述符；训练行与模型不动
+  learner_rf:
+    changes: [learner]
+    learner: rf
+    features: all
+    note: 只改模型：官方 RDKit_RF 的设定（100 树 + 中位数填充）；训练行与特征不动
+  official_recipe:
+    changes: [train_rows, features, learner]
+    learner: rf
+    features: descriptors_only
+    note: 三项一起改成官方口径；它应当逼近官方 RMSE，用来验算整条对比链
+
+seeds: [0]

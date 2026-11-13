@@ -1,0 +1,171 @@
+# A5 链信息臂（我们的方法）· 草案 v1（**未冻结**）
+# A5 chain-information arm (our method) - draft v1 (**NOT frozen**)
+#
+# 为什么不能冻结：三个链输入列在现有数据里都不成立（见文末 `open_questions`）——
+# `psmiles.parquet` 没有"重复次数"、wPSMILES 权重逐行是常数、没有多单元序列列。
+# 这三条要 C 组定，定了之后才能写代码、跑数、登记冻结（分工_C-a §2 C-a-3）。
+# Not frozen: none of the three chain inputs exists in the current data (see `open_questions`).
+# The C group must decide them before any code, run, or freeze registration.
+#
+# A5 的唯一定义：**改输入，不改模型**。输入 = A2 的 2,253 列 + 链列；学习器、超参、划分、种子
+# 与 A2 **逐键相同**。若在 A5 里顺手换了模型，A5 相对 A2 的增益就分不清是"信息"还是"模型"——
+# proposal 的 H3 直接作废（分工_C-a §0 与 §7 红线 2）。
+# A5 is defined by one sentence: change the input, never the model. Input = A2's 2,253 columns plus
+# chain columns; learner, hyper-parameters, split and seeds are key-for-key identical to A2.
+# Swapping the model here would make the A2-to-A5 gain unattributable and void H3.
+
+arm: a5_chain
+version: "1.0-draft"
+status: draft_blocked_pending_data   # 三条链输入列未定；不许出 run 记录
+frozen_at: null
+owner: C-a
+
+# ---- 输入：A2 的输入 + 链列（三个开关，各自可单独打开）----
+# Input: A2's input plus chain columns; three switches, each usable on its own.
+input:
+  source: data/processed/features/<task>.npz + data/processed/structures/psmiles.parquet
+  base_columns: 2253            # = a2_conventional 的 205 描述符 + 2048 指纹，原样保留
+  join_key: psmiles_canonical   # 按规范式对齐，**不按行号**（一个结构可能占多行）
+  switches:
+    a5a_repeat_count:
+      enabled: true
+      source_column: n_stars    # ⚠ 见 open_questions：表里没有"重复次数"，只有连接点数
+      dtype: float32
+    a5b_wpsmiles_weight:
+      enabled: true
+      source_column: wpsmiles
+      parse: bond_weights       # wPSMILES 后缀 `<1-2:1:1<1-1:0:0<2-2:0:0` 里的权重
+      dtype: float32
+      # ⚠ 见 open_questions：A-6 生成的 wPSMILES 后缀是常量 `|1|<1-2:1:1<1-1:0:0<2-2:0:0`，
+      # 18,036 行逐字相同（另 116 行有 3/4/6 个连接点、没有 wpsmiles 串），权重列**方差为 0**。
+      # 按现在的数据，A5b 是一列常数。
+    a5c_multi_unit_sequence:
+      enabled: true
+      source_column: wpsmiles
+      encoding: hashed_ngram     # 单元序列 → 固定长度哈希特征（列数写死在这里，不随数据变）
+      n_features: 64
+      # ⚠ 见 open_questions：`psmiles.parquet` 一行 = 一个重复单元，没有"多单元序列"这一列；
+      # "序列"只存在于 PolyBench26 的 dataset 名（homopolymer / alternating / random）里。
+
+# ---- 这条臂不自己搜超参：**直接复用 A2 的冻结值** ----
+# This arm never searches: it reuses A2's frozen best parameters, task by task.
+derivation:
+  base: configs/arms/a2_conventional.yaml
+  policy: reuse_a2_best_params
+  record_field: a2_config_hash   # 记录里双写：本臂 config_hash + 派生自哪一版 A2 的字节哈希
+  assertion: >-
+    `learner` 与 `search` 两节与 a2_conventional.yaml **逐键相同**，由
+    `tests/test_arms_classical.py` 断言，不靠肉眼比对（分工_C-a §2 C-a-3 验收①）。
+  budget_note: >-
+    A5 **不实际搜索**：直接复用 A2 的 `a2_best_params.csv`，所以 `search.budget` 记的是
+    "若单独搜会花多少"，不是 A5 的花费。这段说明放在 `derivation` 而不是 `search`，
+    否则解析后 `search` 两节就不再逐键相同，验收①会红。
+
+# ---- 与 A2 完全相同（逐字抄过去，测试断言）----
+learner:
+  main: xgboost
+  sensitivity: [rf, knn]
+  params: {}
+  fixed:
+    n_jobs: 1
+    tree_method: hist
+    random_state: from_seed
+  sensitivity_note: >-
+    rf / knn 的数**不进主表**，另存一张学习器敏感性表。kNN 先在训练行上中位数填充、再标准化，
+    距离才可比；不做这两步会得到"经典方法不行"的假结论（分工_C-a §7 的坑）。
+
+search:
+  method: deterministic_random
+  search_seed: 20261113
+  trials: 30
+  cv:
+    scheme: murcko_group_kfold
+    folds: 5
+    pool: first_fold_train_rows
+    pool_note: >-
+      PolyBench 一折；PolyBench26 用 fold_00 的训练行选超参，然后**冻结给全部五折与三个种子**。
+      代价要写明：fold_01..04 的测试行在 fold_00 的训练行里，所以后四折的 CV 乐观一点；
+      这是全队共用一套超参的必然折中，记录里 `search_fold` 如实写着。
+  selection: argmax_mean_r2
+  space:
+    n_estimators: [200, 400, 600]
+    max_depth: [3, 5, 7]
+    learning_rate: [0.03, 0.05, 0.1]
+    subsample: [0.7, 0.85, 1.0]
+    colsample_bytree: [0.4, 0.7, 1.0]
+    min_child_weight: [1, 5, 20]
+    reg_lambda: [1.0, 10.0]
+  budget:
+    candidates: 1944                  # 3×3×3×3×3×3×2
+    trials: 30
+    per_trial_folds: 5
+    total_fits: 150
+    measured_note: >-
+      pb_t1_tg（8,055 行 × 2,253 列）单折拟合约 4–8 秒（200–600 棵树、深度 3–7、n_jobs=1），
+      整轮搜索约 15–20 分钟。超预算不改空间：先砍 trials 到 20 并在交付文档标注。
+
+# ---- 运行网格 ----
+# 分布：A5all 跑满 16 个单元（进主表）；A5a/b/c 与打乱对照只在 2 个代表任务上跑全
+#      （pb_t1_tg 单折 + pb26_polymetrix_tg 五折 = 6 单元）。
+main_runs: all_switches
+ablation_runs: [pb_t1_tg, pb26_polymetrix_tg]
+scramble_control:
+  enabled: true
+  scope: train_rows_only     # 链列在训练行内随机置换后重跑，测试行不动
+  purpose: >-
+    A5 相对 A2 多了几列，任何模型都会因为维度增加而略有变化。没有这条对照，说不出
+    "这 0.02 是信息还是维度"（分工_C-a §2 C-a-3）。
+
+seeds: [0, 1, 2]
+runs:
+  polybench:
+    folds: [official_70_30]
+    tasks:
+      - pb_t1_tg
+      - pb_t1_tm
+      - pb_t2_modulus
+      - pb_t2_permeability
+      - pb_t3_dielectric_loss
+      - pb_t3_iwlt
+  polybench26:
+    folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    tasks:
+      - pb26_polymetrix_tg
+      - pb26_homopolymer_density
+
+device:
+  prefer: cpu
+  note: 与 A2 同一台机器、同一个进程形态；A5 不碰 GPU。
+
+budget:
+  predicted_gpu_hours: [0.0, 0.0]
+  per_run_minutes: [0.02, 0.6]
+  note: >-
+    主表 48 条 + 消融 108 + 打乱 36 ≈ 2 小时（分工_C-a §4 的量级）。
+
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  index: results/aggregate/scramble_control.csv
+  env_fingerprint: results/env_fingerprints/env_core.json
+
+# ---- 待全组决定的口径（**先别写代码**）----
+# Open questions raised to the C group on 2026-11-13 — no code will encode a guess.
+open_questions:
+  repeat_count: >-
+    `psmiles.parquet` 只有 10 列：structure_id / psmiles_canonical / wpsmiles / wpsmiles_reason /
+    n_stars / n_raw_variants / n_rows / n_tasks / tasks / example_raw。**没有"重复次数"**。
+    `n_stars` 是重复单元两端的连接点数（均聚物恒为 2），不是链长。A5a 到底用哪一列，要 C 组定。
+  wpsmiles_weight: >-
+    A-6 的 wPSMILES 后缀逐字是 `|1|<1-2:1:1<1-1:0:0<2-2:0:0`，**18,036 行**完全相同
+    （表里共 18,152 行，其余 116 行有 3/4/6 个连接点，没有 wpsmiles 串）——
+    连接权重全部是 `1:1`、`|1|` 字段全部是 1，权重列方差为 0，进模型等于加一列常数。
+    A5b 要成立，得先有一个"重量不恒为 1"的来源。
+  multi_unit_sequence: >-
+    表里一行 = 一个重复单元，没有多单元序列。"homopolymer / alternating / random" 是
+    PolyBench26 的 **dataset 名**，不是每行的特征；若要用它，那是切分/任务层面的变量，
+    属于 C-b 的规模扫描，不属于 A5 的输入列。
+  arch_armline: >-
+    母本说 "arch 的臂口径" 与 A5 相关（A5 只能改输入）。这里按"同学习器同超参"实现；
+    若有人把 A5 的架构列也算作输入（例如把 A3 的图当链信息），那是另一条臂，不是 A5。
