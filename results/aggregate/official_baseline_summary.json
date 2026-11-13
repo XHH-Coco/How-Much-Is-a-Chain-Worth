@@ -1,0 +1,55 @@
+{
+  "pinned_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+  "tasks": {
+    "pb26_polymetrix_tg": {
+      "quantity": "Tg",
+      "official_protocol": "scaling_seed42_5fold",
+      "official_train_size": 3000,
+      "official_rmse_mean_across_folds": 44.6391626071922,
+      "official_rmse_sd_across_folds": 1.8294400109048636,
+      "two_sigma_band": [
+        40.98028258538247,
+        48.29804262900193
+      ],
+      "ours_train_size": 5893,
+      "ours_rmse_mean_across_folds": 37.15701749504767,
+      "ours_rmse_sd_across_folds": 1.7685526627723203,
+      "ours_inside_two_sigma": false,
+      "n_folds": 5,
+      "legacy_reference": {
+        "protocol": "legacy_full_dataset_5fold_cv",
+        "metric": "rmse",
+        "dataset_size": 7367,
+        "rmse_mean": 39.7,
+        "rmse_std": 1.5,
+        "comparable": false,
+        "why": "legacy full-dataset 5-fold CV; its README says it is not shared-split results"
+      }
+    },
+    "pb26_homopolymer_density": {
+      "quantity": "density",
+      "official_protocol": "scaling_seed42_5fold",
+      "official_train_size": 1000,
+      "official_rmse_mean_across_folds": 0.06406319660739006,
+      "official_rmse_sd_across_folds": 0.016628871792682454,
+      "two_sigma_band": [
+        0.03080545302202515,
+        0.09732094019275497
+      ],
+      "ours_train_size": 1440,
+      "ours_rmse_mean_across_folds": 0.04639350316533157,
+      "ours_rmse_sd_across_folds": 0.01377170837195134,
+      "ours_inside_two_sigma": true,
+      "n_folds": 5,
+      "legacy_reference": {
+        "protocol": "legacy_full_dataset_5fold_cv",
+        "metric": "rmse",
+        "dataset_size": 1800,
+        "rmse_mean": 0.0645,
+        "rmse_std": 0.0123,
+        "comparable": false,
+        "why": "legacy full-dataset 5-fold CV; its README says it is not shared-split results"
+      }
+    }
+  }
+}

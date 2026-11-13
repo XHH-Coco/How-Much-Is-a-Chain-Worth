@@ -1,0 +1,27 @@
+{
+  "run_id": "pb_t1_tg__a1_floor__official_70_30__seed0",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t1_tg",
+  "arm": "a1_floor",
+  "learner": "dummy_mean",
+  "seed": 0,
+  "split_version": "fcbe58cc7d46@splits/polybench/pb_t1_tg/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:871836748cd89e1345c201bd86d2d47404b199246ffc5fdd842414efa2b64edc",
+  "n_train": 5638,
+  "n_test": 2417,
+  "metrics": {
+    "r2": -0.0008828133173128805,
+    "mae": 91.99987492410314,
+    "rmse": 109.5600927901849
+  },
+  "wall_clock_s": 7.950000144774094e-05,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb_t1_tg__a1_floor__official_70_30__seed0.parquet",
+  "train_mean": 419.26394022703084,
+  "started_at": "2026-11-13T09:59:13+08:00",
+  "finished_at": "2026-11-13T09:59:13+08:00",
+  "notes": "floor arm: constant training-mean prediction; no random source, seeds identical; interpreter Python 3.12.10 (D-39)"
+}

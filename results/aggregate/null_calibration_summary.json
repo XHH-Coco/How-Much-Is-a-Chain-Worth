@@ -1,0 +1,72 @@
+{
+  "generated_at": "2026-11-13T19:59:21+08:00",
+  "config": "configs/experiments/null_calibration.yaml",
+  "a2_config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
+  "seeds": [
+    0
+  ],
+  "n_features_base": 2253,
+  "tasks": {
+    "pb_t1_tg": {
+      "n_folds": 1,
+      "baseline_r2_mean": 0.8862028074,
+      "conditions": {
+        "baseline": {
+          "r2_mean": 0.8862028074,
+          "n": 1
+        },
+        "constant3": {
+          "r2_mean": 0.8846648201,
+          "delta_r2_vs_baseline_mean": -0.0015379872999999877,
+          "max_abs_paired_delta": 0.0015379872999999877,
+          "n_pairs": 1
+        },
+        "shuffled3": {
+          "r2_mean": 0.884195827,
+          "delta_r2_vs_baseline_mean": -0.0020069804000000246,
+          "max_abs_paired_delta": 0.0020069804000000246,
+          "n_pairs": 1
+        }
+      }
+    },
+    "pb26_polymetrix_tg": {
+      "n_folds": 5,
+      "baseline_r2_mean": 0.8936789556000001,
+      "conditions": {
+        "baseline": {
+          "r2_mean": 0.8936789556000001,
+          "n": 5
+        },
+        "constant3": {
+          "r2_mean": 0.8924778824,
+          "delta_r2_vs_baseline_mean": -0.0012010732000000024,
+          "max_abs_paired_delta": 0.005402639900000006,
+          "n_pairs": 5
+        },
+        "shuffled3": {
+          "r2_mean": 0.89124242004,
+          "delta_r2_vs_baseline_mean": -0.002436535559999986,
+          "max_abs_paired_delta": 0.006251589200000018,
+          "n_pairs": 5
+        }
+      }
+    }
+  },
+  "overall": {
+    "constant3": {
+      "units": 6,
+      "mean_delta": -0.00125722555,
+      "mean_abs_delta": 0.0025259293499999926,
+      "max_abs_delta": 0.005402639900000006,
+      "p95_abs_delta": 0.0051541893000000005
+    },
+    "shuffled3": {
+      "units": 6,
+      "mean_delta": -0.0023649430333333257,
+      "mean_abs_delta": 0.0024745679999999917,
+      "max_abs_delta": 0.006251589200000018,
+      "p95_abs_delta": 0.005482475424999994
+    }
+  },
+  "note": "零信息地板：3 列常量与 3 列置换描述符。baseline 应与 raw_runs 里同任务同折 seed0 的 A2 记录逐位相同（差异只来自 CSV 十位小数）。不进主表、不写 raw_runs。"
+}

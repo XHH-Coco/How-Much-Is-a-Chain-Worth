@@ -1,0 +1,188 @@
+{
+  "pinned_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+  "checked_at_utc": "2026-11-13T08:57:52Z",
+  "tasks": {
+    "pb26_polymetrix_tg": {
+      "official_dir": "Datasets/scaling_indices/PolyMetriX/Tg/Tg/seed_42",
+      "all_arrays_equal": true,
+      "folds": [
+        {
+          "fold": "fold_00",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 737
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 5893
+            },
+            "val": {
+              "equal": true,
+              "n": 737
+            }
+          }
+        },
+        {
+          "fold": "fold_01",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 737
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 5893
+            },
+            "val": {
+              "equal": true,
+              "n": 737
+            }
+          }
+        },
+        {
+          "fold": "fold_02",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 737
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 5893
+            },
+            "val": {
+              "equal": true,
+              "n": 737
+            }
+          }
+        },
+        {
+          "fold": "fold_03",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 737
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 5893
+            },
+            "val": {
+              "equal": true,
+              "n": 737
+            }
+          }
+        },
+        {
+          "fold": "fold_04",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 737
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 5893
+            },
+            "val": {
+              "equal": true,
+              "n": 737
+            }
+          }
+        }
+      ]
+    },
+    "pb26_homopolymer_density": {
+      "official_dir": "Datasets/scaling_indices/MD_5000/density/homopolymer_density/seed_42",
+      "all_arrays_equal": true,
+      "folds": [
+        {
+          "fold": "fold_00",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 180
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 1440
+            },
+            "val": {
+              "equal": true,
+              "n": 180
+            }
+          }
+        },
+        {
+          "fold": "fold_01",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 180
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 1440
+            },
+            "val": {
+              "equal": true,
+              "n": 180
+            }
+          }
+        },
+        {
+          "fold": "fold_02",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 180
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 1440
+            },
+            "val": {
+              "equal": true,
+              "n": 180
+            }
+          }
+        },
+        {
+          "fold": "fold_03",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 180
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 1440
+            },
+            "val": {
+              "equal": true,
+              "n": 180
+            }
+          }
+        },
+        {
+          "fold": "fold_04",
+          "arrays": {
+            "test": {
+              "equal": true,
+              "n": 180
+            },
+            "train_pool": {
+              "equal": true,
+              "n": 1440
+            },
+            "val": {
+              "equal": true,
+              "n": 180
+            }
+          }
+        }
+      ]
+    }
+  }
+}

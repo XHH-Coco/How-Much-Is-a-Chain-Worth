@@ -1,0 +1,38 @@
+{
+  "run_id": "pb_t2_permeability__a2_conventional__official_70_30__seed1",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t2_permeability",
+  "arm": "a2_conventional",
+  "learner": "xgboost",
+  "seed": 1,
+  "split_version": "e4ed12e12456@splits/polybench/pb_t2_permeability/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
+  "n_train": 497,
+  "n_test": 214,
+  "metrics": {
+    "r2": -0.0018136129832959647,
+    "mae": 3.561561190144945e-11,
+    "rmse": 1.912435583871987e-10
+  },
+  "wall_clock_s": 0.26840489999449346,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb_t2_permeability__a2_conventional__official_70_30__seed1.parquet",
+  "hyperparams": {
+    "colsample_bytree": 0.7,
+    "learning_rate": 0.03,
+    "max_depth": 3,
+    "min_child_weight": 5,
+    "n_estimators": 200,
+    "reg_lambda": 10.0,
+    "subsample": 1.0
+  },
+  "pack_sha256": "sha256:7d2914684514ccd46e8b94a4517c5b03fb074e6853c48cbca87558122da1ad72",
+  "started_at": "2026-11-13T10:50:06+08:00",
+  "finished_at": "2026-11-13T10:50:07+08:00",
+  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.12.10 (D-39: packages match env_core.json, interpreter patch differs)",
+  "search_cv_r2": -3.5713517315,
+  "search_trials": 30
+}

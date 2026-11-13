@@ -1,0 +1,27 @@
+{
+  "run_id": "pb_t3_iwlt__a1_floor__official_70_30__seed1",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t3_iwlt",
+  "arm": "a1_floor",
+  "learner": "dummy_mean",
+  "seed": 1,
+  "split_version": "6a9d1d91dc0a@splits/polybench/pb_t3_iwlt/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:871836748cd89e1345c201bd86d2d47404b199246ffc5fdd842414efa2b64edc",
+  "n_train": 159,
+  "n_test": 69,
+  "metrics": {
+    "r2": -0.03289690746425333,
+    "mae": 166.14947178926258,
+    "rmse": 515.1991495169855
+  },
+  "wall_clock_s": 5.3800002206116915e-05,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb_t3_iwlt__a1_floor__official_70_30__seed1.parquet",
+  "train_mean": 59.07467295597484,
+  "started_at": "2026-11-13T09:51:50+08:00",
+  "finished_at": "2026-11-13T09:51:50+08:00",
+  "notes": "floor arm: constant training-mean prediction; no random source, seeds identical"
+}

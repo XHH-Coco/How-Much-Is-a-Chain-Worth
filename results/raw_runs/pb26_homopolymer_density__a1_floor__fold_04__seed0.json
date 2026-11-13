@@ -1,0 +1,27 @@
+{
+  "run_id": "pb26_homopolymer_density__a1_floor__fold_04__seed0",
+  "status": "ok",
+  "benchmark": "polybench26",
+  "task": "pb26_homopolymer_density",
+  "arm": "a1_floor",
+  "learner": "dummy_mean",
+  "seed": 0,
+  "split_version": "236d2a4fefbb@splits/polybench26/pb26_homopolymer_density/seed_42/fold_04.npz",
+  "split_fold": "fold_04",
+  "config_hash": "sha256:871836748cd89e1345c201bd86d2d47404b199246ffc5fdd842414efa2b64edc",
+  "n_train": 1440,
+  "n_test": 180,
+  "metrics": {
+    "r2": -0.011379102298882726,
+    "mae": 0.16096334873984053,
+    "rmse": 0.2115758430865193
+  },
+  "wall_clock_s": 5.339999916031957e-05,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb26_homopolymer_density__a1_floor__fold_04__seed0.parquet",
+  "train_mean": 1.215045834618441,
+  "started_at": "2026-11-13T10:11:51+08:00",
+  "finished_at": "2026-11-13T10:11:51+08:00",
+  "notes": "floor arm: constant training-mean prediction; no random source, seeds identical; interpreter Python 3.12.10 (D-39)"
+}

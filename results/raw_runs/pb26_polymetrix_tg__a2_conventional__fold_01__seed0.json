@@ -1,0 +1,38 @@
+{
+  "run_id": "pb26_polymetrix_tg__a2_conventional__fold_01__seed0",
+  "status": "ok",
+  "benchmark": "polybench26",
+  "task": "pb26_polymetrix_tg",
+  "arm": "a2_conventional",
+  "learner": "xgboost",
+  "seed": 0,
+  "split_version": "1c0b4e58ab17@splits/polybench26/pb26_polymetrix_tg/seed_42/fold_01.npz",
+  "split_fold": "fold_01",
+  "config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
+  "n_train": 5893,
+  "n_test": 737,
+  "metrics": {
+    "r2": 0.9040875217897048,
+    "mae": 23.041423592431574,
+    "rmse": 33.98226440986442
+  },
+  "wall_clock_s": 6.683180799998809,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb26_polymetrix_tg__a2_conventional__fold_01__seed0.parquet",
+  "hyperparams": {
+    "colsample_bytree": 0.7,
+    "learning_rate": 0.1,
+    "max_depth": 5,
+    "min_child_weight": 5,
+    "n_estimators": 400,
+    "reg_lambda": 10.0,
+    "subsample": 0.85
+  },
+  "pack_sha256": "sha256:00a74a516e2bd880537c330cd4bda883b303df2dd4ae1d2cc96367eb88583bfa",
+  "started_at": "2026-11-13T10:50:28+08:00",
+  "finished_at": "2026-11-13T10:50:35+08:00",
+  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.12.10 (D-39: packages match env_core.json, interpreter patch differs)",
+  "search_cv_r2": 0.8629539693,
+  "search_trials": 30
+}

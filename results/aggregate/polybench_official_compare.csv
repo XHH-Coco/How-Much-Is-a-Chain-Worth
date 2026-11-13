@@ -1,0 +1,7 @@
+task,dataset,official_target_scale,ours_target_scale,r2_comparable,band_counts_match,official_best_r2,official_best_descriptor,official_best_algorithm,official_best_tree_r2,official_best_tree_descriptor,official_best_tree_algorithm,official_xgboost_mordred_r2,official_best_tree_mordred_r2,official_n_train,official_n_test,ours_n_test,split_size_match,ours_a2_r2_mean,ours_a2_r2_sd,ours_a1_r2_mean,ours_minus_best_tree
+pb_t1_tg,Glass transition temperature,raw,raw,True,True,0.886449,Morgan_2048,SVM,0.881944,Mordred,HistGBDT,0.880809,0.881944,5638,2417,2417,True,0.886128,0.000153,-0.000883,+0.004184
+pb_t1_tm,Melting temperature,raw,raw,True,True,0.719161,Morgan_2048,SVM,0.715289,RDKit_2048,XGBoost,0.701038,0.713110,2657,1139,1139,True,0.719714,0.003773,-0.001287,+0.004425
+pb_t2_modulus,Tensile modulus,ln,raw,False,True,0.395284,Morgan_2048,SVM,0.348486,RDKit_2048,ExtraTrees,0.316201,0.336005,723,311,311,True,0.031010,0.007814,-0.000075,
+pb_t2_permeability,Gas permeability coefficient,ln,raw,False,True,0.672768,Maccs,SVM,0.660010,Mordred,CatBoost,0.624508,0.660010,497,214,214,True,-0.001814,0.000000,-0.001814,
+pb_t3_dielectric_loss,Dielectric loss factor,ln,raw,False,True,0.419500,RDKit_512,HistGBDT,0.419500,RDKit_512,HistGBDT,0.221135,0.221135,195,84,84,True,0.593074,0.000000,-0.000628,
+pb_t3_iwlt,Isothermal weight loss time,ln,raw,False,True,0.751941,Morgan_2048,HistGBDT,0.751941,Morgan_2048,HistGBDT,0.587456,0.714300,159,69,69,True,-0.053041,0.007991,-0.032897,

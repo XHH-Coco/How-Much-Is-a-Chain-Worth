@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-11-13T17:32:00+08:00",
+  "pinned_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+  "source": {
+    "repo": "rlearsch/PolymerBenchmark2026",
+    "commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+    "file": "scaling_results/all/scaling_results_detailed.csv",
+    "column": "train_size",
+    "size_rule": "train_pool[:train_size]",
+    "size_rule_source": "Datasets/Dataset_construction_scripts/create_scaling_splits.py",
+    "official_rmse_from": "results/aggregate/official_baseline_summary.json"
+  },
+  "seeds": [
+    0
+  ],
+  "tasks": {
+    "pb26_polymetrix_tg": {
+      "quantity": "Tg",
+      "official_protocol": "scaling_seed42_5fold",
+      "official_train_size": 3000,
+      "official_rmse_mean_across_folds": 44.6391626071922,
+      "official_rmse_sd_across_folds": 1.8294400109048636,
+      "official_rmse_from": "results/aggregate/official_baseline_summary.json",
+      "baseline_rmse_mean": 36.969357079299996,
+      "variants": {
+        "baseline": {
+          "learner": "xgboost",
+          "features": "all",
+          "changes": "none",
+          "n_features": 2253,
+          "n_train": 5893,
+          "n_folds": 5,
+          "rmse_mean": 36.969357079299996,
+          "rmse_sd": 2.0206326899583216,
+          "r2_mean": 0.8936789556000001,
+          "delta_rmse_vs_baseline": 0.0
+        },
+        "train_size": {
+          "learner": "xgboost",
+          "features": "all",
+          "changes": "train_rows",
+          "n_features": 2253,
+          "n_train": 3000,
+          "n_folds": 5,
+          "rmse_mean": 39.88894673998,
+          "rmse_sd": 2.1364955491258604,
+          "r2_mean": 0.8762946023,
+          "delta_rmse_vs_baseline": 2.9195896606800034
+        },
+        "no_fingerprints": {
+          "learner": "xgboost",
+          "features": "descriptors_only",
+          "changes": "features",
+          "n_features": 205,
+          "n_train": 5893,
+          "n_folds": 5,
+          "rmse_mean": 38.542248858899995,
+          "rmse_sd": 2.4805321732518593,
+          "r2_mean": 0.88437000672,
+          "delta_rmse_vs_baseline": 1.572891779599999
+        },
+        "learner_rf": {
+          "learner": "rf",
+          "features": "all",
+          "changes": "learner",
+          "n_features": 2253,
+          "n_train": 5893,
+          "n_folds": 5,
+          "rmse_mean": 39.18198109208,
+          "rmse_sd": 1.7326582120176566,
+          "r2_mean": 0.88034695624,
+          "delta_rmse_vs_baseline": 2.2126240127800045
+        },
+        "official_recipe": {
+          "learner": "rf",
+          "features": "descriptors_only",
+          "changes": "train_rows+features+learner",
+          "n_features": 205,
+          "n_train": 3000,
+          "n_folds": 5,
+          "rmse_mean": 44.61114575586,
+          "rmse_sd": 2.3597499880293453,
+          "r2_mean": 0.84518475852,
+          "delta_rmse_vs_baseline": 7.6417886765600045
+        }
+      },
+      "official_recipe_residual": -0.02801685133219678
+    },
+    "pb26_homopolymer_density": {
+      "quantity": "density",
+      "official_protocol": "scaling_seed42_5fold",
+      "official_train_size": 1000,
+      "official_rmse_mean_across_folds": 0.06406319660739006,
+      "official_rmse_sd_across_folds": 0.016628871792682454,
+      "official_rmse_from": "results/aggregate/official_baseline_summary.json",
+      "baseline_rmse_mean": 0.046168984600000004,
+      "variants": {
+        "baseline": {
+          "learner": "xgboost",
+          "features": "all",
+          "changes": "none",
+          "n_features": 2253,
+          "n_train": 1440,
+          "n_folds": 5,
+          "rmse_mean": 0.046168984600000004,
+          "rmse_sd": 0.015527829136829298,
+          "r2_mean": 0.94728549508,
+          "delta_rmse_vs_baseline": 0.0
+        },
+        "train_size": {
+          "learner": "xgboost",
+          "features": "all",
+          "changes": "train_rows",
+          "n_features": 2253,
+          "n_train": 1000,
+          "n_folds": 5,
+          "rmse_mean": 0.05152949241999999,
+          "rmse_sd": 0.016393145995849814,
+          "r2_mean": 0.9345870494399999,
+          "delta_rmse_vs_baseline": 0.005360507819999985
+        },
+        "no_fingerprints": {
+          "learner": "xgboost",
+          "features": "descriptors_only",
+          "changes": "features",
+          "n_features": 205,
+          "n_train": 1440,
+          "n_folds": 5,
+          "rmse_mean": 0.04707732208,
+          "rmse_sd": 0.012904284367678221,
+          "r2_mean": 0.94609517114,
+          "delta_rmse_vs_baseline": 0.0009083374799999933
+        },
+        "learner_rf": {
+          "learner": "rf",
+          "features": "all",
+          "changes": "learner",
+          "n_features": 2253,
+          "n_train": 1440,
+          "n_folds": 5,
+          "rmse_mean": 0.05704172956,
+          "rmse_sd": 0.018503827429851124,
+          "r2_mean": 0.9193724514999999,
+          "delta_rmse_vs_baseline": 0.010872744959999993
+        },
+        "official_recipe": {
+          "learner": "rf",
+          "features": "descriptors_only",
+          "changes": "train_rows+features+learner",
+          "n_features": 205,
+          "n_train": 1000,
+          "n_folds": 5,
+          "rmse_mean": 0.0636992169,
+          "rmse_sd": 0.018426720059710862,
+          "r2_mean": 0.9014433051000001,
+          "delta_rmse_vs_baseline": 0.01753023229999999
+        }
+      },
+      "official_recipe_residual": -0.0003639797073900636
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "run_id": "pb26_polymetrix_tg__a1_floor__fold_00__seed2",
+  "status": "ok",
+  "benchmark": "polybench26",
+  "task": "pb26_polymetrix_tg",
+  "arm": "a1_floor",
+  "learner": "dummy_mean",
+  "seed": 2,
+  "split_version": "9dfbd37fa2fe@splits/polybench26/pb26_polymetrix_tg/seed_42/fold_00.npz",
+  "split_fold": "fold_00",
+  "config_hash": "sha256:871836748cd89e1345c201bd86d2d47404b199246ffc5fdd842414efa2b64edc",
+  "n_train": 5893,
+  "n_test": 737,
+  "metrics": {
+    "r2": -4.339642331530058e-05,
+    "mae": 96.3653165646706,
+    "rmse": 114.09311145173729
+  },
+  "wall_clock_s": 0.00010029999975813553,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb26_polymetrix_tg__a1_floor__fold_00__seed2.parquet",
+  "train_mean": 416.9904725946038,
+  "started_at": "2026-11-13T10:11:51+08:00",
+  "finished_at": "2026-11-13T10:11:51+08:00",
+  "notes": "floor arm: constant training-mean prediction; no random source, seeds identical; interpreter Python 3.12.10 (D-39)"
+}

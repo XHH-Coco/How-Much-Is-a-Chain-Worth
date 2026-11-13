@@ -1,0 +1,9 @@
+task,learner,best_params,cv_score,trials
+pb26_homopolymer_density,knn,"{""n_neighbors"": 5, ""p"": 1, ""weights"": ""distance""}",0.6202136814,8
+pb26_polymetrix_tg,knn,"{""n_neighbors"": 5, ""p"": 1, ""weights"": ""distance""}",0.7750713847,8
+pb_t1_tg,knn,"{""n_neighbors"": 5, ""p"": 1, ""weights"": ""distance""}",0.7684532543,8
+pb_t1_tm,knn,"{""n_neighbors"": 15, ""p"": 1, ""weights"": ""distance""}",0.4874942879,8
+pb_t2_modulus,knn,"{""n_neighbors"": 15, ""p"": 1, ""weights"": ""distance""}",0.0962009663,8
+pb_t2_permeability,knn,"{""n_neighbors"": 15, ""p"": 2, ""weights"": ""uniform""}",-2.7638554476,8
+pb_t3_dielectric_loss,knn,"{""n_neighbors"": 5, ""p"": 1, ""weights"": ""distance""}",0.1756751480,8
+pb_t3_iwlt,knn,"{""n_neighbors"": 5, ""p"": 2, ""weights"": ""distance""}",0.2343156562,8

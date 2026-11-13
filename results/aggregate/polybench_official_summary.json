@@ -1,0 +1,355 @@
+{
+  "paper_doi": "10.1021/polymscitech.6c00094",
+  "tasks": {
+    "pb_t1_tg": {
+      "dataset": "Glass transition temperature",
+      "official_target_scale": "raw",
+      "ours_target_scale": "raw",
+      "r2_comparable": true,
+      "n_leaderboard_cells": 287,
+      "band_check": {
+        "match": true,
+        "official": {
+          "Dataset": "Glass transition temperature",
+          "Test R² > 0.8": 116,
+          "0.5 <= Test R² < 0.8": 158,
+          "Test R² < 0.5": 13,
+          "Total": 287
+        },
+        "recomputed_from_leaderboard": {
+          "gt0.8": 116,
+          "0.5to0.8": 158,
+          "lt0.5": 13
+        }
+      },
+      "official_best": {
+        "r2": 0.886449,
+        "descriptor": "Morgan_2048",
+        "algorithm": "SVM"
+      },
+      "official_best_tree": {
+        "r2": 0.881944,
+        "descriptor": "Mordred",
+        "algorithm": "HistGBDT"
+      },
+      "official_xgboost_mordred_r2": 0.880809,
+      "split_size_check": {
+        "dataset": "Glass transition temperature",
+        "found": true,
+        "n_leaderboard_rows": 287,
+        "split_sizes_from": "GET /api/predictions/data (n_samples)",
+        "probe_algorithm": "XGBoost",
+        "probe_descriptor": "Mordred",
+        "n_train": 5638,
+        "n_test": 2417
+      },
+      "ours_n_test": 2417,
+      "split_size_match": true,
+      "ours_a2_r2": {
+        "mean": 0.8861276276,
+        "sd": 0.00015326623554857348,
+        "n_runs": 3
+      },
+      "ours_a1_r2": {
+        "mean": -0.0008828132999999999,
+        "sd": 1.0842021724855044e-19,
+        "n_runs": 3
+      }
+    },
+    "pb_t1_tm": {
+      "dataset": "Melting temperature",
+      "official_target_scale": "raw",
+      "ours_target_scale": "raw",
+      "r2_comparable": true,
+      "n_leaderboard_cells": 287,
+      "band_check": {
+        "match": true,
+        "official": {
+          "Dataset": "Melting temperature",
+          "Test R² > 0.8": 0,
+          "0.5 <= Test R² < 0.8": 203,
+          "Test R² < 0.5": 84,
+          "Total": 287
+        },
+        "recomputed_from_leaderboard": {
+          "gt0.8": 0,
+          "0.5to0.8": 203,
+          "lt0.5": 84
+        }
+      },
+      "official_best": {
+        "r2": 0.719161,
+        "descriptor": "Morgan_2048",
+        "algorithm": "SVM"
+      },
+      "official_best_tree": {
+        "r2": 0.715289,
+        "descriptor": "RDKit_2048",
+        "algorithm": "XGBoost"
+      },
+      "official_xgboost_mordred_r2": 0.701038,
+      "split_size_check": {
+        "dataset": "Melting temperature",
+        "found": true,
+        "n_leaderboard_rows": 287,
+        "split_sizes_from": "GET /api/predictions/data (n_samples)",
+        "probe_algorithm": "XGBoost",
+        "probe_descriptor": "Mordred",
+        "n_train": 2657,
+        "n_test": 1139
+      },
+      "ours_n_test": 1139,
+      "split_size_match": true,
+      "ours_a2_r2": {
+        "mean": 0.7197143135666666,
+        "sd": 0.003772826683947292,
+        "n_runs": 3
+      },
+      "ours_a1_r2": {
+        "mean": -0.0012869165,
+        "sd": 0.0,
+        "n_runs": 3
+      }
+    },
+    "pb_t2_modulus": {
+      "dataset": "Tensile modulus",
+      "official_target_scale": "ln",
+      "ours_target_scale": "raw",
+      "r2_comparable": false,
+      "n_leaderboard_cells": 287,
+      "band_check": {
+        "match": true,
+        "official": {
+          "Dataset": "Tensile modulus",
+          "Test R² > 0.8": 0,
+          "0.5 <= Test R² < 0.8": 0,
+          "Test R² < 0.5": 287,
+          "Total": 287
+        },
+        "recomputed_from_leaderboard": {
+          "gt0.8": 0,
+          "0.5to0.8": 0,
+          "lt0.5": 287
+        }
+      },
+      "official_best": {
+        "r2": 0.395284,
+        "descriptor": "Morgan_2048",
+        "algorithm": "SVM"
+      },
+      "official_best_tree": {
+        "r2": 0.348486,
+        "descriptor": "RDKit_2048",
+        "algorithm": "ExtraTrees"
+      },
+      "official_xgboost_mordred_r2": 0.316201,
+      "split_size_check": {
+        "dataset": "Tensile modulus",
+        "found": true,
+        "n_leaderboard_rows": 287,
+        "split_sizes_from": "GET /api/predictions/data (n_samples)",
+        "probe_algorithm": "XGBoost",
+        "probe_descriptor": "Mordred",
+        "n_train": 723,
+        "n_test": 311
+      },
+      "ours_n_test": 311,
+      "split_size_match": true,
+      "ours_a2_r2": {
+        "mean": 0.031009988933333333,
+        "sd": 0.007813764478915226,
+        "n_runs": 3
+      },
+      "ours_a1_r2": {
+        "mean": -7.54662e-05,
+        "sd": 0.0,
+        "n_runs": 3
+      }
+    },
+    "pb_t2_permeability": {
+      "dataset": "Gas permeability coefficient",
+      "official_target_scale": "ln",
+      "ours_target_scale": "raw",
+      "r2_comparable": false,
+      "n_leaderboard_cells": 287,
+      "band_check": {
+        "match": true,
+        "official": {
+          "Dataset": "Gas permeability coefficient",
+          "Test R² > 0.8": 0,
+          "0.5 <= Test R² < 0.8": 78,
+          "Test R² < 0.5": 209,
+          "Total": 287
+        },
+        "recomputed_from_leaderboard": {
+          "gt0.8": 0,
+          "0.5to0.8": 78,
+          "lt0.5": 209
+        }
+      },
+      "official_best": {
+        "r2": 0.672768,
+        "descriptor": "Maccs",
+        "algorithm": "SVM"
+      },
+      "official_best_tree": {
+        "r2": 0.66001,
+        "descriptor": "Mordred",
+        "algorithm": "CatBoost"
+      },
+      "official_xgboost_mordred_r2": 0.624508,
+      "split_size_check": {
+        "dataset": "Gas permeability coefficient",
+        "found": true,
+        "n_leaderboard_rows": 287,
+        "split_sizes_from": "GET /api/predictions/data (n_samples)",
+        "probe_algorithm": "XGBoost",
+        "probe_descriptor": "Mordred",
+        "n_train": 497,
+        "n_test": 214
+      },
+      "ours_n_test": 214,
+      "split_size_match": true,
+      "ours_a2_r2": {
+        "mean": -0.0018136129999999997,
+        "sd": 2.168404344971009e-19,
+        "n_runs": 3
+      },
+      "ours_a1_r2": {
+        "mean": -0.0018136133,
+        "sd": 0.0,
+        "n_runs": 3
+      }
+    },
+    "pb_t3_dielectric_loss": {
+      "dataset": "Dielectric loss factor",
+      "official_target_scale": "ln",
+      "ours_target_scale": "raw",
+      "r2_comparable": false,
+      "n_leaderboard_cells": 287,
+      "band_check": {
+        "match": true,
+        "official": {
+          "Dataset": "Dielectric loss factor",
+          "Test R² > 0.8": 0,
+          "0.5 <= Test R² < 0.8": 0,
+          "Test R² < 0.5": 287,
+          "Total": 287
+        },
+        "recomputed_from_leaderboard": {
+          "gt0.8": 0,
+          "0.5to0.8": 0,
+          "lt0.5": 287
+        }
+      },
+      "official_best": {
+        "r2": 0.4195,
+        "descriptor": "RDKit_512",
+        "algorithm": "HistGBDT"
+      },
+      "official_best_tree": {
+        "r2": 0.4195,
+        "descriptor": "RDKit_512",
+        "algorithm": "HistGBDT"
+      },
+      "official_xgboost_mordred_r2": 0.221135,
+      "split_size_check": {
+        "dataset": "Dielectric loss factor",
+        "found": true,
+        "n_leaderboard_rows": 287,
+        "split_sizes_from": "GET /api/predictions/data (n_samples)",
+        "probe_algorithm": "XGBoost",
+        "probe_descriptor": "Mordred",
+        "n_train": 195,
+        "n_test": 84
+      },
+      "ours_n_test": 84,
+      "split_size_match": true,
+      "ours_a2_r2": {
+        "mean": 0.5930736855,
+        "sd": 0.0,
+        "n_runs": 3
+      },
+      "ours_a1_r2": {
+        "mean": -0.0006281695,
+        "sd": 0.0,
+        "n_runs": 3
+      }
+    },
+    "pb_t3_iwlt": {
+      "dataset": "Isothermal weight loss time",
+      "official_target_scale": "ln",
+      "ours_target_scale": "raw",
+      "r2_comparable": false,
+      "n_leaderboard_cells": 287,
+      "band_check": {
+        "match": true,
+        "official": {
+          "Dataset": "Isothermal weight loss time",
+          "Test R² > 0.8": 0,
+          "0.5 <= Test R² < 0.8": 133,
+          "Test R² < 0.5": 154,
+          "Total": 287
+        },
+        "recomputed_from_leaderboard": {
+          "gt0.8": 0,
+          "0.5to0.8": 133,
+          "lt0.5": 154
+        }
+      },
+      "official_best": {
+        "r2": 0.751941,
+        "descriptor": "Morgan_2048",
+        "algorithm": "HistGBDT"
+      },
+      "official_best_tree": {
+        "r2": 0.751941,
+        "descriptor": "Morgan_2048",
+        "algorithm": "HistGBDT"
+      },
+      "official_xgboost_mordred_r2": 0.587456,
+      "split_size_check": {
+        "dataset": "Isothermal weight loss time",
+        "found": true,
+        "n_leaderboard_rows": 287,
+        "split_sizes_from": "GET /api/predictions/data (n_samples)",
+        "probe_algorithm": "XGBoost",
+        "probe_descriptor": "Mordred",
+        "n_train": 159,
+        "n_test": 69
+      },
+      "ours_n_test": 69,
+      "split_size_match": true,
+      "ours_a2_r2": {
+        "mean": -0.05304058133333333,
+        "sd": 0.007990800915317267,
+        "n_runs": 3
+      },
+      "ours_a1_r2": {
+        "mean": -0.0328969075,
+        "sd": 0.0,
+        "n_runs": 3
+      }
+    }
+  },
+  "source": {
+    "version": {
+      "platform": "http://202.98.16.11",
+      "endpoint": "/api/com_result_data",
+      "paper_doi": "10.1021/polymscitech.6c00094",
+      "retrieved_at_utc": "2026-11-13T09:31:01Z",
+      "sha256": "fce27fd0d539e82a3424ff492eaccca7494bcd43911924ba0e0045c5aa98f1be"
+    },
+    "models": "平台排行榜的 30 个基线模型 × 7 类重复单元编码（每格一个 Test R²）",
+    "split": "官方固定 70/30（平台 test-download 接口，唯一一份划分）；本地快照 splits/polybench/<task>/official_70_30.json",
+    "metric": "Test R²（平台 /api/com_result_data 列名）"
+  },
+  "caveats": [
+    "平台的评分代码未发布：Test R² 按 sklearn r2_score 的同一公式理解，未逐行核对。",
+    "行身份没法像 PB26 那样逐数组核：平台 /api/predictions/data 只回位置序号 index（0..n-1），不回原始行号；能核的是测试集大小（6/6 与本地相等，见 split_size_check）与划分来源（同一 test-download 接口）。",
+    "平台模型的特征实现与超参由平台固定（Mordred 等编码）；我们的 A2 = 205 RDKit 描述符 + 2048 位 Morgan + 30 次 Murcko 分组 CV 选参，是同一家族的不同实现，不是同一条管线。",
+    "Tg/Tm 我们按 D-15 把 ℃ 换成 K 训练；R² 对标签平移不变，所以 R² 可比，RMSE 不可直接比。",
+    "标签尺度：SI Table S27 的 target_scale 列写明官方对 Gas permeability / Tensile modulus / Dielectric loss factor / IWLT 用 ln(y)。我们的 A2 在原始空间训练（Q-10 待全组裁决），所以这四行的官方 R² 与我们的 R² **不是同一个尺度**，r2_comparable=False，ours_minus_best_tree 留空；只有 Tg/Tm 两行可以相减。"
+  ],
+  "n_comparable_tasks": 2
+}

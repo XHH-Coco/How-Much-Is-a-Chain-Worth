@@ -1,0 +1,38 @@
+{
+  "run_id": "pb_t3_dielectric_loss__a2_conventional__official_70_30__seed1",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t3_dielectric_loss",
+  "arm": "a2_conventional",
+  "learner": "xgboost",
+  "seed": 1,
+  "split_version": "c7f3b53f0e2f@splits/polybench/pb_t3_dielectric_loss/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
+  "n_train": 195,
+  "n_test": 84,
+  "metrics": {
+    "r2": 0.5930736854968435,
+    "mae": 0.24247985422051235,
+    "rmse": 0.41838571967620525
+  },
+  "wall_clock_s": 0.28270459998748265,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb_t3_dielectric_loss__a2_conventional__official_70_30__seed1.parquet",
+  "hyperparams": {
+    "colsample_bytree": 1.0,
+    "learning_rate": 0.05,
+    "max_depth": 3,
+    "min_child_weight": 1,
+    "n_estimators": 200,
+    "reg_lambda": 10.0,
+    "subsample": 1.0
+  },
+  "pack_sha256": "sha256:c0afb242f3d714f7f0fd8376538db0c121deb11145c415f55e87ff32699980b4",
+  "started_at": "2026-11-13T10:50:07+08:00",
+  "finished_at": "2026-11-13T10:50:08+08:00",
+  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.12.10 (D-39: packages match env_core.json, interpreter patch differs)",
+  "search_cv_r2": 0.2295430206,
+  "search_trials": 30
+}

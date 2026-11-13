@@ -1,0 +1,26 @@
+{
+  "run_id": "pb_t1_tg__a2_conventional__official_70_30__seed0",
+  "repeats": 2,
+  "max_abs_prediction_delta": 0.0,
+  "median_abs_prediction_delta": 0.0,
+  "p99_abs_prediction_delta": 0.0,
+  "n_test": 2417,
+  "per_repeat_metrics": [
+    {
+      "r2": 0.8862028074232996,
+      "mae": 24.83425760290472,
+      "rmse": 36.94252275300213
+    },
+    {
+      "r2": 0.8862028074232996,
+      "mae": 24.83425760290472,
+      "rmse": 36.94252275300213
+    }
+  ],
+  "threshold": 1e-09,
+  "passed": true,
+  "device": "cpu",
+  "config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
+  "checked_at": "2026-11-13T10:20:09+08:00",
+  "note": "同配置、同折、同种子连跑两遍；经典模型是确定性的，预测应逐位相同。这里比验收④的 r2 差 < 1e-9 更严：直接比预测向量。"
+}

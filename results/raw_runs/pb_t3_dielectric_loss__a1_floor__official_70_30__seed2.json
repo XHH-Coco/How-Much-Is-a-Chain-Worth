@@ -1,0 +1,27 @@
+{
+  "run_id": "pb_t3_dielectric_loss__a1_floor__official_70_30__seed2",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t3_dielectric_loss",
+  "arm": "a1_floor",
+  "learner": "dummy_mean",
+  "seed": 2,
+  "split_version": "c7f3b53f0e2f@splits/polybench/pb_t3_dielectric_loss/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:871836748cd89e1345c201bd86d2d47404b199246ffc5fdd842414efa2b64edc",
+  "n_train": 195,
+  "n_test": 84,
+  "metrics": {
+    "r2": -0.0006281694514558289,
+    "mae": 0.3486948910256411,
+    "rmse": 0.656077777502194
+  },
+  "wall_clock_s": 0.00010699999984353781,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb_t3_dielectric_loss__a1_floor__official_70_30__seed2.parquet",
+  "train_mean": 0.3180793846153846,
+  "started_at": "2026-11-13T10:11:51+08:00",
+  "finished_at": "2026-11-13T10:11:51+08:00",
+  "notes": "floor arm: constant training-mean prediction; no random source, seeds identical; interpreter Python 3.12.10 (D-39)"
+}

@@ -1,0 +1,38 @@
+{
+  "run_id": "pb_t1_tm__a2_conventional__official_70_30__seed1",
+  "status": "ok",
+  "benchmark": "polybench",
+  "task": "pb_t1_tm",
+  "arm": "a2_conventional",
+  "learner": "xgboost",
+  "seed": 1,
+  "split_version": "96c53442a7e4@splits/polybench/pb_t1_tm/official_70_30.json",
+  "split_fold": "official_70_30",
+  "config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
+  "n_train": 2657,
+  "n_test": 1139,
+  "metrics": {
+    "r2": 0.7156839328418383,
+    "mae": 39.10569790619942,
+    "rmse": 56.2069383769259
+  },
+  "wall_clock_s": 6.632150799996452,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb_t1_tm__a2_conventional__official_70_30__seed1.parquet",
+  "hyperparams": {
+    "colsample_bytree": 0.4,
+    "learning_rate": 0.03,
+    "max_depth": 7,
+    "min_child_weight": 5,
+    "n_estimators": 600,
+    "reg_lambda": 1.0,
+    "subsample": 0.85
+  },
+  "pack_sha256": "sha256:c6e067d73c9395f013e513fbe0ff532d53f88cf6ffbe894c084c57e46507d5c5",
+  "started_at": "2026-11-13T10:49:51+08:00",
+  "finished_at": "2026-11-13T10:49:57+08:00",
+  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.12.10 (D-39: packages match env_core.json, interpreter patch differs)",
+  "search_cv_r2": 0.6715134135,
+  "search_trials": 30
+}
