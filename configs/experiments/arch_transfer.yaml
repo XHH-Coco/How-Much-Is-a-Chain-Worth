@@ -1,0 +1,87 @@
+# 架构迁移实验（C-c-1/C-c-2）· 配置 v0（未冻结）
+# Architecture transfer experiment (C-c-1/C-c-2) - config v0 (not frozen yet)
+#
+# 状态：**未冻结**。eval 段由 C-c 按 D-49 写成（2026-11-15：a2_conventional 单臂 15 runs）；
+# data 段是 C-b 的占位——C-b 于 11-16 交付 `generated/shared_splits/` 与组分特征后补实，
+# 补实并双方核对行数后才算冻结（届时登记版本号与字节哈希，run 记录里按冻结规则引用）。
+# Status: NOT frozen. The eval section is written by C-c per D-49 (single a2_conventional arm,
+# 15 runs); the data section is a C-b placeholder - it gets filled on 11-16 when C-b delivers
+# `generated/shared_splits/` and the component features, and only then does this file freeze.
+#
+# 臂口径（D-49）：arch 只跑 a2_conventional 单臂 = 1 臂 × 5 折 × 3 种子 = 15 runs，全程 CPU。
+# D-39 的 a2+a5 作废（a5_chain 三条链输入在数据里不存在，D-47；主表已按 D-48 撤除 A5）。
+# 超参不另调：沿用 configs/arms/a2_conventional.yaml（冻结 v1）的 XGBoost 超参与搜索口径，
+# 不许在这份文件里重写一份——重写会让 config_hash 出现两种语义（D-35 ⑥ 的同一教训）。
+
+arm: a2_conventional
+experiment: arch_transfer
+version: "0.0"
+frozen_at: null
+owner: C-c
+status: draft_data_section_pending_cb
+
+# ---- eval 段：C-c 按 D-49 写 ----
+# Eval section written by C-c per D-49.
+eval:
+  task: pb26_arch_transfer_ea
+  property: 电子亲和能 EA（架构迁移，机制实验，不进主表）
+  n_labels: 6478                     # canonical：交替 6,110 + 均聚 368（官方 task4 README 核过）
+  arms:
+    - a2_conventional                # 单臂（D-49）；GNN 臂按母本 C-4"可选项"保留，B 代跑时再加
+  seeds: [0, 1, 2]
+  folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+  expected_runs: 15                  # 1 臂 × 5 折 × 3 种子
+  device: cpu                        # 全程 CPU，不占 B 的 GPU 队列；env 指纹 = env_core.json
+  id_tiers:
+    # ID 两档分开报（交替 611 行 / 均聚 37 行 = 该折 test），不许合并成一个"ID"
+    alternating: 611
+    homopolymer: 37
+    aggregate: per_fold_mean_std     # ID 才允许按折汇总均值与总体标准差（D-09）
+  ood:
+    # 官方三段式：断言组分覆盖完备 → 每组分预测一次 → 官方 summarize_weighted_predictions.py 合成
+    holdout: 36828                   # random 18,414 + block 18,414；固定不随折变
+    protocol: official_three_stage
+    coverage_assertion: required     # holdout 每个唯一 psmiles 在 component_index.csv 有且仅一行
+    component_prediction: once_per_psmiles
+    synthesis: summarize_weighted_predictions.py   # 只走官方脚本，不许自己写加权
+    reporting:
+      no_t_test: true                # 五折 OOD RMSE 不得做 t 检验（折固定、不是独立重复，D-09）
+      ensemble_point_values: true    # 五折向量 → 按聚合物取平均 → random/block/combined 各一个点值
+      id_only_fold_summary: true
+    official_floors:                 # 与官方地板的差写进 arch_transfer.csv 备注
+      random: 0.536
+      block: 0.581
+      combined: 0.559
+  expected_ordering: block > random > alternating > homopolymer
+  ordering_note: 排序不成立就照实写（登记 D-xx 并由 D 在结论里说），不许重调超参再试。
+
+# ---- data 段：C-b 占位（11-16 交付后补实，行数以物化产物为准）----
+# Data section: C-b's placeholder. Fill on 11-16; row counts subject to materialized artifacts.
+data:
+  owner: C-b
+  status: pending_delivery_2026_11_16
+  canonical:
+    path: generated/shared_splits/       # C-b 物化的官方 task4 五折划分（seed 42）
+    rows: 6478
+    split_protocol: official_task4_5fold_seed42_ood_holdout
+  component_features:
+    path: data/processed/arch/component_features.parquet
+    index: data/processed/arch/component_index.csv   # psmiles → 特征行号
+    status: pending
+  ood_holdout:
+    rows: 36828
+    split: fixed_across_folds
+  materialization_doc: docs/Arch Materialization.md
+  note: 行数与地板凭据以 C-b 的 Arch Materialization.md 为准；本段数字由 C-b 补实后再冻结本文件。
+
+# ---- 记录 ----
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  arch_table: results/aggregate/arch_transfer.csv
+  component_preds: results/aggregate/arch_component_preds
+  ood_dir: results/aggregate/arch_ood
+  ood_vectors: results/aggregate/arch_ood_vectors
+  ensemble: results/aggregate/arch_ood_ensemble.json
+  env_fingerprint: results/env_fingerprints/env_core.json
+  license_note: 训练源 polyVERSE EA 属 GTRC 许可（D-08）——结果表须随附 GTRC 全文、免费分发、不得商用。

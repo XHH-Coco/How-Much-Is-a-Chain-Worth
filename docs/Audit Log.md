@@ -51,7 +51,8 @@
 ### 待办
 
 - C-b 每批收尾跑 `pytest tests/test_run_records.py`，退单记入上表；
-- C-b 的 scaling / openpoly CPU 批、C-c 自己的 arch 30 条，逐批过套件；
+- C-b 的 scaling / openpoly CPU 批、C-c 自己的 arch 15 条（D-49 单臂，2026-11-15 由 30 条改为
+  15 条，`pb26_arch_transfer_ea.yaml` 出 v3、SHA256SUMS 升 v5），逐批过套件；
 - 11-19 定稿：补齐上表、写最终结论（发布前必须 0 退单、0 未解释缺口）。
 
 ---

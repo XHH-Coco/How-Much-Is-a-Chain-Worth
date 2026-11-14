@@ -1,6 +1,7 @@
-# FROZEN v2 | 2026-11-13 | sha256 见 configs/tasks/SHA256SUMS v4（自指，故登记配套文件）
-# v2 = v1 + arms 由 [a2_conventional, a3_graph] 改为 [a2_conventional, a5_chain]（D-39）。
-# 其余字段与数字一个字节未动。v1 从未被任何 run 引用，无重跑。
+# FROZEN v3 | 2026-11-15 | sha256 见 configs/tasks/SHA256SUMS v5（自指，故登记配套文件）
+# v3 = v2 + arms 由 [a2_conventional, a5_chain] 改为 [a2_conventional]（D-49：a5_chain 已被 D-47/D-48
+# 判为不可构造，D-39 的 30 runs 口径随之作废，改为单臂 15 runs）。其余字段与数字一个字节未动。
+# v1/v2 从未被任何 run 引用，无重跑。
 task_id: pb26_arch_transfer_ea
 dataset_name: task4 architecture transfer (EA)
 benchmark: polybench26
@@ -20,12 +21,11 @@ data_ref: null
 eval_unit: 5 folds x 3 seeds + fixed OOD holdout
 arms:
 - a2_conventional
-- a5_chain
 split_ref: splits/polybench26/arch/
 split_status: deferred
 split_protocol: official_task4_5fold_seed42_ood_holdout
 status: available
 notes: 只承担 H3 的架构子句。训练源为 polyVERSE EA，属 GTRC 许可（D-08）：结果表须随附 GTRC 全文、免费分发、不得商用。canonical 表由官方 create_task4_shared_splits.py
   本地物化，列名以物化产物为准（C-4 第①步登记）。OOD 折固定，不得当独立重复做 t 检验（D-09）。
-  臂口径 2026-11-13 定为 a2_conventional + a5_chain（D-39）：30 runs 全程 CPU，且同一
-  (任务, 折, 种子) 上 A5 与 A2 可相减，服务 H3。
+  臂口径 2026-11-15 重定为 a2_conventional 单臂（D-49）：15 runs 全程 CPU；D-39 的
+  a2+a5 作废——a5_chain 三条链输入在数据里不存在（D-47），主表已按 D-48 撤除。
