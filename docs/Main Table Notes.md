@@ -13,11 +13,11 @@
 | `benchmark` | `polybench` / `polybench26`（OpenPoly 不进这 32 格，见 §4） | C-c |
 | `arm` | `a1_floor` / `a2_conventional` / `a3_graph` / `a4_polybert`（`a5_chain` 已撤除，D-48） | C-c |
 | `n_runs` | 该格包含的 run 条数；缺格留**空**，不许填 0 | C-c |
-| `mean_rmse` / `std_rmse` / `mean_mae` / `std_mae` / `mean_r2` / `std_r2` | 该格全部 run 的均值与总体标准差；缺格留空，不许填 0 或均值充数 | C-c |
+| `mean_rmse` / `std_rmse` / `mean_mae` / `std_mae` / `mean_r2` / `std_r2` | 该格全部 run 的均值与**样本**标准差（`main_table.yaml` v2 `spread: sample_std_3_seeds`，与 交付_C-a §4 的 ± 同口径）；缺格留空，不许填 0 或均值充数 | C-c |
 | `run_ids` | 该格全部 `run_id`，`;` 相连；每一格都能点回 `results/raw_runs/<run_id>.json` 与 `results/aggregate/predictions/<run_id>.parquet` | C-c |
 | `missing_reason` | 缺格原因：`blocked_no_gpu`（占位没跑）；已填格留空 | C-c |
-| `leaderboard_value` | PolyBench 排行榜公开数（含出处版本，C-a 提供） | C-a → C-c 合并 |
-| `leaderboard_diff_class` | 与排行榜的差分类：`protocol` / `implementation` / `unexplained`（C-a 提供） | C-a → C-c 合并 |
+| `leaderboard_value` | PolyBench 排行榜公开数（含出处版本，C-a 提供）；**只落在 `a2_conventional` 行**（比较臂），其余行留空 | C-a → C-c 合并 |
+| `leaderboard_diff_class` | 与排行榜的差分类：`implementation` / `protocol` / `unexplained`（C-a 提供，Leaderboard Gap.md §3）；同样只落在 `a2_conventional` 行 | C-a → C-c 合并 |
 | `ci_rmse_low` / `ci_rmse_high` | RMSE 的重采样置信区间，**留空由 D 回填**（粗版不许等 CI） | D |
 | `notes` | 口径备注（每格一句，写清"这个数怎么来的"） | C-c |
 
@@ -32,7 +32,7 @@
 - **A5 不进表，也不标成"没跑"**：它是 `not_constructible_data_unavailable`（三条链输入在数据里不存在，D-47），
   不是 `zero_gain`——这两句话对读者的含义完全不同。替代证据是 D-46 的零信息对照（+3 列置换的 R² 地板）。
 - A3 = chemprop 2.1.0 MPNN（B-3）；A4 = 冻结 polyBERT 嵌入 + ridge 头（B-4，闭式解，同 seed 两次逐位相同）。
-- 汇总口径：先按 (task, arm) 收集全部 run 的 `metrics`，再算均值与总体标准差。ID 才允许这样汇总；
+- 汇总口径：先按 (task, arm) 收集全部 run 的 `metrics`，再算均值与**样本**标准差。ID 才允许这样汇总；
   **OOD 不得给"均值 ± SE"**（D-09），OOD 在 `arch_ood_ensemble.json` 里是集成点值，不进这张表。
 
 ## 3. 缺格约定（组规，不许破）
@@ -40,10 +40,9 @@
 - 缺格**留灰**：`n_runs` 与六个数字列留空，`missing_reason` 写 `blocked_no_gpu`
   （或 `not_constructible_data_unavailable`，只用于 A5 这种"输入不存在"的情况）。
 - **不许填 0、不许填均值**：填 0 不会报错，但会一路传进 D 的结论。
-- 32 格在**数据上已无真缺格**：A1 / A2 的 16 格有 96 条记录（`a1_a2_index.csv`），A3 / A4 的 16 格
-  有 96 条（各 48，B 组；A3 的另外 450 条属 OpenPoly 扫描，不进这 32 格）。
-  但 `main_table.csv` 现在仍是 **40 行旧骨架**：A1 / A2 的 16 格还挂着 `blocked_no_gpu` 占位、
-  A5 的 8 格尚未删除——**C-c 重跑一次骨架即可填实**，不用等 C-a。
+- **32 格已全部填实（2026-11-15）**：A1 / A2 的 16 格来自 C-a 的 96 条记录（`a1_a2_index.csv`），
+  A3 / A4 的 16 格来自 B 的 96 条（各 48；A3 的另外 450 条属 OpenPoly 扫描，不进这 32 格）。
+  无缺格、无 `blocked_no_gpu`；A5 的 8 格已按 D-48 从表中删除（删除 ≠ 填 0，A5 的去向写在 §2）。
 - 两个枚举不要混用：`missing_reason` 答"这格为什么空"，run 记录的 `status`（`ok` / `blocked_no_gpu` /
   `failed`）答"这次运行怎么了"（D-48 ⑥）。
 
@@ -62,6 +61,10 @@
 - `pb_t3_iwlt` 的 RMSE 量级（数百）同样由标签单位决定，跨任务比 RMSE 前先看单位表
   `data/manifests/unit_decisions.csv`。
 - A4 的 `std_*` ≈ 0（闭式解确定性），不是"特别稳"，是"不掷骰子"（B-4 交付文档 §5 原话）。
+- **排行榜两列的口径**：`leaderboard_value` = 官方数（PolyBench 六格取平台"最佳树" R²；PB26 两格取
+  `RDKit_RF` 折间均值 RMSE，同划分）。`leaderboard_diff_class`：Tg / Tm 与 PB26 两格 = `implementation`
+  （同尺度同划分，差在训练量/编码/调参）；modulus / permeability / dielectric_loss / iwlt 四格 =
+  `protocol`（官方在 ln(y) 上评 R²，S27；差值**不可减**，不归因）。出处 `docs/Leaderboard Gap.md`。
 - **宽度不要混读**：主表的 `a2_conventional` 走 XGBoost，入模 **2,253** 列；`learner_sensitivity` 里的
   RF / kNN 经 `SimpleImputer(strategy="median")` 后是 **2,245** 列（8 个 `BCUT2D_*` 列全 NaN，fit 时被丢弃
   并告警）。这是设计如此，不是缺列（D-48 ③）。

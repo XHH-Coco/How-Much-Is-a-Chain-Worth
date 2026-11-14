@@ -211,16 +211,23 @@ def test_floor_seeds_are_identical(small_data: C.TaskData) -> None:
 def test_record_validates_against_the_schema(
     small_data: C.TaskData, a2_config: G.ArmConfig, tmp_path: Path
 ) -> None:
-    """记录必须过 `results/raw_runs/_schema.json`（jsonschema，不是肉眼），且能落盘。
-    The record must pass the frozen JSON schema (jsonschema, not eyeballing) and write to disk.
+    """记录必须过 `results/raw_runs/_schema.json`（机器校验，不是肉眼），且能落盘。
+    The record must pass the frozen JSON schema (machine-checked, not eyeballing) and write to disk.
     """
-    import jsonschema
-
     if not _has_params(SMALL_TASK):
         pytest.skip(f"{SMALL_TASK} 还没有超参：先跑 04_run_cpu.py search")
     outcome = C.train_one(small_data, a2_config, fold="official_70_30", seed=0)
     schema = json.loads((REPO_ROOT / "results" / "raw_runs" / "_schema.json").read_text(encoding="utf-8"))
-    jsonschema.validate(outcome.record, schema)
+    # 三套冻结环境（P0）里都没有 jsonschema（C-c 的审计套件为此用内置 draft-07 子集校验器，
+    # 且 test_schema_uses_only_supported_keywords 保证 _schema.json 只用到被支持的关键词），
+    # 所以这里复用同一校验器，而不是在测试里 import jsonschema（那样只有装了它的 venv 能跑）。
+    # The frozen P0 environments ship no jsonschema; the audit suite's built-in draft-07 subset
+    # validator is reused instead (test_schema_uses_only_supported_keywords proves the schema
+    # only uses supported keywords).
+    from test_run_records import _schema_problems
+
+    problems = _schema_problems(outcome.record, schema, path="$")
+    assert not problems, f"记录不过 _schema.json：{problems}"
     path = G.write_run_record(outcome.record, directory=tmp_path)
     assert path.name == f"{outcome.record['run_id']}.json"
     assert json.loads(path.read_text(encoding="utf-8"))["run_id"] == outcome.record["run_id"]

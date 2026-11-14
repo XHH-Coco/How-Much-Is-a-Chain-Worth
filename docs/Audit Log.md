@@ -25,26 +25,33 @@
 | 日期 | 范围 | 条数 | 退单 | 结论 |
 |:--|:--|--:|--:|:--|
 | 2026-11-13 | B 已交全部（A3 48 + A4 48 + OpenPoly 450） | **546** | **0** | 全绿：546 条全部过第 0 条与六条断言，预测文件 546 份齐，行数与折对得上，无 partial 混入，device/env 全部一致 |
-| 2026-11-13 | C 组各批（`expected_*` 之和） | **0** | — | C-a / C-b 尚未交批；每批收尾后由 C-b 跑套件，缺哪条说清哪条、为什么 |
+| 2026-11-15 | C-a 已交 A1/A2 批（`main_table.yaml` v2：16 单元 × 2 臂 × 3 种子） | **96** | **0** | 全绿：A1 48 + A2 48 全部过第 0 条与六条断言，预测 96 份齐、行数 = 官方测试行、device=cpu ↔ env_core（D-40 的 venv 备注不影响判定） |
+| 2026-11-15 | 全量复跑（B 546 + C-a 96） | **642** | **0** | 套件 14/14 绿；主表 32 格引用 192 条（A1/A2/A3/A4 各 48），其余 450 条属 OpenPoly 扫描 |
 
-### 条数对账（546 的构成）
+### 条数对账（642 的构成）
 
-- 546 = B-3 A3 主扫 48（6 PolyBench × 3 种子 + 2 PB26 × 15）+ B-4 A4 冻结臂 48（同网格）+ B-5 OpenPoly 450（主表 225 + 5–9 折敏感性 225）。
+- 642 = B 546（A3 48 + A4 48 + OpenPoly 450）+ C-a 96（A1 48 + A2 48，`main_table.yaml` v2 口径）。
+- A5：**0 条**，按 D-48 是 `not_constructible_data_unavailable`（D-47 证明三条链输入在数据里不存在），
+  **不是** `zero_gain`、也不标 `blocked_no_gpu`——主表 32 格没有 A5 行（已删，见 Main Table Notes §2）。
 - 对账口径：记录数 = 546 + C 组各批 `expected_*` 之和；`results/raw_runs/_schema.json` **不是记录**，统计时排除。
 - 不在审计范围内：`results/aggregate/a4_finetune/`（B-4 微调对照 48 条，与冻结臂同 run_id，按 D-34 落独立目录、不进 `raw_runs/`，由 B 自管）。
 
 ### 测试基线说明
 
 - 任务书基线：**280 passed / 7 skipped**（数据齐全的机器，`pytest tests`）。
-- 2026-11-13 本机（数据包机，缺 `data/interim/harmonised/*.parquet`——仓库有意不入库）：
-  **209 passed / 86 skipped / 9 failed**。9 个失败全部是 `test_harmonise.py` / `test_task_assembly.py`
+- 2026-11-15 本机（缺 `data/interim/harmonised/*.parquet`——仓库有意不入库）：
+  **230 passed / 86 skipped / 9 failed**。9 个失败全部是 `test_harmonise.py` / `test_task_assembly.py`
   里依赖 `data/interim` 的既有用例，与审计套件无关；86 skipped 同理（缺数据即跳过，或 core 环境无 chemprop）。
-  套件本体 `pytest tests/test_run_records.py`：**14 passed**。数据齐全机上应为 280 + 14 = 294 passed / 7 skipped。
+  套件本体 `pytest tests/test_run_records.py`：**14 passed**（642 条）。数据齐全机上应为 280 + 14 = 294 passed / 7 skipped。
+- **一处移植修复（2026-11-15）**：`tests/test_arms_classical.py::test_record_validates_against_the_schema`
+  原本在函数内 `import jsonschema`——只有 C-a 私装过该包的 venv 能跑（D-40），三套冻结环境里都没有它。
+  按 2026-11-13 已拍板的口径改为复用本套件的内置子集校验器（`_schema_problems`），断言不删、校验语义不变；
+  改完 `pytest tests` 从 10 failed 回到 9 failed 基线。改动在 C-a 的文件里，已如实登记，C-a 可在下次合并时认领。
 
 ### 待办
 
 - C-b 每批收尾跑 `pytest tests/test_run_records.py`，退单记入上表；
-- 11-16 C-c 的 arch 30 条、C-a 的 A1/A2/A5 批、C-b 的 scaling/openpoly CPU 批，逐批过套件；
+- C-b 的 scaling / openpoly CPU 批、C-c 自己的 arch 30 条，逐批过套件；
 - 11-19 定稿：补齐上表、写最终结论（发布前必须 0 退单、0 未解释缺口）。
 
 ---
