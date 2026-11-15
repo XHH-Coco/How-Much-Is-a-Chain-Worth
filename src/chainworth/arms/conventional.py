@@ -576,6 +576,7 @@ def train_one(
     best_params_path: Path | None = None,
     learner_override: str | None = None,
     params_override: Mapping[str, Any] | None = None,
+    extra_record: Mapping[str, Any] | None = None,
 ) -> TaskOutcome:
     """在一条 (任务, 折, 种子) 上训练并评估，返回可落盘的记录与预测。
     Train and evaluate one (task, fold, seed) and return the record plus predictions.
@@ -617,6 +618,35 @@ def train_one(
     if train_index.size == 0 or test_index.size == 0:
         raise G.ArmError(f"{data.task_id}/{fold} 的训练集或测试集为空：划分有问题，先别跑")
 
+    # n 档（只有 C-b-2 的 OpenPoly 经典臂扫描用）：**只截训练行**，验证集与测试集逐行不变，
+    # 否则 R² 的分子与分母会同时变，曲线就不能读成"数据变多"（D-35）。取法唯一实现仍在
+    # `graph.n_level_rows()`：固定种子打乱官方 train_index 再取前缀，与 B-5 的 GNN 用同一套。
+    # 档位信息一并进记录：`subset_sha256` 是 C 与 B 落在同一批训练行上的唯一凭据。
+    # The n level (only C-b-2's OpenPoly classical scan) trims **training rows only**; val/test stay
+    # row-for-row identical, otherwise R^2's numerator and denominator move together (D-35). The
+    # selection stays in graph.n_level_rows() - one implementation, the same one B-5's GNN used.
+    n_info: dict[str, Any] = {}
+    if n_level is not None:
+        subset_section = config.section("subset")
+        n_rule = str(subset_section.get("rule", "shuffle_prefix"))
+        if n_rule == "shuffle_prefix" and "seed" not in subset_section:
+            raise G.ArmError(
+                f"{config.path.name} 缺 `subset.seed`：打乱取前缀的种子必须写死在实验配置里（D-35）"
+            )
+        train_index, n_info = G.n_level_rows(
+            train_index,
+            n_level,
+            seed=int(subset_section.get("seed", 0)),
+            # 取法由实验配置声明：OpenPoly 的 n 档是"打乱后取前缀"（D-35），PolyBench26 的
+            # scaling 档位是官方 `train_pool[:N]` 前缀。**同一份实现，两个参数**，不是两套代码。
+            # The rule comes from the experiment config: OpenPoly's levels shuffle then take a
+            # prefix (D-35), PolyBench26's scaling tiers are the official train_pool[:N]. One
+            # implementation, two parameters - not two code paths.
+            rule=n_rule,
+        )
+        if train_index.size == 0:
+            raise G.ArmError(f"{data.task_id}/{fold}/n={n_level}：截完训练行为 0，这条 run 不能跑")
+
     started = _now_iso()
     clock = time.perf_counter()
     y_pred = _fit_predict(
@@ -637,6 +667,7 @@ def train_one(
         fold=fold,
         seed=seed,
         arm=str(config.raw.get("arm") or ARM),
+        n_level=n_level,
     )
     run_id = run_key.run_id()
     record: dict[str, Any] = {
@@ -670,6 +701,26 @@ def train_one(
     if entry is not None and not overrides:
         record["search_cv_r2"] = entry["cv_score"]
         record["search_trials"] = entry["trials"]
+    if n_level is not None:
+        # n 档的六个数一个都不能少：`subset_sha256` 证明"与 B 用的是同一批训练行"，
+        # `n_level_saturated` 说明这一档是不是被池子卡住（op_dielectric 240 档、op_tm 240 档）。
+        # 全部字段名与 B-5 的 GNN 记录逐字一致，`graph.write_n_index()` 因此能直接读它们。
+        # All six numbers matter: subset_sha256 proves the same training rows as B, and
+        # n_level_saturated says whether the pool capped the level. The names match B-5's records
+        # byte for byte, so graph.write_n_index() reads them without special cases.
+        for key in ("n_level", "n_train_pool", "n_train_requested", "n_level_saturated",
+                    "n_subset_seed", "n_subset_sha256"):
+            record[key] = n_info[key]
+        if "n_selection_rule" in n_info:
+            record["n_selection_rule"] = n_info["n_selection_rule"]
+    if extra_record:
+        # 追加字段（**只加不改**，`_schema.json` 的 additionalProperties: true 允许）。
+        # 目前只有 C-b-1 用它写 `dataset_id`：任务只有一个、数据集有两个，不写下来就无法核对
+        # "这一条拟合的是交替 Cp 还是均聚 Cp"。
+        # Extra fields only (never redefining one; the schema allows additional properties).
+        # Today only C-b-1 uses it, to record `dataset_id`: one task, two datasets, and without it
+        # there is no way to tell which one a fit belongs to.
+        record.update({str(key): value for key, value in extra_record.items()})
     return TaskOutcome(record=record, row_id=data.row_id[test_index], y_pred=y_pred)
 
 
@@ -681,14 +732,26 @@ def run_arm(
     *,
     tasks: Sequence[str] | None = None,
     seeds: Sequence[int] | None = None,
+    n_levels: Sequence[str] | None = None,
 ) -> list[dict[str, Any]]:
     """按配置网格跑一个任务子集（复用 `graph.run_grid` 的 resume 语义与落盘）。
     Run a task subset on the configured grid, reusing `graph.run_grid`'s resume and writers.
 
-    中文：输入：config；tasks/seeds 子集。输出：本次写出的记录。副作用：训练、写记录/预测/墙钟。
-    English: Args: config, optional task/seed subsets. Returns: records written this time.
+    中文：输入：config；tasks/seeds/n_levels 子集（`n_levels` 只对带 `n_levels` 的配置——C-b-2 的
+          OpenPoly 经典臂——有意义，None = 跑全部档位）。输出：本次写出的记录。
+          副作用：训练、写记录/预测/墙钟。
+    English: Args: config; optional task/seed/n-level subsets (n_levels only matters for a config
+    with `n_levels`, i.e. C-b-2's OpenPoly classical scan; None = every level). Returns: the records
+    written this time.
     """
-    return G.run_grid(config, tasks=tasks, seeds=seeds, builder=build_task_data, trainer=train_one)
+    return G.run_grid(
+        config,
+        tasks=tasks,
+        seeds=seeds,
+        n_levels=n_levels,
+        builder=build_task_data,
+        trainer=train_one,
+    )
 
 
 def write_index(records: Sequence[dict[str, Any]], *, path: Path | None = None) -> Path:

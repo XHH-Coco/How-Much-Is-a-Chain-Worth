@@ -82,6 +82,18 @@ CONTROL_SUMMARY = REPO_ROOT / "results" / "aggregate" / "pb26_controlled_control
 NULL_CONFIG = REPO_ROOT / "configs" / "experiments" / "null_calibration.yaml"
 NULL_TABLE = REPO_ROOT / "results" / "aggregate" / "null_calibration.csv"
 NULL_SUMMARY = REPO_ROOT / "results" / "aggregate" / "null_calibration_summary.json"
+# C-b-2：OpenPoly 规模扫描的经典臂一侧（225 条）。配置里带 `n_levels`，网格比 A2 多一个维度。
+# C-b-2: the classical side of the OpenPoly scale scan (225 runs). The config carries `n_levels`,
+# which is the one dimension A2's own grid does not have.
+OPENPOLY_CLASSIC_CONFIG = REPO_ROOT / "configs" / "experiments" / "openpoly_classic.yaml"
+# 对账靶子：B-5 的 GNN 一侧索引（**只读**）。两边的 `subset_sha256` 必须逐档相等，
+# 否则 H4 的交叉点不是"臂的差"而是"子集的差"（分工_C-b 红线 2）。
+# The reconciliation target: B-5's GNN-side index, read-only. The two arms' `subset_sha256` values
+# must match level by level, or H4's crossing point differences the subset, not the arm.
+OPENPOLY_GPU_N_INDEX = REPO_ROOT / "results" / "aggregate" / "openpoly_n_index.csv"
+# C-b-1：PolyBench26 的数据量扫描（H2 的 κ）。档位是官方 `train_sizes` 的前缀。
+# C-b-1: PolyBench26's data-size scan (H2's kappa); a tier is a prefix of the official train_sizes.
+SCALING_CONFIG = REPO_ROOT / "configs" / "experiments" / "scaling.yaml"
 
 SENS_COLUMNS = (
     "task",
@@ -189,6 +201,63 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     nul.add_argument("--conditions", nargs="+", metavar="C")
     nul.add_argument("--seeds", nargs="+", type=int, metavar="S")
     nul.add_argument("--dry-run", action="store_true", help="只打印计划，不训练不写文件")
+
+    # C-b-2：OpenPoly 规模扫描的经典臂（225 条 = 3 性质 × 5 档 × 5 折 × 3 种子）。
+    # 复用同一个入口而不新开编号：与 B-5 复用 05 是同一条理由（D-33 ①），且 06 是留给
+    # C 的汇总脚本的（D-43），另开一个 06 会把那一格占掉。
+    # C-b-2's classical OpenPoly scan reuses this entry instead of taking a new number: the same
+    # reason B-5 reused 05 (D-33), and 06 is reserved for C's aggregation script (D-43).
+    opc = sub.add_parser(
+        "openpoly", help="C-b-2：OpenPoly 经典臂的 n 档扫描（225 条）+ subset_sha256 对账"
+    )
+    opc.add_argument("--config", default=None)
+    opc.add_argument("--tasks", nargs="+", metavar="TASK")
+    opc.add_argument("--seeds", nargs="+", type=int, metavar="S")
+    opc.add_argument("--n-levels", nargs="+", metavar="N", help="只跑这些档（30 60 120 240 all）")
+    opc.add_argument(
+        "--index-only", action="store_true", help="不训练：只按磁盘上的记录刷新两份 CSV 并做对账"
+    )
+    opc.add_argument("--dry-run", action="store_true", help="只打印网格，不训练不写文件")
+
+    # C-b-1：PolyBench26 的数据量扫描（H2 的 κ）。60–80 fits = 8 档 × 5 折 × 2 学习器。
+    # C-b-1: PolyBench26's data-size scan (H2's kappa): 80 fits = 8 tiers x 5 folds x 2 learners.
+    scl = sub.add_parser(
+        "scaling", help="C-b-1：数据量扫描（双数据集的 pack、档位前缀、60–80 fits）"
+    )
+    scl.add_argument("--config", default=None)
+    scl.add_argument("--datasets", nargs="+", metavar="DATASET")
+    scl.add_argument("--tiers", nargs="+", metavar="N")
+    scl.add_argument("--folds", nargs="+", metavar="FOLD")
+    scl.add_argument("--learners", nargs="+", metavar="L", help="xgboost / rf")
+    scl.add_argument(
+        "--build", action="store_true", help="先造（或核）两份特征 pack，再跑拟合"
+    )
+    scl.add_argument(
+        "--build-only", action="store_true", help="只造特征 pack，不训练"
+    )
+    scl.add_argument("--force", action="store_true", help="配合 --build：pack 已存在也重造")
+    scl.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        metavar="N",
+        help="造 pack 时的进程数（0 = 核数−1，上限 8；RDKit 不在线程间并行）",
+    )
+    scl.add_argument(
+        "--table-only", action="store_true", help="不训练：只按磁盘上的记录重写 scaling_cpu.csv"
+    )
+    scl.add_argument(
+        "--search",
+        action="store_true",
+        help="先按预注册协议搜一次 pb26_scaling_cp 的超参（写进 a2_best_params.csv 的一行），再跑",
+    )
+    scl.add_argument(
+        "--search-dataset",
+        default="md5000_alternating_cp",
+        metavar="DATASET",
+        help="用哪个数据集的 fold_00 训练行选参（默认交替 Cp：池子最大、代表性强）",
+    )
+    scl.add_argument("--dry-run", action="store_true", help="只打印网格，不训练不写文件")
 
     return parser.parse_args(argv)
 
@@ -927,6 +996,321 @@ def _nullcal_summary(
     }
 
 
+def _openpoly_subset_map(path: Path) -> dict[tuple[str, str, str], str]:
+    """读一份 n 索引 CSV，取 (task, fold, 档位) → `subset_sha256`。
+    Read one n-index CSV into a (task, fold, level) -> subset_sha256 map.
+
+    中文：用途：对账只认"哪一批训练行"这一个问题，所以只取这三列加哈希。
+          输入：path —— CSV 路径。输出：字典；文件不存在返回空字典。
+          数据来源：`results/aggregate/*_n_index.csv`。副作用：只读。异常：无（解析失败的行跳过）。
+    English: Reconciliation only asks "which training rows", so only these three columns and the
+    digest are read. Returns an empty map when the file is absent.
+    """
+    table: dict[tuple[str, str, str], str] = {}
+    if not path.is_file():
+        return table
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            key = (str(row.get("task", "")), str(row.get("fold", "")), str(row.get("n_level", "")))
+            table[key] = str(row.get("subset_sha256", ""))
+    return table
+
+
+def _openpoly(
+    config_path: str | None,
+    tasks: Sequence[str] | None,
+    seeds: Sequence[int],
+    n_levels: Sequence[str] | None,
+    *,
+    dry_run: bool,
+    index_only: bool,
+) -> int:
+    """C-b-2：跑 OpenPoly 经典臂的 225 条 n 档网格，刷新两份 CSV，并与 B-5 逐档对账。
+    C-b-2: run the 225-run OpenPoly classical n-grid, refresh the two CSVs, reconcile against B-5.
+
+    中文：
+        用途：把"3 性质 × 5 档 × 5 折 × 3 种子 = 225 条"跑成记录与两张表，然后回答一个
+              只有它能回答的问题——**我和 B 的 GNN 是不是落在同一批训练行上**。
+              对账不靠"大概一样"：逐 (task, fold, 档位) 比 `subset_sha256`，一条不同就返回 1。
+        输入：tasks / seeds / n_levels —— 白名单（None = 配置里的全部）；dry_run —— 只打印网格；
+              index_only —— 不训练，只按磁盘上的记录刷新 CSV 并做对账。
+        输出：0 成功且对账全对；1 对账有差异（**停**，别拿这批数去算 H4）。
+        数据来源：`data/processed/features/op_*.npz`、`splits/openpoly/**`、`a2_best_params.csv`。
+        配置来源：`configs/experiments/openpoly_classic.yaml`。
+        副作用：训练、写记录/预测/墙钟、写两份 CSV。
+    English:
+        Runs the 225-run grid into records plus two tables, then answers the one question only this
+        arm can answer: are B's GNN and this classical arm on **the same training rows**? Not "roughly
+        the same" - the check compares `subset_sha256` per (task, fold, level) and returns 1 on any
+        mismatch, because H4's crossing point would then measure the subset, not the arm.
+    """
+    config = G.load_arm_config(Path(config_path) if config_path else OPENPOLY_CLASSIC_CONFIG)
+    if not config.raw.get("n_levels"):
+        raise SystemExit(f"{config.path.name} 没有 `n_levels`：OpenPoly 扫描必须有这一维")
+    keys = G.enumerate_runs(config, tasks=tasks, seeds=seeds, n_levels=n_levels)
+    levels = sorted({str(key.n_level) for key in keys}, key=lambda text: (text != "all", text))
+    print(
+        f"openpoly：{len(keys)} 条 = {len({key.task for key in keys})} 性质 × {len(levels)} 档 "
+        f"({', '.join(levels)}) × {len({key.fold for key in keys})} 折 × "
+        f"{len({key.seed for key in keys})} 种子；配置 {config.path.name}"
+    )
+    if dry_run:
+        for key in keys:
+            print(f"  {key.run_id()}")
+        print("dry-run：没有训练，也没有写 CSV")
+        return 0
+
+    if not index_only:
+        records = C.run_arm(config, tasks=tasks, seeds=seeds, n_levels=n_levels)
+        print(f"本次写出 {len(records)} 条记录（其余命中 resume）")
+
+    summary = G.write_n_index(config)
+    print(
+        f"索引已刷新：{summary['n_runs']} 条 run → "
+        f"{Path(summary['path']).relative_to(REPO_ROOT).as_posix()}；"
+        f"子集 → {Path(summary['n_index_path']).relative_to(REPO_ROOT).as_posix()}"
+    )
+
+    ours = _openpoly_subset_map(Path(summary["n_index_path"]))
+    theirs = _openpoly_subset_map(OPENPOLY_GPU_N_INDEX)
+    if not theirs:
+        print(f"对账跳过：{OPENPOLY_GPU_N_INDEX.name} 不在（B-5 的索引未入库）")
+        return 0
+    shared = sorted(set(ours) & set(theirs))
+    missing = sorted(set(theirs) - set(ours))
+    mismatched = [key for key in shared if ours[key] != theirs[key]]
+    print(
+        f"subset_sha256 对账：共有 {len(shared)} 个 (task, fold, 档位)，"
+        f"一致 {len(shared) - len(mismatched)}，不一致 {len(mismatched)}，"
+        f"B 有而我缺 {len(missing)}"
+    )
+    for key in mismatched[:10]:
+        print(f"  ✗ {key}：本侧 {ours[key]} vs B 侧 {theirs[key]}")
+    for key in missing[:10]:
+        print(f"  … {key} 还没有跑（B 侧哈希 {theirs[key][:21]}…）")
+    if mismatched:
+        print("对账失败：训练行不是同一批，H4 的交叉点不能用这批数——先停下查子集规则")
+        return 1
+    print("对账通过：五档 × 五折 × 三性质的训练行与 B-5 的 GNN 逐档相同")
+    return 0
+
+
+# ---- 6. 数据量扫描的编排 / Orchestration of the scaling scan ----
+def _scaling_search(config_path: str | None, dataset_id: str) -> int:
+    """按 A2 的预注册协议给 `pb26_scaling_cp` 选一次超参，写进 `a2_best_params.csv` 的一行。
+    Run the pre-registered A2 search once for pb26_scaling_cp and append one row.
+
+    中文：
+        用途：`a2_best_params.csv` 是按设计只覆盖 8 个主表任务（分工_C-a），而 `train_one()` 缺行
+              会**报错而不是回退默认值**。于是这里用**同一条协议**（Murcko 分组 5 折、只在第一折
+              训练行内、候选 1,944、固定 `search_seed=20261113`、≤30 trials）补一行，之后冻结给
+              两个数据集、所有档位、所有折与种子（D-51）。
+              用哪个数据集的池子选参必须写死：默认交替 Cp 的 `fold_00`（22,242 行，比均聚的 1,440
+              行更能代表"这套特征上什么超参合适"）；**选了之后不许按档位重搜**（档位是训练集大小，
+              不是超参）。
+        输入：config_path；dataset_id —— 用哪个数据集选参。
+        输出：0 成功。数据来源：该数据集的 pack 与官方五折。副作用：写 `a2_best_params.csv` 一行。
+    English:
+        a2_best_params.csv covers the eight main-table tasks by design, and train_one() raises (rather
+        than falling back to defaults) when a row is missing. So this fills in one row with the *same*
+        protocol, then freezes it for both datasets, every tier, fold and seed (D-51). Which pool does
+        the choosing is pinned: the alternating dataset's fold_00 (22,242 rows). No per-tier re-search
+        - a tier is a training-set size, not a hyper-parameter.
+    """
+    from chainworth.experiments import scaling as S
+
+    # 搜索用的是 **A2 的冻结配置**（A2 的 `search` 段），不是 scaling.yaml：
+    # 空间、trials、search_seed 只在一处定义，实验配置里再抄一份就有第二个口径（D-51）。
+    # The search runs under **A2's frozen config** (its `search` section), not scaling.yaml:
+    # space, trials and search_seed are defined in exactly one place, and copying them into the
+    # experiment config would create a second convention (D-51).
+    search_config = G.load_arm_config(ARM_CONFIGS["a2_conventional"])
+    config = G.load_arm_config(Path(config_path) if config_path else SCALING_CONFIG)
+    data = S.build_task_data(dataset_id)
+    print(
+        f"=== search pb26_scaling_cp [xgboost] on {dataset_id}/{data.split.fold_names[0]} "
+        f"（{int(data.split.folds[0].train_index.size)} 行训练池；协议来自 "
+        f"{search_config.path.name}，产出记录用 {config.path.name}） ===",
+        flush=True,
+    )
+    best = C.search_task(
+        data, search_config, learner="xgboost", log=lambda message: print(message, flush=True)
+    )
+    print(
+        f"pb26_scaling_cp [xgboost] cv_r2={best['cv_score']:.4f} trials={best['trials']} "
+        f"folds={best['cv_folds']} rows={best['n_search_rows']} "
+        f"params={json.dumps(best['params'], sort_keys=True)}"
+    )
+    print("已写进 results/aggregate/a2_best_params.csv（按 (task, learner) 覆盖，8 行老记录未动）")
+    return 0
+
+
+def _scaling(
+    config_path: str | None,
+    datasets: Sequence[str] | None,
+    tiers_wanted: Sequence[str] | None,
+    folds: Sequence[str] | None,
+    learners: Sequence[str] | None,
+    *,
+    build: bool,
+    build_only: bool,
+    force: bool,
+    table_only: bool,
+    dry_run: bool,
+    workers: int = 0,
+    search: bool = False,
+    search_dataset: str = "md5000_alternating_cp",
+) -> int:
+    """C-b-1：造两份 pack → 80 fits → 写 `scaling_cpu.csv`。
+    C-b-1: build the two packs, run the 80 fits, write scaling_cpu.csv.
+
+    中文：
+        用途：把"数据变多、误差会不会变小"变成一张能算 κ 的表。三件事按顺序做，缺一步都不许往下：
+              ① `--build`：造/核两个数据集的特征 pack（`canonical_sha256` 逐位核对）；
+              ② 拟合：数据集 × 官方档位 × 官方五折 × 学习器；XGBoost 落 run 记录，
+                 RF 只进表（理由见 `experiments/scaling.py` 的 `run_scaling()`）；
+              ③ 写表：**按 (dataset, tier, fold, learner, seed) 合并**，所以分几次跑也不会丢行。
+        输入：config_path；datasets / tiers_wanted / folds / learners —— 白名单；
+              build / build_only / force / table_only / dry_run。
+        输出：0 成功。数据来源：pack + `splits/`。配置来源：`configs/experiments/scaling.yaml`。
+        副作用：写 npz、记录、预测、`gpu_hours.csv`、`scaling_cpu.csv`。
+    English:
+        Turns "does more data shrink the error" into a table kappa can be fitted on. Three steps in
+        order, none skippable: build/verify the two packs (canonical hash checked bit for bit), run
+        the grid (XGBoost writes records, the forest only feeds the table), then write the table -
+        **merged by (dataset, tier, fold, learner, seed)** so partial runs never lose rows.
+    """
+    from chainworth.experiments import scaling as S
+
+    config = G.load_arm_config(Path(config_path) if config_path else SCALING_CONFIG)
+    chosen_datasets = list(datasets) if datasets else S.dataset_ids()
+
+    if search:
+        if dry_run:
+            print(f"[dry-run] 会先跑 search（数据集 {search_dataset}，30 trials × 5 折）")
+        else:
+            _scaling_search(config_path, search_dataset)
+
+    if build or build_only:
+        for dataset_id in chosen_datasets:
+            info = S.build_pack(dataset_id, force=force, workers=workers)
+            print(
+                f"pack {dataset_id}：{info['n_rows']} 行、唯一结构 {info.get('n_unique_structures', '?')}、"
+                f"pack_sha256={str(info['pack_sha256'])[:12]}…（{'重造' if info.get('rebuilt') else '沿用'}）"
+            )
+        if build_only:
+            return 0
+
+    chosen_learners = list(learners) if learners else [
+        str(value) for value in (config.raw.get("learners") or ["xgboost", "rf"])
+    ]
+    plan: list[tuple[str, str]] = []
+    for dataset_id in chosen_datasets:
+        available = S.tiers(dataset_id)
+        if tiers_wanted:
+            unknown = sorted({str(value).lower() for value in tiers_wanted} - set(available))
+            if unknown:
+                raise SystemExit(f"{dataset_id} 没有这些档位 {unknown}：官方文件里的是 {available}")
+        for level in available:
+            if tiers_wanted and level not in {str(value).lower() for value in tiers_wanted}:
+                continue
+            plan.append((dataset_id, level))
+    n_folds = len(folds) if folds else len(
+        (config.raw.get("runs") or {}).get("polybench26", {}).get("folds", [])
+    )
+    expected = len(plan) * n_folds * len(chosen_learners)
+    print(
+        f"scaling：{len(chosen_datasets)} 个数据集 × {len(plan)} 个(数据集,档位) × {n_folds} 折 × "
+        f"{len(chosen_learners)} 学习器（{', '.join(chosen_learners)}）= {expected} fits；"
+        f"配置 {config.path.name}（expected_fits={config.raw.get('expected_fits', '未写')}）"
+    )
+    if dry_run:
+        for dataset_id, level in plan:
+            print(f"  {dataset_id} tier={level}")
+        print("dry-run：没有训练，也没有写表")
+        return 0
+
+    if table_only:
+        rows = _scaling_rows_from_disk(chosen_datasets, chosen_learners)
+    else:
+        rows = S.run_scaling(
+            config,
+            datasets=chosen_datasets,
+            tiers_wanted=tiers_wanted,
+            folds=folds,
+            learners=chosen_learners,
+        )
+    merged: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
+    for row in S.read_table():
+        merged[_scaling_key(row)] = row
+    for row in rows:
+        merged[_scaling_key(row)] = row
+    path = S.write_table(list(merged.values()))
+    counts: dict[tuple[str, str], int] = {}
+    for row in merged.values():
+        key = (str(row.get("learner", "")), str(row.get("dataset", "")))
+        counts[key] = counts.get(key, 0) + 1
+    print(f"写出 {len(merged)} 行 → {path.relative_to(REPO_ROOT).as_posix()}")
+    for (learner, dataset_id), count in sorted(counts.items()):
+        print(f"  {dataset_id:<26} [{learner:<7}] {count} 行")
+    per_learner = {}
+    for row in merged.values():
+        metrics = row.get("r2")
+        if metrics in ("", None):
+            continue
+        per_learner.setdefault(str(row["learner"]), []).append(float(metrics))
+    for learner, values in sorted(per_learner.items()):
+        print(
+            f"  {learner}：{len(values)} 行，R² 中位 {float(np.median(values)):+.4f}，"
+            f"最好 {max(values):+.4f}，最差 {min(values):+.4f}"
+        )
+    return 0
+
+
+def _scaling_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str]:
+    """`scaling_cpu.csv` 的合并键。／ The merge key of one scaling_cpu.csv row."""
+    return (
+        str(row.get("dataset", "")),
+        str(row.get("tier", "")),
+        str(row.get("fold", "")),
+        str(row.get("learner", "")),
+        str(row.get("seed", "")),
+    )
+
+
+def _scaling_rows_from_disk(
+    datasets: Sequence[str], learners: Sequence[str]
+) -> list[dict[str, Any]]:
+    """按磁盘上已有的 `raw_runs` 记录重建 XGBoost 那一侧的表行（`--table-only`）。
+    Rebuild the XGBoost rows of the table from the records already on disk (`--table-only`).
+
+    中文：用途：`--table-only` 不训练，所以只可能重建**有 run 记录**的那一半（XGBoost）。
+          RF 的行没有记录可依，重写表时会被保留在旧表里（合并键相同），不会被抹掉。
+    English: only the half with run records can be rebuilt (XGBoost). The forest's rows have no
+    records, but the merge keeps them in place.
+    """
+    from chainworth.experiments import scaling as S
+
+    wanted = set(datasets)
+    rows: list[dict[str, Any]] = []
+    for path in sorted(G.RAW_RUNS_DIR.glob("*.json")):
+        if path.name == "_schema.json":
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:                    # pragma: no cover - 半截文件
+            continue
+        if record.get("task") != S.TASK_ID or record.get("n_level") is None:
+            continue
+        dataset_id = str(record.get("dataset_id") or "")
+        if dataset_id not in wanted or record.get("status") != "ok":
+            continue
+        if "xgboost" not in learners:
+            continue
+        rows.append(S._row_from_record(record, dataset_id, "xgboost"))
+    return rows
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """命令行入口。／ Command-line entry point."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -1012,9 +1396,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "index":
-        records = _records_on_disk(("a1_floor", "a2_conventional"))
+        # 只收**没有 n 档**的记录：`a1_a2_index.csv` 是 C-c 填主表三列的唯一入口（96 条），
+        # C-b 的 scaling / OpenPoly 记录（带 `n_level`）另有两张表，混进来会让主表多出 285 行。
+        # Only records **without** an n level: a1_a2_index.csv is C-c's single entry for the main
+        # table's three columns (96 rows); C-b's scaling and OpenPoly records carry `n_level` and
+        # have their own two tables, and mixing them in would add 285 rows to the main table.
+        records = [
+            record
+            for record in _records_on_disk(("a1_floor", "a2_conventional"))
+            if record.get("n_level") is None
+        ]
         if args.dry_run:
-            print(f"磁盘上 A1/A2 的 ok 记录 {len(records)} 条")
+            print(f"磁盘上 A1/A2 的 ok 记录 {len(records)} 条（不含 n 档记录）")
             return 0
         path = C.write_index(records)
         print(f"索引已重建：{path}（{len(records)} 条）")
@@ -1028,6 +1421,33 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "nullcal":
         return _nullcal(args.tasks, args.conditions, args.seeds or [], dry_run=args.dry_run)
+
+    if args.command == "openpoly":
+        return _openpoly(
+            args.config,
+            args.tasks,
+            args.seeds or [],
+            args.n_levels,
+            dry_run=args.dry_run,
+            index_only=args.index_only,
+        )
+
+    if args.command == "scaling":
+        return _scaling(
+            args.config,
+            args.datasets,
+            args.tiers,
+            args.folds,
+            args.learners,
+            build=args.build,
+            build_only=args.build_only,
+            force=args.force,
+            table_only=args.table_only,
+            dry_run=args.dry_run,
+            workers=args.workers,
+            search=args.search,
+            search_dataset=args.search_dataset,
+        )
 
     raise SystemExit(f"未知子命令 {args.command!r}")
 

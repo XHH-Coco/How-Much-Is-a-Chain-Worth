@@ -1,0 +1,29 @@
+model,set,architecture,fold,n_samples,rmse,mae,official_rmse,official_mae,delta_rmse,note
+RDKit RF,ID,alternating,fold_00,611,0.1506804339,0.1101853503,0.1499494015,,+0.0007310324,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,homopolymer,fold_00,37,0.5415754230,0.3923105294,0.5464325071,,-0.0048570841,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,alternating,fold_01,611,0.1705167681,0.1192814473,0.1695635623,,+0.0009532058,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,homopolymer,fold_01,37,0.6299231278,0.4555452495,0.6372478440,,-0.0073247162,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,alternating,fold_02,611,0.1472662362,0.1050571609,0.1477774762,,-0.0005112400,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,homopolymer,fold_02,37,0.3558988617,0.3003986956,0.3679481013,,-0.0120492397,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,alternating,fold_03,611,0.1649818535,0.1196537741,0.1641078287,,+0.0008740249,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,homopolymer,fold_03,37,0.5546369395,0.4626156589,0.5620916920,,-0.0074547525,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,alternating,fold_04,611,0.1475452788,0.1059741232,0.1480747549,,-0.0005294761,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,ID,homopolymer,fold_04,37,0.4784582642,0.3778590123,0.4777712250,,+0.0006870392,本机复现（官方 train_rf_scaling.py + 官方 splits）
+RDKit RF,OOD,block,fold_00,18414,0.5928367663,0.5086466688,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,random,fold_00,18414,0.5470794442,0.4683677920,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,combined,fold_00,36828,0.5704171060,0.4885072304,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,block,fold_01,18414,0.5772297436,0.4827155632,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,random,fold_01,18414,0.5311502713,0.4444295298,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,combined,fold_01,36828,0.5546687244,0.4635725465,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,block,fold_02,18414,0.5809928475,0.4944063773,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,random,fold_02,18414,0.5365642597,0.4555964566,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,combined,fold_02,36828,0.5592199449,0.4750014169,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,block,fold_03,18414,0.5769789796,0.4784831807,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,random,fold_03,18414,0.5330355113,0.4409846629,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,combined,fold_03,36828,0.5554419858,0.4597339218,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,block,fold_04,18414,0.6001677177,0.5106068198,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,random,fold_04,18414,0.5543530793,0.4709551676,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,combined,fold_04,36828,0.5777147332,0.4907809937,,,,单折 OOD：只留档，不做判决（折固定、不是独立重复，D-09）
+RDKit RF,OOD,block,ensemble_5,18414,0.5813189825,0.4928281266,0.5806575739,0.4926287948,+0.0006614086,五折集成：按聚合物取平均后再算 RMSE（D-09 的唯一可报口径）
+RDKit RF,OOD,random,ensemble_5,18414,0.5357429224,0.4536185093,0.5355172563,0.4536510066,+0.0002256661,五折集成：按聚合物取平均后再算 RMSE（D-09 的唯一可报口径）
+RDKit RF,OOD,combined,ensemble_5,36828,0.5589956343,0.4732233180,0.5585436195,0.4731399007,+0.0004520147,五折集成：按聚合物取平均后再算 RMSE（D-09 的唯一可报口径）

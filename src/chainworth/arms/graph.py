@@ -491,7 +491,7 @@ def run_id_for(task: str, fold: str, seed: int, *, arm: str = ARM, n_level: str 
 
 
 def n_level_rows(
-    train_rows: "np.ndarray", n_level: str | None, *, seed: int
+    train_rows: "np.ndarray", n_level: str | None, *, seed: int, rule: str = "shuffle_prefix"
 ) -> tuple["np.ndarray", dict[str, Any]]:
     """从官方训练行里取出 n 档要用的那些行；档位之间**嵌套**，顺序无偏。
     Take the rows an n-level uses out of the official training rows; levels nest and stay unbiased.
@@ -507,15 +507,18 @@ def n_level_rows(
               ③ **嵌套**：`n=30` 的行集合是 `n=60` 的真子集，五档只差"加进去的行"，不换样品——
                  这样的曲线才能读成"数据变多"的效应。
               **不做值域分层**，这一条反直觉但要说明：OpenPoly 的训练行本身已经是按 10 个等宽箱
-              分层抽出来的（`rule_replicated` 协议），它的无偏子集不会新增偏差；而 n=30 时按比例
-              分层每箱连 1 行都分不到（Tg 最高那箱全量只有 4 行），分层在低档上只是更精细的噪声。
+             分层抽出来的（`rule_replicated` 协议），它的无偏子集不会新增偏差；而 n=30 时按比例
+             分层每箱连 1 行都分不到（Tg 最高那箱全量只有 4 行），分层在低档上只是更精细的噪声。
               「低 n 端天然覆盖不到全值域」是**要观察的现象**，不是要修掉的缺陷（见 D-35）。
         输入：train_rows —— 该折该次实际可用的训练行（已剔除建图失败）；n_level —— `"30"`…`"all"`
-              或 None；seed —— 子集种子（来自实验配置）。
+              或 None；seed —— 子集种子（来自实验配置）；rule —— 取法，两种：
+              `"shuffle_prefix"`（默认，OpenPoly 的 n 档，D-35）与 `"prefix"`
+              （**只给 PolyBench26 的 scaling 档位用**：官方 `create_scaling_splits.py` 写的就是
+              `train = train_pool[:train_size]`，那边的"前 N 行"是官方定义，不是我们挑的）。
         输出：(取出的行, 说明字典)。说明里有 `n_train_pool` / `n_train_requested` /
-              `n_level_saturated` / `n_subset_seed` / `n_subset_sha256`。
-        数据来源：`splits/**`（只读）。配置来源：实验配置的 `subset.seed`。
-        副作用：无（纯函数）。异常：ArmError —— 档位不是正整数也不是 `all`。
+              `n_level_saturated` / `n_selection_rule` / `n_subset_seed` / `n_subset_sha256`。
+        数据来源：`splits/**`（只读）。配置来源：实验配置的 `subset.seed` / `subset.rule`。
+        副作用：无（纯函数）。异常：ArmError —— 档位不是正整数也不是 `all`，或 rule 不认识。
     English:
         Five training-set sizes for the OpenPoly learning curve, with three decisions argued in
         D-35: (1) **no "first n rows"** - the official train_index is ascending, so a prefix is the
@@ -525,8 +528,13 @@ def n_level_rows(
         a level adds rows instead of swapping them. **No value-bin stratification**: the training
         rows are already a 10-bin stratified draw, and at n=30 the sparsest bin cannot even supply
         one row - low-n bins being under-covered is the phenomenon H4 measures, not a bug to hide.
-        Returns: (rows, info). Raises ArmError when a level is neither a positive int nor "all".
+        `rule="prefix"` exists for PolyBench26's scaling tiers only: the official
+        `create_scaling_splits.py` literally builds `train_pool[:train_size]`, so there the prefix is
+        the official definition rather than a choice of ours.
+        Returns: (rows, info). Raises ArmError on a bad level or an unknown rule.
     """
+    if rule not in ("shuffle_prefix", "prefix"):
+        raise ArmError(f"不认识的档位取法 {rule!r}：只认 shuffle_prefix（D-35）与 prefix（scaling）")
     rows = np.asarray(train_rows, dtype=np.int64)
     pool = int(rows.size)
     info: dict[str, Any] = {"n_train_pool": pool}
@@ -551,14 +559,21 @@ def n_level_rows(
         # instead of pretending; those runs must score bit-identically to the "all" level.
         saturated = requested >= pool
     used = min(requested, pool)
-    order = np.random.default_rng(int(seed)).permutation(pool)
-    picked = rows[order[:used]]
+    if rule == "prefix":
+        # 官方前缀：`train_pool[:N]`。**不排序、不打乱**——打乱就不再是官方那一档了。
+        # The official prefix, train_pool[:N]. No sorting and no shuffling: a shuffle would stop
+        # being the official tier.
+        picked = rows[:used]
+    else:
+        order = np.random.default_rng(int(seed)).permutation(pool)
+        picked = rows[order[:used]]
     digest = hashlib.sha256(np.sort(picked).astype("<i8").tobytes()).hexdigest()
     info.update(
         {
             "n_level": text,
             "n_train_requested": int(requested),
             "n_level_saturated": bool(saturated),
+            "n_selection_rule": rule,
             "n_subset_seed": int(seed),
             # 排过序再哈希：定的是"哪些行"，与 DataLoader 的批序无关，换台机器也一致。
             # Hash the sorted rows: this pins *which* rows, independent of batch order or machine.

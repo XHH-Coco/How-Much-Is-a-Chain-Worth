@@ -2,11 +2,11 @@
 # Architecture transfer experiment (C-c-1/C-c-2) - config v0 (not frozen yet)
 #
 # 状态：**未冻结**。eval 段由 C-c 按 D-49 写成（2026-11-15：a2_conventional 单臂 15 runs）；
-# data 段是 C-b 的占位——C-b 于 11-16 交付 `generated/shared_splits/` 与组分特征后补实，
-# 补实并双方核对行数后才算冻结（届时登记版本号与字节哈希，run 记录里按冻结规则引用）。
+# data 段已由 C-b 于 2026-11-15 补实（行数四条全对：6,478 / 6,110 / 368 / 36,828），
+# 双方核对行数后本文件才冻结（届时登记版本号与字节哈希，run 记录里按冻结规则引用）。
 # Status: NOT frozen. The eval section is written by C-c per D-49 (single a2_conventional arm,
-# 15 runs); the data section is a C-b placeholder - it gets filled on 11-16 when C-b delivers
-# `generated/shared_splits/` and the component features, and only then does this file freeze.
+# 15 runs); the data section was filled by C-b on 2026-11-15 (all four row counts verified), and
+# only a joint row-count check freezes this file.
 #
 # 臂口径（D-49）：arch 只跑 a2_conventional 单臂 = 1 臂 × 5 折 × 3 种子 = 15 runs，全程 CPU。
 # D-39 的 a2+a5 作废（a5_chain 三条链输入在数据里不存在，D-47；主表已按 D-48 撤除 A5）。
@@ -17,8 +17,8 @@ arm: a2_conventional
 experiment: arch_transfer
 version: "0.0"
 frozen_at: null
-owner: C-c
-status: draft_data_section_pending_cb
+owner: C-c（eval 段） / C-b（data 段）
+status: data_section_delivered_2026_11_15_pending_joint_check
 
 # ---- eval 段：C-c 按 D-49 写 ----
 # Eval section written by C-c per D-49.
@@ -61,18 +61,55 @@ data:
   owner: C-b
   status: pending_delivery_2026_11_16
   canonical:
-    path: generated/shared_splits/       # C-b 物化的官方 task4 五折划分（seed 42）
+    path: generated/shared_splits/canonical_train.csv   # 官方 task4 物化产物（seed 42，不入库）
     rows: 6478
+    architecture_counts: {alternating: 6110, homopolymer: 368}
+    target_column: electron_affinity
+    target_unit: eV
     split_protocol: official_task4_5fold_seed42_ood_holdout
+    source_commit: 83655bc25901a8cabe3a1e5474b7ec26f01b919f
+  folds:                                  # 五折 = PSMILES 分组 80/10/10，seed 42
+    names: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    train_rows: [5182, 5182, 5182, 5182, 5183]
+    val_fraction: 0.10
+    in_distribution_test_fraction: 0.10
   component_features:
     path: data/processed/arch/component_features.parquet
-    index: data/processed/arch/component_index.csv   # psmiles → 特征行号
-    status: pending
+    index: data/processed/arch/component_index.csv   # psmiles → feature_row（含 feature_sha256）
+    failures: data/processed/arch/component_failures.csv
+    status: delivered_2026_11_15
+    rows: 683
+    columns: 2253                                # 205 描述符 + 2048 位指纹（列序与 A-6/B-1 逐列相同）
+    n_nan_cells: 5464
+    features_sha256: fd7ed9af9c8fd477c4cf5f313454f147578e10a61a36127d1af546ede3071dd9
+    coverage: complete                           # holdout 683 个唯一组分，索引 683 行，missing 0 / duplicated 0
+    assert_with: python scripts/00d_arch_components.py --verify
   ood_holdout:
+    path: generated/shared_splits/architecture_holdout.csv
     rows: 36828
+    architecture_counts: {random: 18414, block: 18414}
+    components_path: generated/shared_splits/ood_components.csv
+    components: 683
     split: fixed_across_folds
+    never_used_for_fitting: true
   materialization_doc: docs/Arch Materialization.md
-  note: 行数与地板凭据以 C-b 的 Arch Materialization.md 为准；本段数字由 C-b 补实后再冻结本文件。
+  manifests:
+    - data/manifests/external_task4_sources.csv   # 19 份取件，逐份 sha256 + commit + GTRC 许可
+    - data/manifests/arch_component_manifest.json # 683 行组分特征的清单（含 features_sha256）
+  floor_reproduction:                             # C-b 用官方 train_rf_scaling.py + evaluate_rdkit_ood.py 复现
+    model: RDKit RF
+    ood_ensemble: {random: 0.5357429224, block: 0.5813189825, combined: 0.5589956343}
+    delta_vs_official: {random: 0.0002256661, block: 0.0006614086, combined: 0.0004520147}
+    id_max_abs_delta_rmse: 0.0120492397           # 均聚只有 37 个测试点；原因见 Arch Materialization.md §3.2
+    table: results/aggregate/arch_floor_compare.csv
+    summary: results/aggregate/arch_floor_summary.json
+    context: >-
+      官方地板复现是"物化没做错"的凭据：OOD 五折集成与官方差 ≤ 7e-4（报警线是 0.1）。
+      它不是 C-c 的参比数——C-c 的 a2_conventional 结果要自己跑出来，只是可以先确认地基没歪。
+  note: >-
+    `data` 段已于 2026-11-15 由 C-b 补实（行数四条全对：6,478 / 6,110 / 368 / 36,828），
+    凭据在 `docs/Arch Materialization.md`；按本文件头的约定，**双方核对行数后本文件才冻结**，
+    故 `frozen_at` 仍为 null，`version` 未升。
 
 # ---- 记录 ----
 records:

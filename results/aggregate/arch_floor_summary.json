@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-11-15T07:30:36+08:00",
+  "source_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+  "official_table": "data/raw/polybench26/Datasets/task4_architecture_transfer/task4_all_model_scores.csv",
+  "licence": "GTRC General Public Use License（polyVERSE / VIPEA，D-08）",
+  "id": {
+    "n_pairs": 10,
+    "max_abs_delta_rmse": 0.0120492397,
+    "tolerance": 0.02,
+    "passed": true,
+    "would_fail_at_0.01": true,
+    "cause": "官方 `Models/RDKit_RF/requirements.txt` 未钉版本（scikit-learn>=0.22.2），本机用 scikit-learn 1.4.2；同一套模型在 36,828 行的 OOD 上集成后与官方差 < 1e-3，说明差的是「森林分裂在这种样本量上的版本漂移」，不是物化",
+    "problems": []
+  },
+  "ood_ensemble": {
+    "random": 0.5357429224,
+    "block": 0.5813189825,
+    "combined": 0.5589956343,
+    "delta_vs_official": {
+      "block": 0.0006614086261490515,
+      "random": 0.0002256660810057154,
+      "combined": 0.0004520147281488196
+    },
+    "alarm_threshold": 0.1,
+    "alarm": false,
+    "verdict": "OOD combined 与官方差 ≤ 0.1：物化与合成链路复现得上，可以交给 C-c 跑 30 runs"
+  },
+  "counts": {
+    "canonical_rows": 6478,
+    "holdout_rows": 36828,
+    "ood_components": 683
+  }
+}

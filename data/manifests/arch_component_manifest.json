@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-11-15T05:22:17+08:00",
+  "source_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+  "licence": "GTRC General Public Use License（VIPEA / polyVERSE）",
+  "n_components_listed": 683,
+  "n_feature_rows": 683,
+  "n_descriptors": 205,
+  "n_fingerprint_bits": 2048,
+  "n_failed": 0,
+  "failed_examples": [],
+  "n_nan_cells": 5464,
+  "features_path": "data/processed/arch/component_features.parquet",
+  "features_sha256": "fd7ed9af9c8fd477c4cf5f313454f147578e10a61a36127d1af546ede3071dd9",
+  "index_path": "data/processed/arch/component_index.csv",
+  "failures_path": "data/processed/arch/component_failures.csv",
+  "coverage": {
+    "complete": true,
+    "n_holdout_components": 683,
+    "n_index_rows": 683,
+    "missing": [],
+    "n_missing": 0,
+    "duplicated": [],
+    "n_duplicated": 0,
+    "n_failed_known": 0
+  }
+}

@@ -1,0 +1,88 @@
+# OpenPoly 规模扫描的经典臂一侧（C-b-2）· 冻结配置 v1
+# OpenPoly scale scan, classical arm side (C-b-2) - frozen config v1
+#
+# 冻结于 2026-11-14。**本文件的字节哈希就是这 225 条记录的 `config_hash`**，所以跑之前改一个
+# 空格，225 条全部作废。
+# Frozen on 2026-11-14. This file's byte hash is the `config_hash` of all 225 records, so editing
+# even a space before a run invalidates every one of them.
+#
+# 这份文件只描述"经典臂在哪个网格上跑"，**不抄 A2 的任何超参**：
+# `learner.params` 是空的（= 空 = 从 `results/aggregate/a2_best_params.csv` 取本任务的冻结超参），
+# 而 `a2_conventional.yaml` 的字节口径一个字都没动——所以 A1/A2 的 96 条记录不受影响。
+# 学习器只有 XGBoost：225 = 3 性质 × 5 档 × 5 折 × 3 种子，一臂一个学习器（分工_C-a §2 的口径框）。
+# This file only says *where* the classical arm runs; it copies no hyper-parameter. `learner.params`
+# is empty, i.e. "take this task's frozen row from a2_best_params.csv", and a2_conventional.yaml is
+# untouched, so A1/A2's 96 records keep their config_hash. One learner only: 225 = 3 properties x
+# 5 levels x 5 folds x 3 seeds.
+#
+# 与 B-5 的 `openpoly_scan.yaml` 的关系：**网格、折、档位、子集种子全部逐字相同**，所以两条臂的
+# `subset_sha256` 可以逐档相比（这正是 H4 交叉点的前提）；不同的只有臂与学习器。
+# Relation to B-5's openpoly_scan.yaml: the grid, folds, levels and the subset seed are identical
+# character for character, so the two arms' `subset_sha256` values are comparable level by level -
+# the precondition for H4's crossing point. Only the arm and the learner differ.
+
+arm: a2_conventional
+experiment: openpoly_classic
+version: "1.0"
+frozen_at: "2026-11-14"
+owner: C-b
+
+# ---- 学习器：与 A2 完全同一份冻结超参，一个都不许重搜 ----
+# Learners: the same frozen hyper-parameters as A2, none of them re-searched.
+learner:
+  main: xgboost
+  params: {}                 # 空 = 从 results/aggregate/a2_best_params.csv 取 (task, xgboost) 那一行
+  fixed:
+    n_jobs: 1                # 线程调度会改变浮点求和顺序：n_jobs 是随机源（分工_C-a §2）
+    tree_method: hist
+    random_state: from_seed  # = run 的 seed
+  note: >-
+    `search` 只在这三个性质上各跑一次（Murcko 分组 5 折 CV、≤30 trials、同一 search_seed），
+    结果写进 a2_best_params.csv 的三行；此后**冻结**，五折三种子共用。为什么不借别的任务的
+    超参：那等于凭空选一套数；为什么不逐档重搜：档位是训练集大小、不是超参，重搜就违反 D-35。
+
+# ---- n 档：与 B-5 逐字相同（档位是 A 冻结的，C 不许改） ----
+# The n levels: identical to B-5. The levels were frozen by A; C may not move them.
+n_levels: [30, 60, 120, 240, all]
+subset:
+  rule: shuffle_prefix
+  seed: 20261122             # 与 B-5 的 subset.seed 同数：两边必须落在同一批训练行上
+  nested: true
+constraints:
+  max_n: 443                 # 验收②：一律 n ≤ 443，不许外推
+  no_extrapolation: true
+  train_only: true           # 只截训练集；验证集与测试集在 5 个档位上逐行不变（H4 的前提）
+
+# ---- 运行网格：225 条 = 3 性质 × 5 折 × 3 种子 × 5 档 ----
+expected_fits: 225
+seeds: [0, 1, 2]
+runs:
+  openpoly:
+    folds: [seed0, seed1, seed2, seed3, seed4]
+    tasks:
+      - op_tg                          # 443 行 → train 355 / val 44 / test 44
+      - op_dielectric_constant_total   # 295 行 → train 235 / val 30 / test 30（240 档取不满）
+      - op_tm                          # 168 行 → train 134 / val 17 / test 17（240 档取不满）
+
+# ---- 设备 ----
+# 本臂 0 条 GPU 记录，写死 cpu（分工_C-a §4 同款）。
+device:
+  prefer: cpu
+  note: 经典臂在 CPU 上跑；device 由脚本填成 "cpu"，与 A3/A4 的 "cuda" 不混。
+
+# ---- 预算（分工_C-b §4：单条 1–5 s，总计 10–20 分钟）----
+budget:
+  predicted_gpu_hours: [0.0, 0.0]
+  per_run_minutes: [0.02, 0.1]
+  note: >-
+    143–651 行的任务上单条 fit 1–5 秒；225 条理论 10–20 分钟，搜索另计（3 性质 × 30 trials × 5 折）。
+    gpu_hours.csv 沿用 B-3 的口径对 CPU 行也写 wall_clock_s / 3600，D 核预算只取 wall_clock_s。
+
+# ---- 记录 ----
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  index: results/aggregate/openpoly_cpu.csv
+  n_index: results/aggregate/openpoly_cpu_n_index.csv
+  env_fingerprint: results/env_fingerprints/env_core.json

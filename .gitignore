@@ -10,6 +10,18 @@ data/external/*
 !data/processed/.gitkeep
 !data/external/.gitkeep
 
+# ---- 物化产物与模型权重：**永久不入库**（D-08 / D-53）---------------
+# `generated/` 装两样东西：① 官方 task4 的物化产物（`shared_splits/`，60+ MB，
+# 派生数据）；② 官方 RDKit_RF 训出来的模型（`models/`，joblib）。
+# 两样都不能入库：前者是 **GTRC General Public Use License** 的派生数据（polyVERSE /
+# VIPEA，不是主表那个 CC BY 4.0），后者是可重训的权重。入库的只有它们的哈希清单
+# （`data/manifests/external_task4_sources.csv` 与 `arch_component_manifest.json`）。
+# `generated/` holds the official task4 materialisation (60+ MB of derived data under the GTRC
+# licence, not CC BY 4.0) and the RDKit_RF models (retrainable weights). Neither belongs in the
+# repository; only their digests do.
+!generated/
+generated/*
+
 # ---- 入库的"入口包"：C 组真读的那 19 MB（2026-11-13，D-38）---------------
 # 破例的理由不是"方便"，是"复现会卡住"：新组员要自己重下 653 MB，得先撞 figshare 的 403
 # （manifests/SOURCES.md 坑十）与 PMC 的工作量证明（坑二十五）；而 C 组真正读的只有这 19 MB。
@@ -46,6 +58,11 @@ data/processed/features/pb_t1_td.npz
 data/processed/features/pb_t2_tssab.npz
 data/processed/features/pb_t3_dlt.npz
 data/processed/features/pb_t3_dmp_sm.npz
+# C-b-1 的两份 scaling pack **不入库**（D-53：27,802 + 1,800 行，共约 20 MB，`scaling --build` 重建）。
+# 上面那条 `!data/processed/features/*.npz` 是为 D-38 的 11 份主表 pack 开的，这里按名字挡回去。
+# C-b-1's two scaling packs stay out of the repository (D-53: ~20 MB, rebuilt by `scaling --build`);
+# the whitelist above exists for D-38's eleven main-table packs, so these are blocked by name.
+data/processed/features/pb26_scaling_cp_*.npz
 data/processed/structures/.descriptor_cache.sqlite3
 data/processed/structures/*.partial.*
 data/processed/structures/*.tmp

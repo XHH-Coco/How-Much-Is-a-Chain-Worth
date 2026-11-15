@@ -1,0 +1,3 @@
+task_id,dataset_id,n_rows,n_label_rows,n_unique_structures,n_unparsable_smiles,n_descriptors,n_fingerprint_bits,n_nan_cells,canonical_sha256,canonical_source,pack_sha256,built_at
+pb26_scaling_cp,md5000_alternating_cp,27802,27802,27802,0,205,2048,222416,7dad9d1dc0e93d112a2137c728c773d6255bf2c9af9ca4ddda1d90961eec6952,PSMILES/MD_5000/Cp/alternating_Cp.csv,38047fcf0f9e23fede1d35627775c647775cce534f907715e725169b04b68455,2026-11-15T05:17:29+08:00
+pb26_scaling_cp,md5000_homopolymer_cp,1800,1800,1800,0,205,2048,14400,0b09e47df3b69aa9b439838fe5027fd255ab73213820d87cf346567149f437a7,PSMILES/MD_5000/Cp/homopolymer_Cp.csv,573d1181aa21716ccbbf33192f785a690d2a6555fb21e67bd19620c157c7db55,2026-11-15T05:17:32+08:00

@@ -284,8 +284,23 @@ def _resolve_fold(
                 f"{name}: split_version 哈希前缀 {prefix} ≠ 文件字节 {digest}（{rel} 被换过？）"
             ]
     task = str(record.get("task", ""))
+    # 双数据集任务（PB26 的 scaling）按 `dataset_id` 寻址：`loaders.load_split()` 对这类任务
+    # **明确报错**（`split_ref` 是目录，一任务一划分不成立，见 D-54），而记录里有 `dataset_id`。
+    # 这只是**多一条寻址分支**，断言一条都没放松：折名仍要在 spec 里找得到、`split_version`
+    # 仍要指向存在且哈希前缀对得上的文件。
+    # A two-dataset task (PB26's scaling) is addressed by `dataset_id`: loaders.load_split() refuses
+    # such a task on purpose (its split_ref is a directory, D-54) and the record carries the id.
+    # This adds an addressing branch only - no assertion is relaxed: the fold must still resolve and
+    # split_version must still point at an existing file whose digest prefix matches.
+    dataset_id = record.get("dataset_id")
     try:
-        spec = cache.setdefault(task, L.load_split(task))
+        if dataset_id:
+            from chainworth.experiments import scaling as S
+
+            key = f"{task}/{dataset_id}"
+            spec = cache.setdefault(key, S.load_dataset_split(str(dataset_id), task_id=task))
+        else:
+            spec = cache.setdefault(task, L.load_split(task))
     except Exception as exc:  # load_split 的 AssemblyError 分支，统一收集
         return None, [f"{name}: 读划分失败（{exc}）"]
     fold_name = str(record.get("split_fold", ""))

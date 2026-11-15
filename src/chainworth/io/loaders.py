@@ -644,6 +644,24 @@ def load_split(task_id: str) -> SplitSpec:
     """
     config = load_task_config(task_id)
     benchmark = str(config["benchmark"])
+    # 双数据集任务（PB26 的 scaling）：`split_ref` 指向**目录**，每个数据集各有五折，
+    # 所以"一任务一划分"在这里不成立。**明确报错并指路**，而不是把目录当文件打开——
+    # 那会抛 `IsADirectoryError`，看着像权限问题，实际是口径问题（分工_C-b §7 的第一个坑）。
+    # 判据是"`split_ref` 是不是文件"，**不是**"配置里有没有 `datasets`"：PB26 的两个主表任务
+    # 也带 `datasets`（它们的 scaling 上下文），但它们的划分是一个 `seed_42/manifest.json`。
+    # A two-dataset task (PB26's scaling): `split_ref` points at a *directory* and each dataset has
+    # its own five folds, so "one task, one split" does not hold. Fail with a pointer instead of
+    # opening a directory as a file - that raises IsADirectoryError, which looks like a permission
+    # problem while the real issue is the addressing level (分工_C-b section 7's first trap).
+    # The test is "is `split_ref` a file", **not** "does the config carry `datasets`": both PB26
+    # main-table tasks carry `datasets` too (their scaling context) but their split is one manifest.
+    split_ref = REPO_ROOT / str(config["split_ref"])
+    if config.get("datasets") and split_ref.is_dir():
+        raise AssemblyError(
+            f"{task_id} 是双数据集任务（{', '.join(str(e.get('dataset_id')) for e in config['datasets'])}）："
+            "划分要按数据集取，用 `chainworth.experiments.scaling.load_dataset_split(dataset_id)`；"
+            "`load_split()` 只认一任务一划分的任务"
+        )
     if benchmark == "polybench":
         return _polybench_split(task_id, config)
     if benchmark == "polybench26":

@@ -57,6 +57,49 @@
 
 ---
 
+## 运行侧执行记录（C-b 维护，2026-11-15）
+
+> 分工_C-b 的 C-b-4：**每批收尾就跑一遍套件、逐批记账**，只退回、不改数。C-c 在上面已审过
+> **642 条**（B 546 + C-a 96）；C-b 在两批新数据交付后追加了两批，现总 **907 条**。
+> 本机没有 `data/interim/harmonised/` 与 `data/raw/polybench26/Datasets/scaling_indices/`（D-38 明确不入库），
+> 所以套件里依赖那两处的既有用例按 `skipped` 计——**套件本体（`tests/test_run_records.py`，14 条）全程可跑**。
+
+### 逐批执行（C-b 追加的两批用粗体）
+
+| # | 批次 | 何时跑 | 记录条数 | 退单 | 结论 |
+|--:|:--|:--|--:|--:|:--|
+| 1 | B 已交全部（A3 48 + A4 48 + OpenPoly 450） | 11-15 04:47 | **546** | 0 | 复核：与 C-c 11-13 的结论一致，全绿 |
+| 2 | C-a 的 A1 + A2 | 11-15 04:47 | **96** | 0 | 全绿：`a1_floor` 48 + `a2_conventional` 48，`config_hash` 逐条等于冻结臂配置 |
+| 3 | **C-b-2 的 OpenPoly 经典臂 225** | 11-15 04:47 | **225** | 0 | 全绿：225 条 `ok`、225 份预测、`arm=a2_conventional`、`device=cpu`；每条带 `n_level` / `subset_sha256` / `n_train_pool` / `n_level_saturated` |
+| 4 | **C-b-1 的 scaling（XGBoost 一侧 40 条）** | 11-15 07:26 | **40** | 0 | 全绿：`dataset_id` / `fold_index` / `n_level` 齐全；`split_version` 指向该折自己那份 `fold_XX.npz`（哈希前缀逐条对上）。**另有 40 条 RF 行只进 `scaling_cpu.csv`、不进 `raw_runs/`**（`_schema.json` 的 arm 枚举里没有"森林"，D-53） |
+| 5 | A5 批 | — | **0** | — | **没有记录可审**：A5 已按 D-48 撤除（三条链输入在现有数据里不存在，D-47），状态 `not_constructible_data_unavailable`。不是"漏跑"，是"不可构造" |
+| 6 | arch（C-c） | — | **0** | — | C-c 尚未交批。臂已由 **D-49** 定为 `a2_conventional` 单臂 = **15 runs**（`pb26_arch_transfer_ea.yaml` v3 / `SHA256SUMS` v5）；C-b 的地基（物化 + 组分特征 + 官方地板）已交，等 C-c 开跑 |
+
+### 条数对账（907 的构成）
+
+- 907 = C-c 已审的 **642**（B 546 + C-a 96）+ C-b 追加的 **265**（C-b-2 225 + C-b-1 40）。
+- `results/raw_runs/` 文件数 908 = 907 条记录 + `_schema.json`（**不是记录**，统计时排除）。
+- **0 退单**，所以 `results/aggregate/audit_backlog.csv` **只有表头**（"主表定稿前必须清零"这条现在是清着的）。
+  退单会留痕：每退一条就多一行（`run_id,问题,退回给谁,退回时间,状态`）。
+
+### 本机测试基线（2026-11-15，`pytest tests`）
+
+- **250 passed / 88 skipped / 10 failed**（共 348 条）。10 个失败**全部**是"缺数据"的既有用例：
+  `test_harmonise.py` 1 条、`test_task_assembly.py` 8 条（缺 `data/interim/harmonised/*.parquet`）、
+  `test_splits.py` 1 条（缺 `data/raw/polybench26/Datasets/scaling_indices/`）。
+  两处都是 **D-38 明确不入库**的东西，在这台"数据包机"上跑不出来，与 C-b 的改动无关。
+- 套件本体 `pytest tests/test_run_records.py`：**14 passed**（在 907 条真实记录上）。
+- C-b 新增的测试：`tests/test_openpoly_classic.py`（14）+ `tests/test_scaling_scan.py`（9）= **23 条**，全绿。
+
+### C-b 给套件补的一处能力缺口（不放松任何断言）
+
+`_resolve_fold()` 原本只走 `loaders.load_split()`，而**双数据集任务**（PB26 的 scaling）在那条路上是
+**故意报错**的（D-54：`split_ref` 是目录，一任务一划分不成立）。C-b 加了一条寻址分支：记录里有
+`dataset_id` 就走 `experiments.scaling.load_dataset_split()`。**断言一条都没放松**：折名仍要在 spec 里
+找得到、`split_version` 仍要指向存在且哈希前缀对得上的文件。**交 C-c 会签。**
+
+---
+
 ## 入口侧结论（D 维护）
 
 （占位：D 的划分与泄漏审计章节。）
