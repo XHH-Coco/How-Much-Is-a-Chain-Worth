@@ -94,6 +94,9 @@ OPENPOLY_GPU_N_INDEX = REPO_ROOT / "results" / "aggregate" / "openpoly_n_index.c
 # C-b-1：PolyBench26 的数据量扫描（H2 的 κ）。档位是官方 `train_sizes` 的前缀。
 # C-b-1: PolyBench26's data-size scan (H2's kappa); a tier is a prefix of the official train_sizes.
 SCALING_CONFIG = REPO_ROOT / "configs" / "experiments" / "scaling.yaml"
+# C-c-1/C-c-2：架构迁移 15 runs（D-49 单臂）+ OOD 三段式。冻结后其字节哈希进每条记录的 config_hash。
+# C-c-1/C-c-2: the architecture transfer 15 runs (D-49 single arm) + OOD three stages.
+ARCH_CONFIG = REPO_ROOT / "configs" / "experiments" / "arch_transfer.yaml"
 
 SENS_COLUMNS = (
     "task",
@@ -258,6 +261,33 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="用哪个数据集的 fold_00 训练行选参（默认交替 Cp：池子最大、代表性强）",
     )
     scl.add_argument("--dry-run", action="store_true", help="只打印网格，不训练不写文件")
+
+    arch = sub.add_parser(
+        "arch", help="C-c-1/C-c-2：架构迁移 15 runs（a2 单臂）+ OOD 三段式（分工_C-c）"
+    )
+    arch.add_argument("--config", default=None, help="实验配置（默认 configs/experiments/arch_transfer.yaml）")
+    arch.add_argument(
+        "--setup", action="store_true",
+        help="划分落位 splits/polybench26/arch/ + 造 ID 特征（6,478 × 2,253）",
+    )
+    arch.add_argument("--verify", action="store_true", help="只读复核：物化行数、组分覆盖、特征哈希")
+    arch.add_argument(
+        "--search", action="store_true",
+        help="按 D-51 的预注册协议搜一次 pb26_arch_transfer_ea 的超参（写 a2_best_params.csv 第 13 行）",
+    )
+    arch.add_argument("--ood", action="store_true", help="OOD 三段式 + 五折集成点值")
+    arch.add_argument("--table-only", action="store_true", help="不训练：按磁盘记录与 OOD 指标重写 arch_transfer.csv")
+    arch.add_argument("--folds", nargs="+", metavar="FOLD", help="白名单（默认全部 5 折）")
+    arch.add_argument("--seeds", nargs="+", type=int, metavar="SEED", help="白名单（默认 0 1 2）")
+    arch.add_argument("--no-resume", action="store_true", help="已有的 ok 记录/OOD 产物也重跑")
+    arch.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        metavar="N",
+        help="造 ID 特征时的进程数（0 = 核数−1，上限 8）",
+    )
+    arch.add_argument("--dry-run", action="store_true", help="只打印网格，不训练不写文件")
 
     return parser.parse_args(argv)
 
@@ -1311,6 +1341,212 @@ def _scaling_rows_from_disk(
     return rows
 
 
+# ---- 7. 架构迁移的编排 / Orchestration of the architecture transfer ----
+def _arch(
+    config_path: str | None,
+    *,
+    setup: bool,
+    verify: bool,
+    search: bool,
+    ood: bool,
+    table_only: bool,
+    dry_run: bool,
+    resume: bool,
+    folds: Sequence[str] | None,
+    seeds: Sequence[int] | None,
+    workers: int,
+) -> int:
+    """C-c-1/C-c-2：setup → search → 15 runs → OOD 三段式 → 集成点值 → arch_transfer.csv。
+    C-c-1/C-c-2: setup -> search -> 15 runs -> the OOD three stages -> ensemble -> the table.
+
+    中文：
+        用途：按分工_C-c 的顺序把六件事编排在一个子命令里，每件都可单独跑：
+              ① `--setup`：划分落位 `splits/polybench26/arch/seed_42/`（polybench26 格式 +
+                 PROVENANCE）+ 造 ID 特征（6,478 × 2,253，与组分表同一套列）；
+              ② `--search`：D-51 预注册协议搜一次超参（A2 冻结配置的 search 段），写
+                 `a2_best_params.csv` 第 13 行——**在 15 runs 之前**，`train_one()` 缺行会报错；
+              ③ 15 runs：复用 `C.train_one()`，超参来自第②步，`config_hash` = 本配置字节哈希，
+                 所以**本文件必须冻结成 v1 之后才能跑**；
+              ④ `--ood`：覆盖断言 → 逐组分预测（重拟合须与落盘 ID 预测逐位一致）→
+                 官方 `summarize_weighted_predictions.py` 合成 → 每种子五折集成点值；
+              ⑤ `arch_transfer.csv`：一 run 一行、ID 两档分开列、OOD 逐折留档；
+              ⑥ 排序核对：block > random > alternating > homopolymer 是否成立，照实打印。
+        输入：各白名单与开关。输出：0 成功。数据来源：generated/ + ID/组分特征 + splits/。
+        副作用：见各步。异常：任一验收不过即抛。
+    English:
+        The six C-c steps in one subcommand, each runnable alone. The 15 runs must come after the
+        search (train_one() raises on a missing row) and after this config is frozen to v1, because
+        its byte hash is every record's config_hash.
+    """
+    from chainworth.experiments import arch as A
+
+    config = G.load_arm_config(Path(config_path) if config_path else ARCH_CONFIG)
+    if setup:
+        if verify:
+            problems = A.verify_arch_setup()
+            print(
+                f"复核：{'通过' if problems['ok'] else '不过'}——"
+                f"canonical {problems['canonical']['rows']}、holdout {problems['holdout']['rows']}、"
+                f"组分覆盖 {problems['components']['complete']}"
+            )
+            for problem in problems["problems"]:
+                print(f"  ✗ {problem}")
+            return 0 if problems["ok"] else 1
+        splits = A.materialize_splits()
+        print(
+            f"划分落位：{A.ARCH_SPLIT_MANIFEST.relative_to(REPO_ROOT).as_posix()} "
+            f"（train {splits['train_rows']} / val {splits['val_rows']} / test 648×5）"
+        )
+        features = A.build_id_features(workers=workers)
+        print(
+            f"ID 特征：{features['n_rows']} 行 × {features['n_descriptors'] + features['n_fingerprint_bits']} 列，"
+            f"NaN 单元 {features['n_nan_cells']}，sha256={features['features_sha256'][:12]}…"
+        )
+        return 0
+
+    if search:
+        if dry_run:
+            print("[dry-run] 会按 D-51 协议在 fold_00 训练行内搜 30 trials（Murcko 分组 5 折）")
+            return 0
+        search_config = G.load_arm_config(ARM_CONFIGS["a2_conventional"])
+        data = A.load_id_data()
+        print(
+            f"=== search {A.TASK_ID} [xgboost] on {data.split.fold_names[0]} "
+            f"（{int(data.split.folds[0].train_index.size)} 行训练池；协议来自 "
+            f"{search_config.path.name}，产出记录用 {config.path.name}） ===",
+            flush=True,
+        )
+        best = C.search_task(
+            data, search_config, learner="xgboost", log=lambda message: print(message, flush=True)
+        )
+        print(
+            f"{A.TASK_ID} [xgboost] cv_r2={best['cv_score']:.4f} trials={best['trials']} "
+            f"folds={best['cv_folds']} rows={best['n_search_rows']} "
+            f"params={json.dumps(best['params'], sort_keys=True)}"
+        )
+        print("已写进 results/aggregate/a2_best_params.csv（按 (task, learner) 覆盖，12 行老记录未动）")
+        return 0
+
+    if verify:
+        problems = A.verify_arch_setup()
+        print(
+            f"复核：{'通过' if problems['ok'] else '不过'}——"
+            f"canonical {problems['canonical']['rows']}、holdout {problems['holdout']['rows']}、"
+            f"组分覆盖 {problems['components']['complete']}"
+        )
+        for problem in problems["problems"]:
+            print(f"  ✗ {problem}")
+        return 0 if problems["ok"] else 1
+
+    if table_only:
+        records = _arch_records_on_disk()
+        ood_by_run = _arch_ood_from_disk()
+        path = A.write_arch_table(records, ood_by_run=ood_by_run)
+        print(f"arch_transfer.csv 已重写：{len(records)} 行 → {path.relative_to(REPO_ROOT).as_posix()}")
+        _arch_print_ordering(records, ood_by_run)
+        return 0
+
+    if dry_run:
+        fold_names = [entry["name"] for entry in A._split_fold_names()]
+        seeds_wanted = [int(s) for s in (seeds or config.raw.get("seeds") or [0])]
+        for fold in fold_names:
+            for seed in seeds_wanted:
+                run_id = G.RunKey(
+                    task=A.TASK_ID, benchmark="polybench26", fold=fold, seed=seed, arm=A.ARM
+                ).run_id()
+                print(run_id)
+        print(f"dry-run：{len(fold_names) * len(seeds_wanted)} 条 run，没有训练")
+        return 0
+
+    records = A.run_arch(config, folds=folds, seeds=seeds, resume=resume)
+    if not records:
+        print("没有新记录（全部命中 resume）")
+    else:
+        print(f"写出/命中 {len(records)} 条 run 记录")
+
+    ood_summaries: list[dict[str, Any]] = []
+    if ood:
+        ood_summaries = A.run_ood(config, folds=folds, seeds=seeds, resume=resume)
+        ensemble = A.ensemble_ood(config, seeds=seeds)
+        print("五折集成点值（D-09：不做 t 检验，不给均值 ± SE）：")
+        for seed_key, payload in ensemble["seeds"].items():
+            points = payload["ensemble_point_values"]
+            print(
+                f"  seed {seed_key}：random {points['random']['rmse']:.4f} / "
+                f"block {points['block']['rmse']:.4f} / combined {points['combined']['rmse']:.4f}"
+            )
+
+    ood_by_run = _arch_ood_from_disk() if ood_summaries else None
+    path = A.write_arch_table(records, ood_by_run=ood_by_run)
+    print(f"arch_transfer.csv：{len(records)} 行 → {path.relative_to(REPO_ROOT).as_posix()}")
+    _arch_print_ordering(records, ood_by_run or {})
+    return 0
+
+
+def _arch_records_on_disk() -> list[dict[str, Any]]:
+    """磁盘上 arch 的 15 条记录（按 run_id 排序）。／ The arch records on disk, sorted by run_id."""
+    from chainworth.experiments import arch as A
+
+    records: list[dict[str, Any]] = []
+    for path in sorted(G.RAW_RUNS_DIR.glob("*.json")):
+        if path.name == "_schema.json":
+            continue
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:                    # pragma: no cover - 半截文件
+            continue
+        if record.get("task") == A.TASK_ID and record.get("status") == "ok":
+            records.append(record)
+    return records
+
+
+def _arch_ood_from_disk() -> dict[str, dict[str, Any]]:
+    """磁盘上逐 run 的 OOD 指标（metrics json → dict）。／ Per-run OOD metrics read back."""
+    from chainworth.experiments import arch as A
+
+    result: dict[str, dict[str, Any]] = {}
+    for path in sorted(A.OOD_DIR.glob("*_metrics.json")):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        run_id = path.name[: -len("_metrics.json")]
+        result[run_id] = {"metrics": {entry["architecture"]: entry for entry in payload["metrics"]}}
+    return result
+
+
+def _arch_print_ordering(
+    records: Sequence[Mapping[str, Any]], ood_by_run: Mapping[str, Mapping[str, Any]]
+) -> None:
+    """报告实际排序：block > random > alternating > homopolymer 是否成立（照实写，不重调）。
+    Report the actual ordering; state it plainly instead of re-tuning when it does not hold.
+    """
+    import numpy as np
+
+    from chainworth.experiments import arch as A
+
+    id_alt = [r["id_tier_metrics"]["alternating"]["rmse"] for r in records if r.get("id_tier_metrics")]
+    id_homo = [r["id_tier_metrics"]["homopolymer"]["rmse"] for r in records if r.get("id_tier_metrics")]
+    ood_random = [
+        v["metrics"]["random"]["rmse"] for v in ood_by_run.values() if "random" in v.get("metrics", {})
+    ]
+    ood_block = [
+        v["metrics"]["block"]["rmse"] for v in ood_by_run.values() if "block" in v.get("metrics", {})
+    ]
+    alt = float(np.mean(id_alt)) if id_alt else float("nan")
+    homo = float(np.mean(id_homo)) if id_homo else float("nan")
+    random_ = float(np.mean(ood_random)) if ood_random else float("nan")
+    block = float(np.mean(ood_block)) if ood_block else float("nan")
+    print(
+        f"实际排序（mean RMSE；OOD 为逐折、ID 为 15 run 均值，跨域只作陈述不作判决）："
+        f"block {block:.4f} / random {random_:.4f} / alternating {alt:.4f} / homopolymer {homo:.4f}"
+    )
+    if not np.isfinite([alt, homo, random_, block]).all():
+        print("  （OOD 尚未合成，排序判决待 arch --ood 之后再说）")
+        return
+    holds = bool(block > random_ > alt > homo)
+    print(
+        "  → " + ("成立" if holds else "不成立——按分工_C-c 验收⑤照实登记 DECISIONS.md，不重调超参")
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """命令行入口。／ Command-line entry point."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -1447,6 +1683,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             workers=args.workers,
             search=args.search,
             search_dataset=args.search_dataset,
+        )
+
+    if args.command == "arch":
+        return _arch(
+            args.config,
+            setup=args.setup,
+            verify=args.verify,
+            search=args.search,
+            ood=args.ood,
+            table_only=args.table_only,
+            dry_run=args.dry_run,
+            resume=not args.no_resume,
+            folds=args.folds,
+            seeds=args.seeds,
+            workers=args.workers,
         )
 
     raise SystemExit(f"未知子命令 {args.command!r}")

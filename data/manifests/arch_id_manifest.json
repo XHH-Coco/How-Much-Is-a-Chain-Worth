@@ -1,0 +1,12 @@
+{
+  "generated_at": "2026-11-16T00:23:52+08:00",
+  "source_commit": "83655bc25901a8cabe3a1e5474b7ec26f01b919f",
+  "licence": "GTRC General Public Use License（polyVERSE / VIPEA，D-08）",
+  "n_rows": 6478,
+  "n_descriptors": 205,
+  "n_fingerprint_bits": 2048,
+  "n_nan_cells": 51824,
+  "features_path": "data/processed/arch/id_features.parquet",
+  "features_sha256": "fed6173b823ad37070d321ca9b072c97cda41b25aae6a1e7293be337045a76de",
+  "canonical_sha256": "632aa02dc773942e103d8fc0c4bdefe6afddfb76151b33c99f70963868926068"
+}

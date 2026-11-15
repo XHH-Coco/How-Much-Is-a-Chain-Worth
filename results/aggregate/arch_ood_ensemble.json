@@ -1,0 +1,100 @@
+{
+  "generated_at": "2026-11-16T00:46:36+08:00",
+  "task": "pb26_arch_transfer_ea",
+  "arm": "a2_conventional",
+  "protocol": "5-fold per-polymer averaged ensemble; fold-level OOD metrics are NOT independent replicates (fixed holdout), no t-test was computed (D-09)",
+  "floors": {
+    "random": 0.5357429224,
+    "block": 0.5813189825,
+    "combined": 0.5589956343
+  },
+  "seeds": {
+    "0": {
+      "ensemble_point_values": {
+        "random": {
+          "n_samples": 18414,
+          "rmse": 0.4777077666275028,
+          "mae": 0.4072511137118109,
+          "mse": 0.2282047102962367,
+          "floor": 0.5357429224,
+          "delta_vs_floor": -0.05803515577249718
+        },
+        "block": {
+          "n_samples": 18414,
+          "rmse": 0.5259862428494162,
+          "mae": 0.4481431420439946,
+          "mse": 0.27666152766684504,
+          "floor": 0.5813189825,
+          "delta_vs_floor": -0.05533273965058383
+        },
+        "combined": {
+          "n_samples": 36828,
+          "rmse": 0.5024272275479713,
+          "mae": 0.42769712787790276,
+          "mse": 0.2524331189815409,
+          "floor": 0.5589956343,
+          "delta_vs_floor": -0.05656840675202868
+        }
+      },
+      "folds_averaged": 5
+    },
+    "1": {
+      "ensemble_point_values": {
+        "random": {
+          "n_samples": 18414,
+          "rmse": 0.4987037774983536,
+          "mae": 0.42686755485227373,
+          "mse": 0.24870545769112737,
+          "floor": 0.5357429224,
+          "delta_vs_floor": -0.03703914490164639
+        },
+        "block": {
+          "n_samples": 18414,
+          "rmse": 0.5460051667379942,
+          "mae": 0.46780334121559114,
+          "mse": 0.2981216421045848,
+          "floor": 0.5813189825,
+          "delta_vs_floor": -0.03531381576200587
+        },
+        "combined": {
+          "n_samples": 36828,
+          "rmse": 0.5228896154044905,
+          "mae": 0.44733544803393244,
+          "mse": 0.27341354989785605,
+          "floor": 0.5589956343,
+          "delta_vs_floor": -0.03610601889550946
+        }
+      },
+      "folds_averaged": 5
+    },
+    "2": {
+      "ensemble_point_values": {
+        "random": {
+          "n_samples": 18414,
+          "rmse": 0.49095520566108325,
+          "mae": 0.4176145915479979,
+          "mse": 0.24103701396571653,
+          "floor": 0.5357429224,
+          "delta_vs_floor": -0.04478771673891674
+        },
+        "block": {
+          "n_samples": 18414,
+          "rmse": 0.5386867079725415,
+          "mae": 0.45827204396059196,
+          "mse": 0.2901833693462942,
+          "floor": 0.5813189825,
+          "delta_vs_floor": -0.04263227452745855
+        },
+        "combined": {
+          "n_samples": 36828,
+          "rmse": 0.5153738367981104,
+          "mae": 0.4379433177542949,
+          "mse": 0.26561019165600536,
+          "floor": 0.5589956343,
+          "delta_vs_floor": -0.04362179750188955
+        }
+      },
+      "folds_averaged": 5
+    }
+  }
+}

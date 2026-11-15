@@ -27,10 +27,11 @@
 | 2026-11-13 | B 已交全部（A3 48 + A4 48 + OpenPoly 450） | **546** | **0** | 全绿：546 条全部过第 0 条与六条断言，预测文件 546 份齐，行数与折对得上，无 partial 混入，device/env 全部一致 |
 | 2026-11-15 | C-a 已交 A1/A2 批（`main_table.yaml` v2：16 单元 × 2 臂 × 3 种子） | **96** | **0** | 全绿：A1 48 + A2 48 全部过第 0 条与六条断言，预测 96 份齐、行数 = 官方测试行、device=cpu ↔ env_core（D-40 的 venv 备注不影响判定） |
 | 2026-11-15 | 全量复跑（B 546 + C-a 96） | **642** | **0** | 套件 14/14 绿；主表 32 格引用 192 条（A1/A2/A3/A4 各 48），其余 450 条属 OpenPoly 扫描 |
+| 2026-11-16 | C-c 已交 arch 批（15 条，D-49 单臂） | **15** | **0** | 全绿：15 条全部过第 0 条与六条断言；预测 15 份齐、行数 = 648（交替 611 + 均聚 37）；`split_version` 指向本地物化的 `splits/polybench26/arch/seed_42/fold_XX.npz` 且哈希前缀逐条对上；device=cpu ↔ env_core；`id_tier_metrics`/`id_tier_n` 两档分开落盘（验收①）；OOD 走官方三段式（验收②），五折只报集成点值（D-09） |
 
-### 条数对账（642 的构成）
+### 条数对账（657 的构成）
 
-- 642 = B 546（A3 48 + A4 48 + OpenPoly 450）+ C-a 96（A1 48 + A2 48，`main_table.yaml` v2 口径）。
+- 657 = B 546（A3 48 + A4 48 + OpenPoly 450）+ C-a 96（A1 48 + A2 48，`main_table.yaml` v2 口径）+ **C-c 15（arch 单臂 15 runs，D-49）**。
 - A5：**0 条**，按 D-48 是 `not_constructible_data_unavailable`（D-47 证明三条链输入在数据里不存在），
   **不是** `zero_gain`、也不标 `blocked_no_gpu`——主表 32 格没有 A5 行（已删，见 Main Table Notes §2）。
 - 对账口径：记录数 = 546 + C 组各批 `expected_*` 之和；`results/raw_runs/_schema.json` **不是记录**，统计时排除。
@@ -51,8 +52,7 @@
 ### 待办
 
 - C-b 每批收尾跑 `pytest tests/test_run_records.py`，退单记入上表；
-- C-b 的 scaling / openpoly CPU 批、C-c 自己的 arch 15 条（D-49 单臂，2026-11-15 由 30 条改为
-  15 条，`pb26_arch_transfer_ea.yaml` 出 v3、SHA256SUMS 升 v5），逐批过套件；
+- ~~C-c 自己的 arch 15 条（D-49 单臂）~~ **已交（2026-11-16，15 条 0 退单）**；任务配置按 D-57 保持 D-49 的 v3 / SHA256SUMS v5 一个字节没动（present+文件会弄红 A-5 的 `test_splits.py`，划分解析由 C-c 的 `arch.py::_load_arch_split()` 与套件 `_resolve_fold` 新分支承担）；
 - 11-19 定稿：补齐上表、写最终结论（发布前必须 0 退单、0 未解释缺口）。
 
 ---

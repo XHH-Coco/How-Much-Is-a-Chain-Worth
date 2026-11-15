@@ -299,6 +299,32 @@ def _resolve_fold(
 
             key = f"{task}/{dataset_id}"
             spec = cache.setdefault(key, S.load_dataset_split(str(dataset_id), task_id=task))
+        elif (
+            split_path.is_file()
+            and split_path.suffix == ".npz"
+            and (REPO / str(L.load_task_config(task)["split_ref"])).is_dir()
+        ):
+            # 划分由本地物化、任务配置的 split_ref 保持目录形态的任务（arch，D-57）：`load_split()`
+            # 只认 split_ref 是文件，而 A-5 校验器对 `split_status: deferred` 的契约是"说明文件
+            # 目录"——两条路不能同时走。这里从记录自己的 `split_version` 文件（前面已经做过
+            # 12 位哈希前缀 = 文件字节的校验）读折，折名 = npz 文件名，断言一条都没放松：
+            # 行数断言用的就是这份被字节校验过的 test 数组。`.npz` 后缀限定是必要的：
+            # OpenPoly 的记录同样满足"split_ref 是目录 + 文件存在"，但它的折文件是 json。
+            # Tasks whose split is materialised locally with the task config's split_ref kept in the
+            # directory form (arch, D-57): load_split() demands a file while the A-5 verifier's
+            # deferred contract demands a directory. The fold comes from the record's own
+            # split_version file (already byte-checked above); the fold name is the npz file name.
+            # The .npz-suffix guard is required: OpenPoly records also satisfy "directory split_ref
+            # + existing file", but their fold files are json.
+            # No assertion is relaxed: the row-count check uses exactly this byte-checked test array.
+            import numpy as np
+
+            with np.load(split_path) as payload:
+                test_index = payload["test"].astype(np.int64)
+            fold_name = split_path.name[: -len(".npz")]
+            if fold_name == str(record.get("split_fold", "")):
+                return type("FoldSpec", (), {"name": fold_name, "test_index": test_index})(), problems
+            return None, [f"{name}: split_version 文件名 {fold_name} ≠ 记录的 split_fold {record.get('split_fold')!r}"]
         else:
             spec = cache.setdefault(task, L.load_split(task))
     except Exception as exc:  # load_split 的 AssemblyError 分支，统一收集

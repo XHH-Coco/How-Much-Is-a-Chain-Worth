@@ -1,0 +1,54 @@
+{
+  "run_id": "pb26_arch_transfer_ea__a2_conventional__fold_01__seed1",
+  "status": "ok",
+  "benchmark": "polybench26",
+  "task": "pb26_arch_transfer_ea",
+  "arm": "a2_conventional",
+  "learner": "xgboost",
+  "seed": 1,
+  "split_version": "956872e43e23@splits/polybench26/arch/seed_42/fold_01.npz",
+  "split_fold": "fold_01",
+  "config_hash": "sha256:fd4122165029a731bc3f97eb0ed63710857bb5cc4096b2297209239cbf5b87d8",
+  "n_train": 5182,
+  "n_test": 648,
+  "metrics": {
+    "r2": 0.9501081171770736,
+    "mae": 0.10210212830192854,
+    "rmse": 0.1586520816615463
+  },
+  "wall_clock_s": 8.52560649998486,
+  "device": "cpu",
+  "env_fingerprint": "results/env_fingerprints/env_core.json",
+  "predictions": "results/aggregate/predictions/pb26_arch_transfer_ea__a2_conventional__fold_01__seed1.parquet",
+  "hyperparams": {
+    "colsample_bytree": 0.4,
+    "learning_rate": 0.1,
+    "max_depth": 5,
+    "min_child_weight": 20,
+    "n_estimators": 600,
+    "reg_lambda": 10.0,
+    "subsample": 1.0
+  },
+  "pack_sha256": "sha256:fed6173b823ad37070d321ca9b072c97cda41b25aae6a1e7293be337045a76de",
+  "started_at": "2026-11-16T01:03:09+08:00",
+  "finished_at": "2026-11-16T01:03:18+08:00",
+  "notes": "classical arm; hyper-parameters chosen by Murcko-grouped CV inside the training rows only; test split never used for selection; interpreter Python 3.10.14 (D-40: packages match env_core.json, interpreter patch differs)",
+  "search_cv_r2": 0.9284251854,
+  "search_trials": 30,
+  "id_tier_metrics": {
+    "alternating": {
+      "r2": 0.969467786580783,
+      "mae": 0.08562627249800017,
+      "rmse": 0.11205751139851662
+    },
+    "homopolymer": {
+      "r2": 0.8462965600717616,
+      "mae": 0.37417639576679956,
+      "rmse": 0.48318246044730867
+    }
+  },
+  "id_tier_n": {
+    "alternating": 611,
+    "homopolymer": 37
+  }
+}

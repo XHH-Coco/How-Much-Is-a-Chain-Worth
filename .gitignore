@@ -22,6 +22,18 @@ data/external/*
 !generated/
 generated/*
 
+# ---- arch 划分：本地物化、不入库（同 generated/ 的理由，D-57）---------------
+# splits/polybench26/arch/seed_42/ 由 `python scripts/04_run_cpu.py arch --setup` 从
+# generated/shared_splits/ 物化，npz 与 manifest.json 随时可重建；run 记录的 split_version
+# 就是这些 npz 的字节哈希前缀，机器上有文件即可审计。入库的只有两份证据：
+# README.md（物化协议）与 PROVENANCE.json（物化脚本 sha256 + 上游 commit）。
+# splits/polybench26/arch/seed_42/ is materialised locally by `arch --setup` from
+# generated/shared_splits/; the npz files and manifest.json are re-derivable. Only the protocol
+# (README.md) and the provenance (script sha256 + upstream commit) are committed.
+splits/polybench26/arch/*
+!splits/polybench26/arch/README.md
+!splits/polybench26/arch/PROVENANCE.json
+
 # ---- 入库的"入口包"：C 组真读的那 19 MB（2026-11-13，D-38）---------------
 # 破例的理由不是"方便"，是"复现会卡住"：新组员要自己重下 653 MB，得先撞 figshare 的 403
 # （manifests/SOURCES.md 坑十）与 PMC 的工作量证明（坑二十五）；而 C 组真正读的只有这 19 MB。
@@ -149,3 +161,18 @@ scripts/_scratch/
 # results/aggregate/ <- computed Lambda / kappa tables
 # Note: do not add blanket '*.csv' or '*.json' rules. They would
 # silently drop exactly the files this repository exists to preserve.
+
+# ---- arch OOD 的行级 GTRC 派生产物（D-08）：留本地、哈希入清单 ----------------
+# 三样东西都含行级 GTRC 数据（polyVERSE EA 的 SMILES / 标签 / 摩尔分数），照 C-b 的
+# 先例（component_features/component_index 也不入库）不入库：holdout 合成 CSV、五折预测
+# 向量、逐组分预测 CSV。入库的是聚合与清单：arch_ood/*_metrics.json（逐折指标）、
+# arch_ood_ensemble.json（五折集成点值）、arch_transfer.csv（一 run 一行）、
+# data/manifests/arch_ood_artifacts_manifest.csv（这 45 份的逐份 sha256）。
+# D 要 bootstrap 区间时：本机跑 `python scripts/04_run_cpu.py arch --ood` 重建，或向 C-c 取件
+# 后按清单核 sha256。arch_ood/*.csv 只挡 CSV——同目录的 *_metrics.json 是聚合证据，照常入库。
+# Row-level GTRC-derived OOD artefacts stay local (D-08, same call as C-b's component table):
+# the holdout CSVs, the per-fold vectors and the per-component prediction CSVs. What enters the
+# repo are the aggregates plus the per-file sha256 manifest.
+results/aggregate/arch_component_preds/*
+results/aggregate/arch_ood/*.csv
+results/aggregate/arch_ood_vectors/*

@@ -1,39 +1,59 @@
-# 架构迁移实验（C-c-1/C-c-2）· 配置 v0（未冻结）
-# Architecture transfer experiment (C-c-1/C-c-2) - config v0 (not frozen yet)
+# 架构迁移实验（C-c-1/C-c-2）· 冻结配置 v1
+# Architecture transfer experiment (C-c-1/C-c-2) - frozen config v1
 #
-# 状态：**未冻结**。eval 段由 C-c 按 D-49 写成（2026-11-15：a2_conventional 单臂 15 runs）；
-# data 段已由 C-b 于 2026-11-15 补实（行数四条全对：6,478 / 6,110 / 368 / 36,828），
-# 双方核对行数后本文件才冻结（届时登记版本号与字节哈希，run 记录里按冻结规则引用）。
-# Status: NOT frozen. The eval section is written by C-c per D-49 (single a2_conventional arm,
-# 15 runs); the data section was filled by C-b on 2026-11-15 (all four row counts verified), and
-# only a joint row-count check freezes this file.
+# 冻结于 2026-11-16。**本文件的字节哈希就是这批 15 条记录的 `config_hash`**，所以跑之前改一个空格，
+# 已有的记录全部作废（resume 会按 config_hash 判重）。
+# Frozen on 2026-11-16. This file's byte hash is the `config_hash` of the 15 records, so editing a
+# single space before a run invalidates every record already on disk.
+#
+# v1 = v0（C-c 的 eval 段 + C-b 的 data 段）做三件事后冻结：
+#   ① 补 ArmConfig 要求的顶层节（learner / seeds / runs / device），形状照 scaling.yaml v1；
+#   ② data 段 train_rows 按 2026-11-16 本地物化产物改正：折 3/4 都是 5,183（C-b 原写折 3 为 5,182，
+#      与物化 manifest 不符——联合核对时发现并改正，已告知 C-b）；
+#   ③ 双方核对行数通过：canonical 6,478 = 6,110 + 368、holdout 36,828 = 18,414 + 18,414、
+#      组分 683/683 覆盖完备、组分特征 sha256 跨机器一致（fd7ed9af…）。
 #
 # 臂口径（D-49）：arch 只跑 a2_conventional 单臂 = 1 臂 × 5 折 × 3 种子 = 15 runs，全程 CPU。
 # D-39 的 a2+a5 作废（a5_chain 三条链输入在数据里不存在，D-47；主表已按 D-48 撤除 A5）。
 # 超参不另调：沿用 configs/arms/a2_conventional.yaml（冻结 v1）的 XGBoost 超参与搜索口径，
 # 不许在这份文件里重写一份——重写会让 config_hash 出现两种语义（D-35 ⑥ 的同一教训）。
+# `learner.params` 留空 = 从 results/aggregate/a2_best_params.csv 取 (pb26_arch_transfer_ea, xgboost)
+# 那一行（04_run_cpu.py arch --search 按 D-51 协议产出，登记 D-56）；缺行 train_one() 会报错。
 
 arm: a2_conventional
 experiment: arch_transfer
-version: "0.0"
-frozen_at: null
-owner: C-c（eval 段） / C-b（data 段）
-status: data_section_delivered_2026_11_15_pending_joint_check
+version: "1.0"
+frozen_at: "2026-11-16"
+owner: C-c
 
-# ---- eval 段：C-c 按 D-49 写 ----
-# Eval section written by C-c per D-49.
+# ---- 超参：与 A2 完全同一份冻结表，一个都不许重搜（D-51 协议，登记 D-56）----
+learner:
+  main: xgboost
+  params: {}                 # 空 = 从 results/aggregate/a2_best_params.csv 取 (pb26_arch_transfer_ea, xgboost)
+
+# ---- 网格：1 臂 × 5 折 × 3 种子 = 15 runs（D-49）----
+expected_runs: 15
+seeds: [0, 1, 2]
+runs:
+  polybench26:
+    folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
+    tasks:
+      - pb26_arch_transfer_ea
+
+# ---- 设备：全程 CPU（不占 B 的 GPU 队列；env 指纹 = env_core.json）----
+device:
+  prefer: cpu
+  note: 经典臂在 CPU 上跑；device 由脚本填成 "cpu"。
+
+# ---- eval 段：C-c 按 D-49 写（v0 起未变）----
 eval:
   task: pb26_arch_transfer_ea
   property: 电子亲和能 EA（架构迁移，机制实验，不进主表）
   n_labels: 6478                     # canonical：交替 6,110 + 均聚 368（官方 task4 README 核过）
   arms:
     - a2_conventional                # 单臂（D-49）；GNN 臂按母本 C-4"可选项"保留，B 代跑时再加
-  seeds: [0, 1, 2]
-  folds: [fold_00, fold_01, fold_02, fold_03, fold_04]
-  expected_runs: 15                  # 1 臂 × 5 折 × 3 种子
-  device: cpu                        # 全程 CPU，不占 B 的 GPU 队列；env 指纹 = env_core.json
   id_tiers:
-    # ID 两档分开报（交替 611 行 / 均聚 37 行 = 该折 test），不许合并成一个"ID"
+    # ID 两档分开报（交替 611 行 / 均聚 37 行 = 该折 test），不许合并成一个"ID"（验收①）
     alternating: 611
     homopolymer: 37
     aggregate: per_fold_mean_std     # ID 才允许按折汇总均值与总体标准差（D-09）
@@ -43,23 +63,22 @@ eval:
     protocol: official_three_stage
     coverage_assertion: required     # holdout 每个唯一 psmiles 在 component_index.csv 有且仅一行
     component_prediction: once_per_psmiles
-    synthesis: summarize_weighted_predictions.py   # 只走官方脚本，不许自己写加权
+    synthesis: summarize_weighted_predictions.py   # 只走官方脚本，不许自己写加权（验收②）
     reporting:
       no_t_test: true                # 五折 OOD RMSE 不得做 t 检验（折固定、不是独立重复，D-09）
       ensemble_point_values: true    # 五折向量 → 按聚合物取平均 → random/block/combined 各一个点值
       id_only_fold_summary: true
-    official_floors:                 # 与官方地板的差写进 arch_transfer.csv 备注
+    official_floors:                 # 与官方地板的差写进 arch_transfer.csv 备注（验收⑤）
       random: 0.536
       block: 0.581
       combined: 0.559
   expected_ordering: block > random > alternating > homopolymer
   ordering_note: 排序不成立就照实写（登记 D-xx 并由 D 在结论里说），不许重调超参再试。
 
-# ---- data 段：C-b 占位（11-16 交付后补实，行数以物化产物为准）----
-# Data section: C-b's placeholder. Fill on 11-16; row counts subject to materialized artifacts.
+# ---- data 段：C-b 2026-11-15 补实；C-c 2026-11-16 联合核对后改正 train_rows ----
 data:
-  owner: C-b
-  status: pending_delivery_2026_11_16
+  owner: C-b（补实）/ C-c（联合核对）
+  status: joint_check_passed_2026_11_16
   canonical:
     path: generated/shared_splits/canonical_train.csv   # 官方 task4 物化产物（seed 42，不入库）
     rows: 6478
@@ -70,20 +89,31 @@ data:
     source_commit: 83655bc25901a8cabe3a1e5474b7ec26f01b919f
   folds:                                  # 五折 = PSMILES 分组 80/10/10，seed 42
     names: [fold_00, fold_01, fold_02, fold_03, fold_04]
-    train_rows: [5182, 5182, 5182, 5182, 5183]
-    val_fraction: 0.10
+    train_rows: [5182, 5182, 5182, 5183, 5183]   # 2026-11-16 按物化 manifest 改正（折 3 原写 5,182）
+    val_rows: [648, 648, 648, 647, 647]
+    test_rows: [648, 648, 648, 648, 648]         # 每折 = 交替 611 + 均聚 37
     in_distribution_test_fraction: 0.10
   component_features:
     path: data/processed/arch/component_features.parquet
     index: data/processed/arch/component_index.csv   # psmiles → feature_row（含 feature_sha256）
     failures: data/processed/arch/component_failures.csv
-    status: delivered_2026_11_15
+    status: verified_2026_11_16
     rows: 683
     columns: 2253                                # 205 描述符 + 2048 位指纹（列序与 A-6/B-1 逐列相同）
     n_nan_cells: 5464
     features_sha256: fd7ed9af9c8fd477c4cf5f313454f147578e10a61a36127d1af546ede3071dd9
     coverage: complete                           # holdout 683 个唯一组分，索引 683 行，missing 0 / duplicated 0
     assert_with: python scripts/00d_arch_components.py --verify
+  id_features:                                  # C-c 造：15 runs 的 X，列序与组分表逐列相同（规则 2）
+    path: data/processed/arch/id_features.parquet
+    manifest: data/manifests/arch_id_manifest.json
+    rows: 6478
+    columns: 2253
+    note: 官方 fold 目录的 RDKit_descriptors **不用**（那是官方地板口径，不是主表特征口径）
+  splits:
+    path: splits/polybench26/arch/seed_42/       # 本地物化、不入库；PROVENANCE.json 记脚本 sha256 + commit
+    format: polybench26_manifest_plus_npz        # 与 _polybench26_split 同一格式，由本模块 _load_arch_split() 读
+    task_config: configs/tasks/pb26_arch_transfer_ea.yaml v3（D-49 冻结；D-57：present+文件会弄红 A-5 的 test_splits.py，故保持 v3 一个字节不动）
   ood_holdout:
     path: generated/shared_splits/architecture_holdout.csv
     rows: 36828
@@ -106,15 +136,12 @@ data:
     context: >-
       官方地板复现是"物化没做错"的凭据：OOD 五折集成与官方差 ≤ 7e-4（报警线是 0.1）。
       它不是 C-c 的参比数——C-c 的 a2_conventional 结果要自己跑出来，只是可以先确认地基没歪。
-  note: >-
-    `data` 段已于 2026-11-15 由 C-b 补实（行数四条全对：6,478 / 6,110 / 368 / 36,828），
-    凭据在 `docs/Arch Materialization.md`；按本文件头的约定，**双方核对行数后本文件才冻结**，
-    故 `frozen_at` 仍为 null，`version` 未升。
 
 # ---- 记录 ----
 records:
   raw_runs: results/raw_runs
   predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
   arch_table: results/aggregate/arch_transfer.csv
   component_preds: results/aggregate/arch_component_preds
   ood_dir: results/aggregate/arch_ood
