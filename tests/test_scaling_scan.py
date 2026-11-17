@@ -214,11 +214,27 @@ def test_shuffle_rule_would_break_the_official_tier() -> None:
 def test_packs_are_built_from_the_official_canonical_bytes() -> None:
     """pack 清单里的 `canonical_sha256` 必须等于官方 manifest 的那一串（D-21）。
     The pack manifest's canonical_sha256 must equal the official one (D-21).
+
+    中文：
+        用途：核**输入**（canonical 哈希、行数）与**产物身份**（`pack_sha256`）。三条规则：
+              ① 输入不符 = 红（没有讨论空间）；② pack 不在盘上 = skip，并给出重建命令——
+                 它是 `--build-only` 的产物，不入库，干净克隆上本来就没有；③ 盘上哈希既不是
+                 `pack_sha256` 也不是 `pack_sha256_rebuilt` = 红。
+              为什么要有 ③ 的第二项：交替 Cp 的 pack 在另一台机器上重造得到的是
+              `60d27d55…`，而记录的身份是 `38047fcf…`（D-59）。清单把两者分开记，读的人
+              才知道自己拿的是第二版，而不是"哈希对上了"。
+    English:
+        Checks the input (canonical hash, rows) and the pack identity. Input mismatch is red; an
+        absent pack is a skip with the rebuild command (it is a --build-only artifact and is not
+        committed); a digest that is neither the identity nor the recorded rebuild is red. The
+        second accepted value exists because the alternating pack rebuilds to a different digest on
+        another host (D-59) - recording both keeps "it matched" from being a false statement.
     """
     if not PACK_MANIFEST.is_file():
         pytest.skip("还没有 scaling_features_manifest.csv（先跑 scaling --build）")
     with PACK_MANIFEST.open("r", encoding="utf-8", newline="") as handle:
         rows = {row["dataset_id"]: row for row in csv.DictReader(handle)}
+    missing: list[str] = []
     for dataset_id in DATASETS:
         if dataset_id not in rows:
             pytest.skip(f"{dataset_id} 的 pack 还没造")
@@ -226,8 +242,52 @@ def test_packs_are_built_from_the_official_canonical_bytes() -> None:
         assert rows[dataset_id]["canonical_sha256"] == official
         assert int(rows[dataset_id]["n_rows"]) == int(_manifest(dataset_id)["n_rows"])
         pack = REPO / "data" / "processed" / "features" / f"pb26_scaling_cp_{dataset_id}.npz"
-        assert pack.is_file(), "清单说有 pack，盘上没有：清单过期了"
-        assert _sha256(pack) == rows[dataset_id]["pack_sha256"]
+        if not pack.is_file():
+            missing.append(f"{dataset_id}（{pack.relative_to(REPO).as_posix()}）")
+            continue
+        identity = rows[dataset_id]["pack_sha256"]
+        rebuilt = (rows[dataset_id].get("pack_sha256_rebuilt") or "").strip()
+        reproducibility = (rows[dataset_id].get("reproducibility") or "").strip()
+        actual = _sha256(pack)
+        if actual == identity:
+            continue
+        assert rebuilt, (
+            f"{dataset_id}: 盘上 pack {actual[:12]}… 与清单身份 {identity[:12]}… 不符，"
+            "而清单没有登记任何重造值——要么文件被改过，要么清单过期"
+        )
+        assert reproducibility == "host_sensitive", (
+            f"{dataset_id}: 清单登记了重造值，却没把 reproducibility 标成 host_sensitive"
+        )
+        assert actual == rebuilt, (
+            f"{dataset_id}: 盘上 pack {actual[:12]}… 既非身份 {identity[:12]}… 也非登记的重造值 "
+            f"{rebuilt[:12]}…"
+        )
+    if missing:
+        pytest.skip(
+            "以下 pack 未在本地物化（`--build-only` 产物，D-38 不入库）："
+            + "、".join(missing)
+            + "\n重建：python scripts/04_run_cpu.py scaling --build-only"
+        )
+
+
+def test_pack_manifest_records_the_descriptor_provenance() -> None:
+    """清单必须记描述符实现指纹：只记"rdkit 版本号"不足以判定两次造包是同一套实现（D-59）。
+    The manifest must carry the descriptor provenance: a version string alone cannot prove that two
+    builds used the same implementation (D-59).
+    """
+    if not PACK_MANIFEST.is_file():
+        pytest.skip("还没有 scaling_features_manifest.csv（先跑 scaling --build）")
+    with PACK_MANIFEST.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows, "清单是空的"
+    for row in rows:
+        assert row.get("rdkit_version"), f"{row['dataset_id']}: 缺 rdkit_version"
+        assert len(row.get("descriptor_code_sha256") or "") == 64, (
+            f"{row['dataset_id']}: descriptor_code_sha256 不是 sha256"
+        )
+        assert (row.get("reproducibility") or "") in {"first_build", "exact", "host_sensitive"}, (
+            f"{row['dataset_id']}: reproducibility={row.get('reproducibility')!r} 不在枚举内"
+        )
 
 
 def test_table_rows_reproduce_the_records() -> None:

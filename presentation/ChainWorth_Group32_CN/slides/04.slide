@@ -1,0 +1,37 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>03 · 研究问题</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        一个问题，以及它为什么值得干净地检验一次
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ marginTop: 26, padding: '22px 26px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 25, color: '#FFFFFF', lineHeight: 1.55 }}>
+            如果把一整条链压缩成一个重复单元，还有多少性质方差变得无法解释 ——
+            而这个比例在数据涨十倍之后会缩小吗？
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 30 }}>
+        {[
+            ['01', '它给十年的数据积累换一个读法', '如果 Λ 为正、κ 近零，那么这个领域买到的是分布内的插值精度，而不是链的物理。'],
+            ['02', '这不是抽样噪声的故事', '数据涨十倍之后仍然存在的缺口，更像「缺一个坐标」。多给数据是错的解药 —— 这个主张值得被攻击。'],
+            ['03', '用现有的东西就能判定', '每个「任务 × 臂」格一个 Λ，每个数据集一个斜率。不需要新测量、新合成，只要公开基准与冻结划分。'],
+        ].map(([idx, head, body]) => (
+            <Box key={idx} style={{ flex: 1, flexDirection: 'column' }}>
+                <Text style={{ fontSize: 13, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 1.6 }}>{idx}</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, lineHeight: 1.4 }}>{head}</Text>
+                <Text style={{ fontSize: 14, color: '#A8B8CE', marginTop: 10, lineHeight: 1.7 }}>{body}</Text>
+            </Box>
+        ))}
+    </Box>
+
+    <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 24 }}>
+        课程的四个题目都不覆盖有机与高分子材料 —— 而高分子是按产量计最大的材料类别。
+    </Text>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>4 / 17</Text>
+    </Box>
+</Slide>

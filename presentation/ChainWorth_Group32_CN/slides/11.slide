@@ -1,0 +1,73 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · 结果（4/6）—— H2</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        κ 为负 —— 但 Λ 从未减半
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 18 }}>
+        <Box style={{ width: 640, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.2, fontWeight: 'bold' }}>
+                交替共聚物 · Λ 对训练行数（五折）
+            </Text>
+            <Chart
+                style={{ width: 640, height: 300, marginTop: 6 }}
+                chartType='lineChart'
+                colors={['#4D8DFF']}
+                background='#0E1728'
+                showLegend={false}
+                showDataLabels={true}
+                axisColor='#8FA3BC'
+                dataLabelColor='#FFFFFF'
+                data={[
+                    ['训练行数', 'Λ'],
+                    ['300', 0.2946],
+                    ['1,000', 0.5029],
+                    ['3,000', 0.3675],
+                    ['10,000', 0.2785],
+                    ['all 22,242', 0.1915],
+                ]}
+            />
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 14 }}>
+            <Box style={{ flexDirection: 'column' }}>
+                <Text style={{ fontSize: 44, fontWeight: 'bold', color: '#FF6B6B', lineHeight: 1.05 }}>−0.0863</Text>
+                <Text style={{ fontSize: 13, color: '#8FA3BC', marginTop: 4 }}>κ，95% 区间 [−0.1053, −0.0672] —— 整段在 0 以下</Text>
+            </Box>
+            <Box style={{ flexDirection: 'column' }}>
+                <Text style={{ fontSize: 44, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>0.650</Text>
+                <Text style={{ fontSize: 13, color: '#8FA3BC', marginTop: 4 }}>最大 n 处的 Λ ÷ 最小 n 处的 Λ —— 要 &lt; 0.5 才算减半</Text>
+            </Box>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.75, marginTop: 2 }}>
+                H2 需要<span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>两个条件同时</span>成立：κ 显著为负、且 Λ 减半。
+                第一条成立，第二条不成立 —— 所以 H2 <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>没有被推翻</span>，也没有被证实。
+            </Text>
+            <Text style={{ fontSize: 13, color: '#A8B8CE', lineHeight: 1.7 }}>
+                形状是驼峰不是直线：+0.295 → +0.503 → +0.192。单一斜率掩盖了第一步是上升的。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 24, marginTop: 'auto' }}>
+        {[
+            ['预注册', '−0.086 / 0.650', '全部档位，以最小档为起点'],
+            ['去掉最小档', '−0.224', '符号不变：[−0.241, −0.205]'],
+            ['只用分母 ≥ 0.05 的两档', '+0.398', '符号翻转'],
+            ['起点改取峰值（事后）', '0.380', '会推翻；不采用'],
+        ].map(([label, value, note]) => (
+            <Box key={label} style={{ flex: 1, flexDirection: 'column', padding: '10px 14px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 4 }}>
+                <Text style={{ fontSize: 10, color: '#7E93AE', letterSpacing: 0.8 }}>{label}</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginTop: 4, lineHeight: 1.2 }}>{value}</Text>
+                <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 3, lineHeight: 1.45 }}>{note}</Text>
+            </Box>
+        ))}
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>
+            kappa.csv · 均聚物不报斜率（顶上两档只隔 0.158 dex）；它的端点差是 +0.647，没有区间。
+        </Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>11 / 17</Text>
+    </Box>
+</Slide>

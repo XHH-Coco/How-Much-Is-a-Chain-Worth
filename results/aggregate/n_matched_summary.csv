@@ -1,0 +1,3 @@
+n_level,n_tier1,n_tier2,lambda_tier1,lambda_tier2,delta,delta_lo,delta_hi,n_points_tier1,n_points_tier2,verdict,note
+497,2,1,-0.040878,-0.007864,-0.033014,-0.042331,-0.023697,2,1,tier1_lower,
+723,2,1,-0.103589,-0.016321,-0.087267,-0.152708,-0.021827,2,1,tier1_lower,

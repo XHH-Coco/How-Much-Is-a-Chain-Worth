@@ -1,0 +1,65 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>04 · 基准</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        三个基准，各承担一个假设
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Table
+        style={{ width: 1160, height: 172, marginTop: 22 }}
+        defaultTextStyle={{ fontSize: 14, textAlign: 'left', color: '#C3D0E2' }}
+        defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
+        cells={[
+            [
+                { text: '基准', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+                { text: '本文用到的任务', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+                { text: '评估协议', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+                { text: '承担', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+            ],
+            [
+                { text: 'PolyBench', textStyle: { bold: true, color: '#4D8DFF' } },
+                '6 个主表任务：Tg、Tm、模量、渗透率、介电损耗、IWLT',
+                '固定 70/30 划分 × 3 个模型种子',
+                { text: 'H1', textStyle: { bold: true, color: '#FFFFFF' } },
+            ],
+            ['PolyBench26', '2 个任务（PolyMetriX Tg、均聚物密度）+ 官方架构迁移', '官方 5 折，seed 42',
+                { text: 'H2、H1 架构子句', textStyle: { bold: true, color: '#FFFFFF' } }],
+            ['OpenPoly', '3 个性质：Tg、Tm、介电常数', '自建 5 折 × 3 种子 × 5 档（30 / 60 / 120 / 240 / all）',
+                { text: 'H3、H4', textStyle: { bold: true, color: '#FFFFFF' } }],
+        ]}
+    />
+
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 24 }}>
+        <Box style={{ width: 470, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.4, fontWeight: 'bold' }}>POLYBENCH 自己的三层划分</Text>
+            <Table
+                style={{ width: 470, height: 132, marginTop: 10 }}
+                defaultTextStyle={{ fontSize: 13, textAlign: 'left', color: '#C3D0E2' }}
+                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
+                cells={[
+                    ['层号', '任务', '标注行数'],
+                    ['1', 'Tg、Tm', '8,055 / 3,796'],
+                    ['2', '模量、渗透率', '1,034 / 711'],
+                    ['3', '介电损耗、IWLT', '279 / 228'],
+                ]}
+            />
+        </Box>
+        <Box style={{ flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 14 }}>
+            <Text style={{ fontSize: 15, color: '#FFB020', lineHeight: 1.7 }}>
+                层号与样本量反向：ρ(层号, log10 n) = −0.956。
+            </Text>
+            <Text style={{ fontSize: 14, color: '#A8B8CE', lineHeight: 1.75 }}>
+                所以一个层号同时代理了两件事 ——「需要链信息」与「数据少 30 倍」。这个混淆在介绍分层的那一页就说清，
+                不等讨论时才发现。
+            </Text>
+            <Text style={{ fontSize: 13, color: '#7E93AE', lineHeight: 1.7 }}>
+                规则 R1：一个假设只在一个基准内裁决。不同行的数字从不互相比较。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>5 / 17</Text>
+    </Box>
+</Slide>

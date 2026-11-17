@@ -1,0 +1,79 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · 结果（2/6）—— H1</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        H1 被证伪 —— 而这是由单个不可判点造成的
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 20 }}>
+        <Box style={{ width: 660, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.2, fontWeight: 'bold' }}>
+                去掉一个任务后的秩相关（A3 臂）
+            </Text>
+            <svg width='660' height='330' viewBox='0 0 660 330'>
+                <line x1='410' y1='8' x2='410' y2='316' stroke='#33445F' strokeWidth='1' />
+                <line x1='235' y1='8' x2='235' y2='316' stroke='#FFB020' strokeWidth='1' strokeDasharray='4 4' opacity='0.55' />
+                <line x1='585' y1='8' x2='585' y2='316' stroke='#FFB020' strokeWidth='1' strokeDasharray='4 4' opacity='0.55' />
+                <text x='235' y='322' fill='#FFB020' fontSize='11' textAnchor='middle' opacity='0.85'>−0.5</text>
+                <text x='585' y='322' fill='#FFB020' fontSize='11' textAnchor='middle' opacity='0.85'>+0.5</text>
+
+                <text x='185' y='30' fill='#A8B8CE' fontSize='12' textAnchor='end'>去掉 pb_t1_tg</text>
+                <rect x='410' y='18' width='55' height='16' fill='#3E5A82' />
+                <text x='475' y='30' fill='#A8B8CE' fontSize='12'>+0.158</text>
+
+                <text x='185' y='76' fill='#A8B8CE' fontSize='12' textAnchor='end'>去掉 pb_t1_tm</text>
+                <rect x='355' y='64' width='55' height='16' fill='#3E5A82' />
+                <text x='345' y='76' fill='#A8B8CE' fontSize='12' textAnchor='end'>−0.158</text>
+
+                <text x='185' y='122' fill='#A8B8CE' fontSize='12' textAnchor='end'>去掉 pb_t2_modulus</text>
+                <rect x='410' y='110' width='2' height='16' fill='#3E5A82' />
+                <text x='422' y='122' fill='#A8B8CE' fontSize='12'>0.000</text>
+
+                <text x='185' y='168' fill='#A8B8CE' fontSize='12' textAnchor='end'>去掉 pb_t2_permeability</text>
+                <rect x='410' y='156' width='2' height='16' fill='#3E5A82' />
+                <text x='422' y='168' fill='#A8B8CE' fontSize='12'>0.000</text>
+
+                <text x='185' y='214' fill='#FFFFFF' fontSize='12' textAnchor='end' fontWeight='bold'>去掉 pb_t3_dielectric_loss</text>
+                <rect x='410' y='202' width='184' height='16' fill='#FFB020' />
+                <text x='602' y='214' fill='#FFB020' fontSize='12' fontWeight='bold'>+0.527</text>
+
+                <text x='185' y='260' fill='#A8B8CE' fontSize='12' textAnchor='end'>去掉 pb_t3_iwlt</text>
+                <rect x='225' y='248' width='185' height='16' fill='#3E5A82' />
+                <text x='215' y='260' fill='#A8B8CE' fontSize='12' textAnchor='end'>−0.527</text>
+            </svg>
+            <Text style={{ fontSize: 12, color: '#7E93AE', lineHeight: 1.6 }}>
+                虚线是 ±0.5 门槛。只有删掉一个任务能把 |ρ| 推过门槛 —— 所以判定挂在单个任务上。
+            </Text>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 14 }}>
+            <Box style={{ flexDirection: 'row', gap: 28 }}>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FF6B6B', lineHeight: 1.05 }}>+0.000</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4 }}>ρ，A3 臂</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FF6B6B', lineHeight: 1.05 }}>+0.239</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4 }}>ρ，A4 臂</Text>
+                </Box>
+            </Box>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.7 }}>
+                两条臂还各自有 <span style={{ color: '#FFB020', fontWeight: 'bold' }}>两处跨层倒序</span>。任一条件单独就足以证伪 H1。
+            </Text>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.7 }}>
+                四处倒序每一处都含 <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>pb_t3_dielectric_loss</span> —— 279 行、bootstrap 区间宽 2.19、A3 的 R² 是 −0.009，比预测均值还差。
+            </Text>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.7 }}>
+                去掉它，ρ 变成 +0.527 / +0.949，判定翻成「未被证伪」。这个删除不做：看到结果再选分析，正是预注册要防的那件事。
+            </Text>
+            <Text style={{ fontSize: 14, color: '#FFB020', lineHeight: 1.7 }}>
+                所以：按预注册是「被证伪」，但证伪由一个我们判不了的点驱动 —— 这是「没有能力检验」，不是「检验了没通过」。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>h1_ordering.csv · leave-one-task-out 行，A3 臂</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>9 / 17</Text>
+    </Box>
+</Slide>

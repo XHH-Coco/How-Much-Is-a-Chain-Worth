@@ -193,6 +193,44 @@ tests/test_run_records.py
 
 ---
 
+## 3.5 跨人交付接口（2026-11-17 补，D-62 / D-64 的教训）
+
+三个人之间出过三件事，看起来无关，其实是同一个缺口——**没人定义"我交什么、什么格式、对方怎么验"**：
+
+1. C-c 拿不到 C-b 的两份 scaling pack，只能自己重造，于是发现哈希对不上（D-59）；
+2. D 拿不到 C-c 的 45 份行级产物，"清单说留本地"变成了"谁也不知道在哪台机器"（D-62）；
+3. `index` 把 arch 的 15 条吞进主表索引，96 变 111 且不报错（D-61）。
+
+所以从这份分工起，**任何跨人交付都必须带三样东西**，缺一样就算没交：
+
+| 交付物 | 给谁 | 必备三样 | 验收命令 |
+|:--|:--|:--|:--|
+| 主表 32 格 | D | `main_table.csv` + `run_ids` 可点回 + 每格 `n_runs` | 逐格重算均值/样本标准差（C 组验收做的那一步） |
+| 主表索引 96 条 | C-c | `a1_a2_index.csv` + 任务×臂白名单 + 期望条数 | `04_run_cpu.py index --dry-run` 必须打印 96 |
+| scaling pack（20.2 MB） | 全体 | npz + `scaling_features_manifest.csv`（含 `pack_sha256`/`pack_sha256_rebuilt`/`reproducibility`/`rdkit_version`/`descriptor_code_sha256`）+ 重建命令 | `scaling --build-only`；`test_scaling_scan.py` 三路判定 |
+| arch 行级产物 45 份 | D | 文件 + `arch_ood_artifacts_manifest.csv`（`path,sha256,size_bytes,committed,where,created_at,deletable_after`）+ 重建命令 | `04_run_cpu.py arch --verify-ood` |
+| 官方地板 | C-c / D | `arch_floor_summary.json` + 复现差与容差 | `test_arch_transfer.py::test_official_floors_recorded` |
+| 成本 | D | `cost_summary.csv`（按 `device`+`arm`）+ OOD 单列 | `05b_report_tables.py cost` |
+
+**清单的六个字段是硬要求**：`path`、`sha256`、`size_bytes`、`committed`、`where`（哪台机器）、
+`deletable_after`（什么时候可以删）。前四个证明"东西是对的"，后两个证明"**东西找得到、也知道何时能扔**"。
+只有前四个的清单，就是 D-62 那个困境。
+
+**期望条数必须写成断言，不许写在正文里**：`96`、`32`、`192`、`922` 这些数各有一处唯一出处
+（`main_table.yaml`、`main_table.csv`、`Audit Log`），其余地方只许引用。写错一个数不会报错，
+只有对着 `ls results/raw_runs/*.json | wc -l` 才会发现。
+
+### 冻结物的变更窗口（2026-11-17 补）
+
+`environment/*.yml`、`lock/*`、`splits/`、`configs/` 是冻结物，**但冻结不等于不改**。问题是以前的改法是
+"谁需要谁单点请示"，结果 `main_table.yaml` 的 `cell` 段和 Q-10 各自悬空了两轮（D-61 / D-63）。
+
+规则改成：**每批验收结束后 24 小时内开一次变更窗口**，把这一批攒下的冻结物修订**一次收完**并升版本号
+（`v2 → v3`），窗口外只接受"会导致错误结论"的紧急修订（如 Q-10 的方向反转）。这样每张冻结表一次只跳
+一个版本，`config_hash` 作废的记录也一次算清，不用每次改一条就重算影响面。
+
+---
+
 ## 4. 没有 GPU 怎么办
 
 **你一项都不需要 GPU。** 505 次拟合全在 CPU 上，一台普通笔记本就能跑完：

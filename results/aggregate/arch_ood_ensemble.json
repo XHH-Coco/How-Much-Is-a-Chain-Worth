@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-16T00:46:36+08:00",
+  "generated_at": "2026-11-17T20:19:50+08:00",
   "task": "pb26_arch_transfer_ea",
   "arm": "a2_conventional",
   "protocol": "5-fold per-polymer averaged ensemble; fold-level OOD metrics are NOT independent replicates (fixed holdout), no t-test was computed (D-09)",
@@ -96,5 +96,25 @@
       },
       "folds_averaged": 5
     }
-  }
+  },
+  "refit_matches_id": {
+    "pb26_arch_transfer_ea__a2_conventional__fold_00__seed0": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_00__seed1": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_00__seed2": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_01__seed0": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_01__seed1": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_01__seed2": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_02__seed0": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_02__seed1": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_02__seed2": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_03__seed0": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_03__seed1": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_03__seed2": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_04__seed0": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_04__seed1": true,
+    "pb26_arch_transfer_ea__a2_conventional__fold_04__seed2": true
+  },
+  "refit_all_match": true,
+  "ood_wall_clock_s": 190.702,
+  "ood_audit_path": "results/aggregate/arch_ood_audit.json"
 }

@@ -1,0 +1,3 @@
+dataset,dropped_tier,n_levels_before,n_levels_after,span_dex_after,slope_status_after,kappa_base,kappa_dropped,delta,lo_dropped,hi_dropped,sign_flipped,verdict_dropped,note
+md5000_alternating_cp,300,5,4,1.3472,ok,-0.086314,-0.223777,-0.137463,-0.241489,-0.205389,false,kappa_negative,符号不翻转
+md5000_homopolymer_cp,300,3,2,0.1584,no_slope_span,,,,,,false,no_slope,删掉最小档后不再满足拟合门槛（D-3 ④），无法比较

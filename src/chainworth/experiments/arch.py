@@ -33,6 +33,7 @@ import csv
 import hashlib
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -343,6 +344,8 @@ COMPONENT_PREDS_DIR = REPO_ROOT / "results" / "aggregate" / "arch_component_pred
 OOD_DIR = REPO_ROOT / "results" / "aggregate" / "arch_ood"
 OOD_VECTORS_DIR = REPO_ROOT / "results" / "aggregate" / "arch_ood_vectors"
 OOD_ENSEMBLE_PATH = REPO_ROOT / "results" / "aggregate" / "arch_ood_ensemble.json"
+OOD_AUDIT_PATH = REPO_ROOT / "results" / "aggregate" / "arch_ood_audit.json"
+OOD_MANIFEST_PATH = REPO_ROOT / "data" / "manifests" / "arch_ood_artifacts_manifest.csv"
 SUMMARIZE_SCRIPT = (
     REPO_ROOT / "data" / "raw" / "polybench26" / "Datasets" / "task4_architecture_transfer"
     / "summarize_weighted_predictions.py"
@@ -955,9 +958,23 @@ def run_ood(
     fold_list = list(folds) if folds else [entry["name"] for entry in _split_fold_names()]
     seed_list = [int(seed) for seed in (seeds if seeds is not None else config.raw.get("seeds") or [0])]
     summaries: list[dict[str, Any]] = []
+    # OOD 是这份分工里最重的一步（15 次重拟合 + 683 组分预测 + 45 万行官方合成），但它**不写
+    # run 记录**，所以 `gpu_hours.csv` 里没有它（那张表一次 run 一行）。墙钟记在这里的
+    # `arch_ood_audit.json`，由 `05b_cost_report.py` 并入总账（D-60）。
+    # OOD is the heaviest step here but writes no run record, so it has no row in gpu_hours.csv
+    # (one row per run). Its wall clock lands in arch_ood_audit.json and the cost report adds it.
+    previous_audit = {}
+    if OOD_AUDIT_PATH.is_file():
+        try:
+            previous_audit = json.loads(OOD_AUDIT_PATH.read_text(encoding="utf-8")) or {}
+        except json.JSONDecodeError:
+            previous_audit = {}
+    known_refit: dict[str, Any] = dict(previous_audit.get("refit_matches_id") or {})
+    seconds: dict[str, float] = {}
     for fold in fold_list:
         for seed in seed_list:
             run_id = G.RunKey(task=TASK_ID, benchmark="polybench26", fold=fold, seed=seed, arm=ARM).run_id()
+            clock = time.perf_counter()
             if resume and (OOD_DIR / f"{run_id}_metrics.json").is_file() and (
                 OOD_VECTORS_DIR / f"{run_id}.parquet"
             ).is_file():
@@ -974,8 +991,58 @@ def run_ood(
             summary = synthesize_ood(run_id, component_csv=csv_path)
             summary["refit_matches_id"] = refit["refit_matches_id"]
             summary["search_cv_r2"] = search_info["cv_score"]
+            known_refit[run_id] = bool(refit["refit_matches_id"])
             summaries.append(summary)
+            seconds[run_id] = time.perf_counter() - clock
+    _write_ood_audit(summaries, known_refit, seconds)
     return summaries
+
+
+def _write_ood_audit(
+    summaries: Sequence[Mapping[str, Any]],
+    refit: Mapping[str, Any],
+    seconds: Mapping[str, float],
+) -> Path | None:
+    """把 OOD 阶段的两件"只在内存里"的事实落盘：重拟合一致性 + 墙钟。
+    Persist the two facts that used to live only in memory: refit identity and wall clock.
+
+    中文：
+        用途：`refit_matches_id` 是"重拟合出来的模型与落盘 ID 预测逐位相同"的证据，原来是
+              `component_predictions()` 的局部变量，进程一退就无法核对；OOD 的墙钟同样不落
+              run 记录。两者写进 `arch_ood_audit.json`，`ensemble_ood()` 再引用一次，
+              这样"15 条全部一致"与"OOD 花了多久"两句话都能被第三方复核（D-60）。
+        输入：summaries；refit —— run_id → bool；seconds —— run_id → 秒。
+        输出：写出的路径（没有跑任何 run 时返回 None）。副作用：写一个 JSON。
+    English:
+        refit_matches_id is the evidence that the re-fitted model reproduces the stored ID
+        predictions bit for bit; it used to be a local variable and vanished with the process, and
+        the OOD wall clock never reached any ledger. Both land here so a third party can check
+        "all 15 identical" and "how long OOD took" (D-60).
+    """
+    if not seconds and not summaries:
+        return None
+    payload = {
+        "generated_at": _now_iso(),
+        "task": TASK_ID,
+        "arm": ARM,
+        "n_runs": len(summaries),
+        "n_runs_timed": len(seconds),
+        "wall_clock_s_total": round(float(sum(seconds.values())), 3),
+        "wall_clock_s_per_run": {key: round(float(value), 3) for key, value in sorted(seconds.items())},
+        "refit_matches_id": {key: refit[key] for key in sorted(refit) if refit[key] is not None},
+        "refit_all_match": bool(refit) and all(value is True for value in refit.values()),
+        "note": (
+            "OOD 阶段（重拟合 + 683 组分预测 + 官方合成）不写 run 记录，故不在 gpu_hours.csv；"
+            "墙钟以本文件为准，由 05b_cost_report.py 并入总账（D-60）。"
+            "`refit_matches_id` 只覆盖本次真正重拟合过的 run——resume 命中的 run 不重算，"
+            "沿用上一次记录的结论。"
+        ),
+    }
+    OOD_AUDIT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    OOD_AUDIT_PATH.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
+    )
+    return OOD_AUDIT_PATH
 
 
 def _split_fold_names() -> list[dict[str, str]]:
@@ -1012,6 +1079,22 @@ def ensemble_ood(config: Any, *, seeds: Sequence[int] | None = None) -> dict[str
             if not path.is_file():
                 raise FileNotFoundError(f"缺 {path.relative_to(REPO_ROOT).as_posix()}：先跑 OOD 三段式")
             vectors.append(pd.read_parquet(path))
+        # 五个折级向量必须**逐行对得上**才能按位置求平均：官方合成脚本的输出顺序依赖输入顺序，
+        # 一旦某折的行序不同，`np.mean(axis=0)` 会把 A 聚合物算到 B 的预测上，**不报错**、
+        # 数字看起来还合理（与 D-37 同类的静默错误）。行序断言放在求均值之前（D-60）。
+        # The five fold-level vectors must line up row by row before a positional mean: the official
+        # synthesis script's output order follows its input order, so one reordered fold would let
+        # np.mean(axis=0) average polymer A's prediction into polymer B - silently, and the numbers
+        # still look plausible (the D-37 failure class). Assert the order before averaging (D-60).
+        base_index = vectors[0]["holdout_row_index"].to_numpy()
+        for position, vector in enumerate(vectors[1:], start=1):
+            other = vector["holdout_row_index"].to_numpy()
+            if other.shape != base_index.shape or not np.array_equal(other, base_index):
+                mismatch = int(np.flatnonzero(other != base_index)[0]) if other.shape == base_index.shape else -1
+                raise RuntimeError(
+                    f"seed {seed} 的第 {position} 折行序与第 0 折不一致（首个差异位置 {mismatch}）："
+                    "按位置求平均会串行，拒绝集成"
+                )
         merged = vectors[0][["holdout_row_index", "architecture", "electron_affinity"]].copy()
         merged["prediction"] = np.mean([vector["prediction"].to_numpy() for vector in vectors], axis=0)
         points: dict[str, Any] = {}
@@ -1030,6 +1113,12 @@ def ensemble_ood(config: Any, *, seeds: Sequence[int] | None = None) -> dict[str
                 points[architecture]["floor"] = float(floor)
                 points[architecture]["delta_vs_floor"] = float(points[architecture]["rmse"] - floor)
         per_seed[str(seed)] = {"ensemble_point_values": points, "folds_averaged": 5}
+    audit: dict[str, Any] = {}
+    if OOD_AUDIT_PATH.is_file():
+        try:
+            audit = json.loads(OOD_AUDIT_PATH.read_text(encoding="utf-8")) or {}
+        except json.JSONDecodeError:
+            audit = {}
     payload = {
         "generated_at": _now_iso(),
         "task": TASK_ID,
@@ -1038,11 +1127,88 @@ def ensemble_ood(config: Any, *, seeds: Sequence[int] | None = None) -> dict[str
         "replicates (fixed holdout), no t-test was computed (D-09)",
         "floors": floors,
         "seeds": per_seed,
+        # 这两项原先只活在内存里（`component_predictions()` 的局部变量）与日志里，第三方无从核对。
+        # 现在从 `arch_ood_audit.json` 引用；缺失时写 null + 说明，**不留空、也不编数**（D-60）。
+        # These two used to exist only in memory and in the log. They are cited from
+        # arch_ood_audit.json; when absent this writes null plus a note - never a blank, never a guess.
+        "refit_matches_id": audit.get("refit_matches_id") or None,
+        "refit_all_match": audit.get("refit_all_match"),
+        "ood_wall_clock_s": audit.get("wall_clock_s_total"),
+        "ood_audit_path": (
+            OOD_AUDIT_PATH.relative_to(REPO_ROOT).as_posix() if audit else None
+        ),
     }
+    if not audit:
+        payload["ood_audit_note"] = (
+            "缺 results/aggregate/arch_ood_audit.json：这份 JSON 由 `arch --ood` 在 D-60 之后写出。"
+            "旧版运行没有留下重拟合一致性与 OOD 墙钟，需在物化机上重跑一次 `--ood` 才能补上；"
+            "在此之前，这两项保持 null，不许用估计值填。"
+        )
     OOD_ENSEMBLE_PATH.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n"
     )
     return payload
+
+
+def verify_ood_artifacts(*, manifest_path: Path | None = None) -> dict[str, Any]:
+    """核 45 份行级产物：在不在、字节对不对、`where` 有没有登记（取件用）。
+    Verify the 45 row-level artifacts: present, byte-identical, and with a recorded host.
+
+    中文：
+        用途：这些产物 `committed: no`（D-08），清单里只有哈希。D 要算 OOD 的 bootstrap 区间就得
+              拿到它们，而"清单说留本地"并不等于"某个地方真有"。这条命令把三件事分开报：
+              ① 缺几份（→ 按 `reconstruct` 重建，或向 C-c 取件）；② 哈希不符几份（→ 文件被改过）；
+              ③ `where` 未登记几份（→ 交接链断在这里：不知道去哪台机器取）。
+              三者混成一个"红"就会重演 C-c 验收 §5.1 的困境（D-62）。
+        输入：manifest_path（默认 `data/manifests/arch_ood_artifacts_manifest.csv`）。
+        输出：计数 + 明细 + 重建命令。数据来源：清单与盘上文件。副作用：只读。
+        异常：清单不存在时抛 FileNotFoundError——清单本身是入库物，缺了就是仓库问题。
+    English:
+        These artifacts are committed: no (D-08) and the manifest only carries hashes, so "kept
+        locally" never proved that somewhere really has them. Three separate counts: missing
+        (rebuild or ask C-c), digest mismatch (the file was edited), and an unrecorded host (the
+        handoff chain breaks here). Merging them into one red light is exactly the C-c section 5.1
+        trap (D-62). Read-only; missing manifest raises.
+    """
+    target = Path(manifest_path) if manifest_path is not None else OOD_MANIFEST_PATH
+    if not target.is_file():
+        raise FileNotFoundError(f"缺 {target}：这张清单是入库物，缺了先查仓库，不要重跑覆盖")
+    with target.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    present = 0
+    missing: list[str] = []
+    mismatch: list[dict[str, str]] = []
+    unrecorded: list[str] = []
+    for row in rows:
+        rel = str(row.get("path", ""))
+        # `where` 与文件在不在是**两件事**：缺件要重建，缺机器名要人填。以前把 where 的检查放在
+        # "文件存在"之后，于是"45 份全缺 + 45 份 where 未登记"只报前一半（2026-11-17 实测撞到）。
+        # `where` and the file's presence are different findings: a missing file needs a rebuild, a
+        # missing host name needs a human. The check used to sit after the existence test, so
+        # "45 missing + 45 unrecorded" reported only the first half.
+        if str(row.get("where", "")).strip() in ("", "unrecorded"):
+            unrecorded.append(rel)
+        path = REPO_ROOT / rel
+        if not path.is_file():
+            missing.append(rel)
+            continue
+        present += 1
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        expected = str(row.get("sha256", ""))
+        if expected and actual != expected:
+            mismatch.append({"path": rel, "expected": expected, "actual": actual})
+    return {
+        "manifest": target.relative_to(REPO_ROOT).as_posix(),
+        "n_artifacts": len(rows),
+        "present": present,
+        "missing": missing,
+        "mismatch": mismatch,
+        "unrecorded_hosts": unrecorded,
+        "ok": not missing and not mismatch,
+        "reconstruct": (
+            "python scripts/04_run_cpu.py arch --setup && python scripts/04_run_cpu.py arch --ood"
+        ),
+    }
 
 
 def write_arch_table(records: Sequence[dict[str, Any]], *, ood_by_run: Mapping[str, dict[str, Any]] | None = None) -> Any:

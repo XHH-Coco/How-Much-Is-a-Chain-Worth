@@ -85,6 +85,10 @@ MANIFEST_COLUMNS = (
     "canonical_sha256",
     "canonical_source",
     "pack_sha256",
+    "pack_sha256_rebuilt",
+    "reproducibility",
+    "rdkit_version",
+    "descriptor_code_sha256",
     "built_at",
 )
 UNRESOLVED_COLUMNS = ("task_id", "dataset_id", "row_id", "psmiles_raw", "reason")
@@ -243,6 +247,38 @@ def _sha256_of_file(path: Path) -> str:
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _rdkit_version() -> str:
+    """当前 RDKit 的版本串；取不到返回空串（不猜）。／ RDKit version, empty when unavailable."""
+    try:
+        from rdkit import rdBase
+
+        return str(rdBase.rdkitVersion)
+    except Exception:  # pragma: no cover - 只有在没有 RDKit 的环境里才会走到
+        return ""
+
+
+def _descriptor_code_sha256() -> str:
+    """描述符实现（`chem/descriptors.py`）的字节哈希——pack 的浮点末位由它决定。
+    Byte hash of the descriptor implementation; it is what sets the pack's last float bit.
+
+    中文：
+        用途：`pack_sha256` 是"哪一份特征"的身份，而这份特征由**这段代码 + 这一版 RDKit** 算出。
+              只记版本号不够（conda 包与 pip wheel 可以同版本、末位不同），所以把实现本身的字节
+              哈希也记下来。取不到返回空串，**不猜**。
+    English:
+        The pack identity depends on this code plus the RDKit build; a version string alone is not
+        enough (conda and pip wheels can share a version with different last bits), so the hash of
+        the implementation is recorded too. Empty when unavailable - never guessed.
+    """
+    try:
+        from chainworth.chem import descriptors as D
+
+        return _sha256_of_file(Path(D.__file__))
+    except Exception:  # pragma: no cover - 同 `_rdkit_version`
+        return ""
+
 
 
 def _now_iso() -> str:
@@ -424,6 +460,36 @@ def manifest_pack_sha256(dataset_id: str, task_id: str = TASK_ID) -> str:
     )
 
 
+def manifest_row(dataset_id: str, task_id: str = TASK_ID) -> dict[str, str]:
+    """取清单里这个数据集的一整行（取不到返回空 dict）。／ The dataset's whole manifest row."""
+    for row in read_manifest_rows():
+        if row.get("task_id") == task_id and row.get("dataset_id") == dataset_id:
+            return dict(row)
+    return {}
+
+
+def accepted_pack_hashes(dataset_id: str, task_id: str = TASK_ID) -> set[str]:
+    """盘上 pack 可以接受的哈希集合：**身份**，加上（若有）另一台机器重造出的那一版。
+    Digests a pack on disk may carry: the identity, plus the other host's rebuild when recorded.
+
+    中文：
+        用途：清单的 `pack_sha256` 是"产出记录的那一份"（身份），跨机重造会得到另一个值
+              （`pack_sha256_rebuilt`，`reproducibility: host_sensitive`，D-59）。读盘时两者都
+              接受，但**只有身份能用来对账记录**——调用方若拿到的是 rebuilt，要知道自己在用第二版。
+        输入：dataset_id；task_id。输出：哈希集合。数据来源：`scaling_features_manifest.csv`。
+    English:
+        The manifest's pack_sha256 is the identity behind the records; another host rebuilds to a
+        different digest (pack_sha256_rebuilt, reproducibility: host_sensitive, D-59). Both are
+        accepted when loading, but only the identity reconciles against the records.
+    """
+    row = manifest_row(dataset_id, task_id)
+    hashes = {str(row.get("pack_sha256") or "")} - {""}
+    rebuilt = str(row.get("pack_sha256_rebuilt") or "")
+    if rebuilt:
+        hashes.add(rebuilt)
+    return hashes
+
+
 def build_pack(
     dataset_id: str, *, task_id: str = TASK_ID, force: bool = False, workers: int = 0
 ) -> dict[str, Any]:
@@ -586,6 +652,37 @@ def build_pack(
     pack_path = F.save_pack(summary)
     pack_sha = _sha256_of_file(pack_path)
 
+    # `pack_sha256` 是**身份**：产出那 25 条 run 记录的那一份特征。重造只写 `pack_sha256_rebuilt`，
+    # 绝不覆盖身份——否则记录的 `pack_sha256` 字段会与清单"自动对上"，而那个对上的是第二版（D-59）。
+    # pack_sha256 is the *identity*: the features the 25 run records were produced from. A rebuild
+    # only fills pack_sha256_rebuilt and never overwrites the identity - otherwise the records'
+    # pack_sha256 would "match" by accident, and what matched would be the second build (D-59).
+    previous = next(
+        (
+            item
+            for item in read_manifest_rows()
+            if item.get("task_id") == task_id and item.get("dataset_id") == dataset_id
+        ),
+        {},
+    )
+    identity = str(previous.get("pack_sha256") or pack_sha)
+    if not previous:
+        reproducibility = "first_build"
+        rebuilt = ""
+    elif pack_sha == identity:
+        reproducibility = "exact"
+        rebuilt = ""
+    else:
+        reproducibility = "host_sensitive"
+        rebuilt = pack_sha
+        LOGGER.warning(
+            "%s：重造的 pack %s… 与清单身份 %s… 不同（描述符实现或 RDKit 构建不同）。"
+            "身份保持不变，差值记在 pack_sha256_rebuilt / reproducibility=host_sensitive（D-59）",
+            name,
+            pack_sha[:12],
+            identity[:12],
+        )
+
     row = {
         "task_id": task_id,
         "dataset_id": dataset_id,
@@ -598,7 +695,11 @@ def build_pack(
         "n_nan_cells": int(np.isnan(desc).sum()),
         "canonical_sha256": canonical_sha,
         "canonical_source": str(entry["canonical_source"]),
-        "pack_sha256": pack_sha,
+        "pack_sha256": identity,
+        "pack_sha256_rebuilt": rebuilt,
+        "reproducibility": reproducibility,
+        "rdkit_version": _rdkit_version(),
+        "descriptor_code_sha256": _descriptor_code_sha256(),
         "built_at": _now_iso(),
     }
     write_manifest_rows([row])
@@ -644,11 +745,20 @@ def load_pack(dataset_id: str, *, task_id: str = TASK_ID) -> dict[str, Any]:
             f"缺 pack {path.relative_to(REPO_ROOT).as_posix()}：先跑 "
             "`python scripts/04_run_cpu.py scaling --build`"
         )
-    expected = manifest_pack_sha256(dataset_id, task_id)
+    identity = manifest_pack_sha256(dataset_id, task_id)
+    accepted = accepted_pack_hashes(dataset_id, task_id)
     actual = _sha256_of_file(path)
-    if actual != expected:
+    if actual not in accepted:
         raise G.ArmError(
-            f"{path.name} 的 sha256={actual[:12]} 与清单 {expected[:12]} 不符：文件被改过或清单过期"
+            f"{path.name} 的 sha256={actual[:12]} 与清单 {identity[:12]} 不符：文件被改过或清单过期"
+        )
+    if actual != identity:
+        LOGGER.warning(
+            "%s：用的是**另一台机器重造**的 pack（%s…），身份是 %s…；"
+            "特征末位可能不同，复现精度按 D-59 的 ±1e-3 声明",
+            path.name,
+            actual[:12],
+            identity[:12],
         )
     return F.load_pack(pack_name(dataset_id, task_id))
 
@@ -786,6 +896,333 @@ def build_task_data(dataset_id: str, *, task_id: str = TASK_ID, limit: int | Non
         pack_sha256=manifest_pack_sha256(dataset_id, task_id),
         limit=limit,
     )
+
+
+# ---- 3b. 链臂（A3 图臂）的数据与网格 / The chain arm's data and grid (D-69) ----
+
+CHAIN_ARM = "a3_graph"
+# 链臂自己的表。**不并进 `scaling_cpu.csv`**：那张表是 A2 的，里面还混着 40 行不写记录的 RF，
+# 再混一个臂，"哪一行是哪个臂"就说不清了（D-69）。
+# The chain arm's own table; keeping it out of scaling_cpu.csv keeps "one row = one arm" readable.
+CHAIN_TABLE_PATH = REPO_ROOT / "results" / "aggregate" / "scaling_chain.csv"
+
+
+def task_config_arms(task_id: str = TASK_ID) -> list[str]:
+    """任务配置里声明的臂名单（`pb26_scaling_cp.yaml` 的 `arms`）。
+    The arm list declared by the task config.
+
+    中文：用途：链臂跑之前核一件事——**任务配置里得有这条臂**，否则跑出来的记录属于一个"任务身份
+          没声明过"的组合（`eval_unit` 写着 2 arms、`arms` 只有一个的时候就是这么来的，D-69）。
+          输入：task_id。输出：字符串列表。数据来源：`configs/tasks/<task>.yaml`。副作用：只读。
+    English: Before the chain arm runs, the task config must declare it; otherwise the records
+    belong to a combination the task identity never declared.
+    """
+    path = REPO_ROOT / "configs" / "tasks" / f"{task_id}.yaml"
+    raw = _load_yaml(path)
+    arms = raw.get("arms") or []
+    return [str(value) for value in arms]
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    """读一份 YAML（本模块只读，不写）。／ Read one YAML file (read-only here)."""
+    import yaml
+
+    return yaml.safe_load(path.read_bytes())
+
+
+_GRAPH_CACHE: dict[str, G.TaskData] = {}
+
+
+def build_graph_task_data(
+    dataset_id: str, *, task_id: str = TASK_ID, use_cache: bool = True
+) -> G.TaskData:
+    """把一个数据集读成**图臂**要的 `TaskData`（每行一张图 + 官方五折）。
+    Build one dataset into the **graph arm's** TaskData (one graph per row + official folds).
+
+    中文：
+        用途：与 `graph.build_task_data()` 同形状，但三处按 scaling 的形状改写：
+              ① **pack 用 C-b 自己那份**（`<task>_<dataset>.npz`，走本模块的清单校验），
+                 不是 B-1 的十一份主表 pack；
+              ② **折名带数据集前缀**（`md5000_alternating_cp_fold_00`），划分来自
+                 `load_dataset_split()`；测试集 2,780 行、验证集 2,780 行，五折 × 八档全部相同；
+              ③ **wPSMILES 现场派生**：27,802 个结构不在 B-1 的结构表里（实测只有 7 个在），
+                 而 `to_wpsmiles()` 对这批结构 **100% 成功**（2 个星号、线性链）。用同一个函数、
+                 不是另写一套，所以图里 `has_wpsmiles` 的口径与主表 A3 一致。
+              `n_failed` 如实计数：解析失败的行留在表里，训练/打分时跳过并写进记录。
+        输入：dataset_id；task_id；use_cache —— 同进程内复用（5 折 × 8 档都读同一份）。
+        输出：`G.TaskData`。数据来源：pack + `splits/` + `chem.structures.to_wpsmiles()`。
+        副作用：读盘、建图（约 0.6 分钟/数据集，实测 1.3 ms/结构）。
+        异常：ArmError —— pack 哈希不符、图数对不上结构数、全部解析失败；
+              AssemblyError —— 划分与行数不配套。
+    English:
+        Same shape as graph.build_task_data() with three scaling-specific changes: the pack is C-b's
+        own (checked against the scaling manifest), fold names carry the dataset prefix, and the
+        wPSMILES are derived on the fly with the same `to_wpsmiles()` the main table uses (all 27,802
+        structures succeed; only 7 of them exist in B-1's structure table). Parse failures stay in
+        the table as None, are counted in the record, and are skipped at train/score time.
+    """
+    key = f"{task_id}@{dataset_id}"
+    if use_cache and key in _GRAPH_CACHE:
+        return _GRAPH_CACHE[key]
+
+    from chainworth.chem import graph as CG
+    from chainworth.chem.structures import to_wpsmiles
+
+    pack = load_pack(dataset_id, task_id=task_id)
+    split = load_dataset_split(dataset_id, task_id=task_id)
+    row_id = np.asarray(pack["row_id"], dtype=np.int64)
+    n_rows = int(row_id.size)
+    problems = L.check_split_matches_rows(split, n_rows)
+    if problems:
+        raise L.AssemblyError("；".join(problems))
+
+    psmiles = [str(value) for value in np.asarray(pack["psmiles"])]
+    unique = list(dict.fromkeys(text for text in psmiles if text))
+    started = time.perf_counter()
+    wpsmiles: dict[str, str] = {}
+    for text in unique:
+        derived = to_wpsmiles(text)
+        if derived:
+            wpsmiles[text] = derived
+    graphs, failures = CG.build_graphs(unique, wpsmiles)
+    built = time.perf_counter() - started
+    if len(graphs) + len(failures) != len(unique):
+        raise G.ArmError(
+            f"{dataset_id}：建图返回 {len(graphs)} 张图 + {len(failures)} 条失败 ≠ {len(unique)} 个唯一结构。"
+            "键对不上会让整批行悄悄变成'建图失败'，所以这里直接停"
+        )
+    # `GraphTensors`（numpy）→ chemprop `MolGraph`：**只走 graph._to_molgraph() 这一个转换点**，
+    # 理由与 B-3 相同——在别处自己拼 `MolGraph`，`edge_index` 的 dtype 或 `rev_edge_index` 少一处，
+    # 模型照样能训、指标照样出，只是没有可比性。也正因为这一步要 torch/chemprop，
+    # 本函数只能在 GNN 环境里调用（Core 环境会在 `_to_molgraph` 处 ImportError）。
+    # GraphTensors -> chemprop MolGraph through the single sanctioned conversion point; that step
+    # needs torch/chemprop, so this function only runs in the GNN environment.
+    molgraphs = {text: G._to_molgraph(tensors) for text, tensors in graphs.items()}
+    mgs = [molgraphs.get(text) for text in psmiles]
+    n_failed = sum(1 for item in mgs if item is None)
+    if n_failed == n_rows:
+        raise G.ArmError(f"{dataset_id}：{n_rows} 行没有一张图，这条臂跑不了")
+
+    data = G.TaskData(
+        task_id=task_id,
+        benchmark="polybench26",
+        n_rows=n_rows,
+        split=split,
+        y=np.asarray(pack["y"], dtype=np.float64),
+        row_id=row_id,
+        mgs=mgs,
+        psmiles=psmiles,
+        n_failed=n_failed,
+        failures=[(text, reason) for text, reason in failures],
+        built_in_s=built,
+    )
+    LOGGER.info(
+        "%s：%d 行 / %d 个唯一结构，建图 %.1f 秒，无 wPSMILES %d 个，解析失败 %d 行",
+        dataset_id,
+        n_rows,
+        len(unique),
+        built,
+        sum(1 for text in unique if text not in wpsmiles),
+        n_failed,
+    )
+    if use_cache:
+        _GRAPH_CACHE[key] = data
+    return data
+
+
+def run_scaling_chain(
+    config: G.ArmConfig,
+    *,
+    datasets: Sequence[str] | None = None,
+    tiers_wanted: Sequence[str] | None = None,
+    folds: Sequence[str] | None = None,
+    seeds: Sequence[int] | None = None,
+    resume: bool = True,
+) -> list[dict[str, Any]]:
+    """按网格跑**链臂**的 scaling：数据集 × 档位 × 折 × 种子，写记录/预测，返回表行。
+    Run the **chain arm** over the scaling grid, writing records/predictions and returning rows.
+
+    中文：
+        用途：`scaling_chain.csv` 的唯一生产者。与 `run_scaling()` 的差别有四处，都写在实现里：
+              ① **写记录**（`arm=a3_graph`）：链臂是正式臂，schema 的 arm 枚举里有它，所以每条都落
+                 `results/raw_runs/` 与预测，`config_hash` = `scaling_chain.yaml` 的字节哈希；
+              ② **档位取法是官方前缀**：由配置的 `subset.rule: prefix` 决定，实现在
+                 `graph.n_level_rows()`（与 A2 同一份），所以两支臂在每个档位落在**同一批训练行**上，
+                 凭据是记录里的 `n_subset_sha256`——两臂必须逐位相同，`06c` 会核这一条；
+              ③ **不写 `scaling_cpu.csv`**：那张表是 A2 的（还混着不写记录的 RF 行），链臂另落一张；
+              ④ `split_version` 由本模块算（带前缀的折名拼不出文件名），经 `extra_record` 交进去。
+        输入：config（`configs/experiments/scaling_chain.yaml`）；datasets / tiers_wanted / folds /
+              seeds —— 白名单；resume —— 跳过已有 ok 记录。
+        输出：逐 run 的表行。数据来源：两份 pack + `splits/`。副作用：训练、写记录/预测/工时表。
+        异常：ArmError —— 任务配置没声明这条臂、档位或折名不在官方文件里。
+    English:
+        The only producer of scaling_chain.csv. Four differences from run_scaling(): every fit writes
+        a record (the chain arm is a real arm in the schema); the tier rule is the official prefix
+        from the config, using the same `n_level_rows()` as A2 so both arms sit on the *same* training
+        rows at every tier (`n_subset_sha256` is the proof); the table is separate; and
+        `split_version` is computed here and handed in through `extra_record`.
+    """
+    declared = task_config_arms()
+    arm_name = str(config.raw.get("arm") or CHAIN_ARM)
+    if arm_name not in declared:
+        raise G.ArmError(
+            f"任务配置没声明臂 {arm_name!r}（现在只有 {declared}）：先改 "
+            "configs/tasks/pb26_scaling_cp.yaml 并重登记 SHA256SUMS（D-69），别让记录落在"
+            "一个任务身份没声明过的组合上"
+        )
+
+    chosen_datasets = list(datasets) if datasets else dataset_ids()
+    wanted = {str(value).lower() for value in tiers_wanted} if tiers_wanted else None
+    chosen_folds = set(folds) if folds else None
+    seed_list = [int(value) for value in (seeds or config.raw.get("seeds") or [0])]
+
+    rows: list[dict[str, Any]] = []
+    for dataset_id in chosen_datasets:
+        data = build_graph_task_data(dataset_id)
+        available = tiers(dataset_id)
+        if wanted is not None:
+            unknown = sorted(wanted - set(available))
+            if unknown:
+                raise G.ArmError(f"{dataset_id} 没有这些档位 {unknown}：官方文件里的是 {available}")
+        for level in available:
+            if wanted is not None and level not in wanted:
+                continue
+            for fold in data.split.fold_names:
+                if chosen_folds is not None and fold not in chosen_folds:
+                    continue
+                for seed in seed_list:
+                    run_id = G.RunKey(
+                        task=TASK_ID,
+                        benchmark="polybench26",
+                        fold=fold,
+                        seed=seed,
+                        arm=arm_name,
+                        n_level=level,
+                    ).run_id()
+                    if resume and _already_done(run_id):
+                        existing = json.loads(
+                            (G.RAW_RUNS_DIR / f"{run_id}.json").read_text(encoding="utf-8")
+                        )
+                        rows.append(_chain_row_from_record(existing, dataset_id))
+                        continue
+                    outcome = G.train_one(
+                        data,
+                        config,
+                        fold=fold,
+                        seed=seed,
+                        n_level=level,
+                        extra_record={
+                            "dataset_id": dataset_id,
+                            "fold_index": fold.split("_")[-1],
+                            # 见 `fold_split_version()`：带前缀的折名拼不出文件名。
+                            "split_version": fold_split_version(dataset_id, fold),
+                        },
+                    )
+                    record = outcome.record
+                    G.write_predictions(outcome)
+                    G.write_run_record(record)
+                    G.append_gpu_hours([record])
+                    rows.append(_chain_row_from_record(record, dataset_id))
+                    LOGGER.info(
+                        "%s %s/%s n=%s：r2=%+.4f n_train=%d %.1f 秒",
+                        run_id,
+                        dataset_id,
+                        fold,
+                        level,
+                        record["metrics"]["r2"],
+                        record["n_train"],
+                        record["wall_clock_s"],
+                    )
+    return rows
+
+
+def _chain_row_from_record(
+    record: Mapping[str, Any], dataset_id: str
+) -> dict[str, Any]:
+    """把一条链臂记录折成 `scaling_chain.csv` 的一行（列与 A2 表前 18 列同名）。
+    Fold one chain-arm record into a scaling_chain.csv row (the first 18 columns match A2's table).
+    """
+    metrics = record.get("metrics") or {}
+    return {
+        "task": record.get("task", TASK_ID),
+        "dataset": dataset_id,
+        "tier": record.get("n_level", ""),
+        "n_train": record.get("n_train", ""),
+        "n_train_pool": record.get("n_train_pool", ""),
+        "n_level_saturated": str(bool(record.get("n_level_saturated"))).lower(),
+        "n_selection_rule": record.get("n_selection_rule", ""),
+        "subset_sha256": record.get("n_subset_sha256", ""),
+        "n_unique_structures": "",
+        "n_graph_failed": record.get("n_graph_failed", ""),
+        "fold": record.get("split_fold", ""),
+        "arm": record.get("arm", ""),
+        "learner": "chemprop",
+        "seed": record.get("seed", ""),
+        "r2": f"{float(metrics['r2']):.10f}" if metrics else "",
+        "mae": f"{float(metrics['mae']):.10f}" if metrics else "",
+        "rmse": f"{float(metrics['rmse']):.10f}" if metrics else "",
+        "wall_clock_s": f"{float(record.get('wall_clock_s') or 0.0):.3f}",
+        "epochs_run": record.get("epochs_run", ""),
+        "best_epoch": "" if record.get("best_epoch") is None else record.get("best_epoch"),
+        "run_id": str(record.get("run_id", "")),
+        "note": "run 记录 + 预测已落盘；档位=官方前缀，与 A2 同一批训练行（subset_sha256 应相同）",
+    }
+
+
+CHAIN_TABLE_COLUMNS = (
+    "task",
+    "dataset",
+    "tier",
+    "n_train",
+    "n_train_pool",
+    "n_level_saturated",
+    "n_selection_rule",
+    "subset_sha256",
+    "n_unique_structures",
+    "n_graph_failed",
+    "fold",
+    "arm",
+    "learner",
+    "seed",
+    "r2",
+    "mae",
+    "rmse",
+    "wall_clock_s",
+    "epochs_run",
+    "best_epoch",
+    "run_id",
+    "note",
+)
+
+
+def write_chain_table(rows: Sequence[Mapping[str, Any]], *, path: Path | None = None) -> Path:
+    """写 `scaling_chain.csv`（整表覆盖，UTF-8 / LF，一 run 一行）。
+    Write scaling_chain.csv in full (UTF-8 / LF, one row per run).
+    """
+    target = Path(path) if path is not None else CHAIN_TABLE_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    ordered = sorted(
+        rows,
+        key=lambda row: (
+            str(row.get("dataset", "")),
+            _tier_sort_key(row.get("tier", "")),
+            str(row.get("fold", "")),
+            str(row.get("seed", "")),
+        ),
+    )
+    with target.open("w", encoding="utf-8", newline="\n") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(CHAIN_TABLE_COLUMNS), lineterminator="\n")
+        writer.writeheader()
+        for row in ordered:
+            writer.writerow({column: row.get(column, "") for column in CHAIN_TABLE_COLUMNS})
+    return target
+
+
+def read_chain_table(*, path: Path | None = None) -> list[dict[str, str]]:
+    """读回 `scaling_chain.csv`。／ Read scaling_chain.csv back."""
+    target = Path(path) if path is not None else CHAIN_TABLE_PATH
+    with target.open(encoding="utf-8", newline="") as handle:
+        return [dict(row) for row in csv.DictReader(handle)]
 
 
 # ---- 4. 批量拟合与表 / Batch fits and the table ----

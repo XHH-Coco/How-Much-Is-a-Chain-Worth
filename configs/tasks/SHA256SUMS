@@ -1,4 +1,9 @@
-# configs/tasks 冻结指纹 v5 | 2026-11-15 | 格式：<hash>  <file>（18 份任务配置；本表自身不登记）
+# configs/tasks 冻结指纹 v6 | 2026-11-17 | 格式：<hash>  <file>（18 份任务配置；本表自身不登记）
+# v6 相对 v5 只改了 1 份：pb26_scaling_cp.yaml 出 v2（D-69）——arms 由 [a2_conventional]
+#   改为 [a2_conventional, a3_graph]（κ 的纵轴需要链臂），dataset/档位/划分/行数/单位一个字节未动；
+#   该文件 v1 的哈希 d9b90715… 从未写进任何 run 记录（40 条 scaling 记录的 config_hash 是
+#   scaling.yaml 的 60841fcd…），所以**不需要重跑任何既有记录**。
+#   其余 17 份一个字节没动。
 # v5 相对 v4 只改了 1 份：pb26_arch_transfer_ea.yaml 出 v3（D-49）——arms 由
 #   [a2_conventional, a5_chain] 改为 [a2_conventional]（a5_chain 不可构造，D-47/D-48），其余字节未动；
 #   该文件 v1/v2 从未被任何 run 引用，无重跑。
@@ -8,14 +13,14 @@
 #   eval_unit 把 "5 folds" 写明为 "5 replicated folds (split seeds 0-4)"，notes 补一句"不是作者那一份"。
 #   其余 15 份一个字节没动，字段与数字也没变。
 # 验：cd configs/tasks && sha256sum -c SHA256SUMS
-# 改任何一份 yaml = 冻结物被改 = 该阶段重做；要改就出 v5，并在 docs/DECISIONS.md 记一条。
+# 改任何一份 yaml = 冻结物被改 = 该阶段重做；要改就出 v6，并在 docs/DECISIONS.md 记一条。
 c581bcca9a2d4c13a8f2d0c2fb4357f5bb59ade6c243ef99801b4cc95c32a876 *op_dielectric_constant_total.yaml
 ec3a3930ec0742f6f9fed1556d796f0e3cf9021c2d9d6813142ed1da8ba95f91 *op_tg.yaml
 286d5896f4e3ddb602eea35921c4727b7b7ddda1b525c3ee6b498c031d20ad31 *op_tm.yaml
 00e35867d471658ab8bcd3960d36d14c262d21a0dee4e637c44fc7021f4e1074 *pb26_arch_transfer_ea.yaml
 86969debf82b5a2ebf5cb1e4038f2d6761f4197f662c996316206c9e0cc9daa3 *pb26_homopolymer_density.yaml
 b383db95d155098039b9ced603b803a73c35313db4ba1b18ad626e0eee9f1f82 *pb26_polymetrix_tg.yaml
-d9b9071523db3bec0a1d63b24fb4e2b939f11eff649064c63897db04445f5a83 *pb26_scaling_cp.yaml
+508510d85b67ec2ab7ad5b21154e4e29fb9b303c6edf3071dc467ed247511dd4 *pb26_scaling_cp.yaml
 a836a9033cdaee56e0459a7b2b83761fd724d095a7bbb53a1cf207b224e8f9e5 *pb_t1_bandgap_chain.yaml
 81e7b6d2d815cc767340b35cc58876f36f090d03d52cd4e8a8b3062e2be42d83 *pb_t1_td.yaml
 8a26dc0d9a02fc4ad946896d59327efba94de908021c1041b837dbd0766d4c7f *pb_t1_tg.yaml

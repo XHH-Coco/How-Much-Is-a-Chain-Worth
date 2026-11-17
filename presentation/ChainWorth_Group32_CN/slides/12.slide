@@ -1,0 +1,79 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · 结果（5/6）—— H2′</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        换一把尺子，同一条曲线就减半了：0.650 对 0.167
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+
+    <Box style={{ marginTop: 16, padding: '10px 18px', background: '#16233A', borderLeft: '2px solid #FFB020' }}>
+        <Text style={{ fontSize: 13.5, color: '#FFFFFF', lineHeight: 1.7 }}>
+            <span style={{ color: '#FFB020', fontWeight: 'bold', letterSpacing: 1 }}>H2′ —— </span>
+            数据涨十倍，也不能把<span style={{ fontWeight: 'bold' }}>绝对增益</span> ΔR² 减半，其中 ΔR² = R²_chain − R²_unit。
+            判据：末档 ΔR² 低于首档的一半即算被推翻 —— 这就是 H2 的原判据，只是把尺子从比值换成 R²。
+            <span style={{ color: '#8FA3BC' }}> 未预注册：数字出来之后才提，只与 H2 并列，不并入它的判定。</span>
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 14 }}>
+        <Box style={{ width: 600, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.2, fontWeight: 'bold' }}>
+                同一批折、同一批档位，两把尺子 —— 都归一化到最小 n
+            </Text>
+            <Chart
+                style={{ width: 600, height: 272, marginTop: 6 }}
+                chartType='lineChart'
+                colors={['#4D8DFF', '#FFB020']}
+                background='#0E1728'
+                showLegend={true}
+                showDataLabels={true}
+                legendColor='#A8B8CE'
+                axisColor='#8FA3BC'
+                dataLabelColor='#FFFFFF'
+                data={[
+                    ['训练行数', 'Λ（比值）', 'ΔR²（绝对）'],
+                    ['300', 1.0, 1.0],
+                    ['1,000', 1.707, 0.948],
+                    ['3,000', 1.247, 0.453],
+                    ['10,000', 0.945, 0.276],
+                    ['all', 0.65, 0.167],
+                ]}
+            />
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 16 }}>
+            <Box style={{ flexDirection: 'row', gap: 34 }}>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>0.650</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4, lineHeight: 1.5 }}>Λ 比值 [0.570, 0.739]<br />未减半</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>0.167</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4, lineHeight: 1.5 }}>ΔR² 比值 [0.138, 0.198]<br />已减半</Text>
+                </Box>
+            </Box>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.75 }}>
+                两个区间<span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>完全不重叠</span>。这不是两个指标之间的边缘分歧。
+            </Text>
+            <Text style={{ fontSize: 13, color: '#A8B8CE', lineHeight: 1.75 }}>
+                机制：分母 1 − R²_unit 从 0.135 掉到 0.034（×0.25），而分子 ΔR² 只降到 ×0.17。
+                两个都在塌的数相除，可以不塌 —— 那个驼峰是算术，不是物理。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ marginTop: 'auto', padding: '11px 18px', background: '#111B2E', borderLeft: '2px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 13, color: '#C3D0E2', lineHeight: 1.7 }}>
+            两把尺子，两个问题：Λ 问「<span style={{ fontStyle: 'italic' }}>剩余</span>方差里收回多少」，ΔR² 问「R² 绝对涨多少」。
+            H2′ 未预注册，所以它只并列在这里，从不合并进 H2 的判定。
+        </Text>
+        <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 5 }}>
+            22,242 行时绝对增益是 0.0066 —— 与逐任务噪声地板同量级（中位 0.0022，最大 0.0192）。
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>metric_sensitivity.csv · metric_sensitivity_levels.csv · 均聚物在两把尺子下都没有减半</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>12 / 17</Text>
+    </Box>
+</Slide>

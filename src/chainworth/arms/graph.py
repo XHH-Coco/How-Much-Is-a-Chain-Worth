@@ -95,7 +95,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
 import yaml
@@ -1308,6 +1308,7 @@ def train_one(
     max_epochs: int | None = None,
     patience: int | None = None,
     n_level: str | None = None,
+    extra_record: Mapping[str, Any] | None = None,
 ) -> TrainOutcome:
     """训一条 run，返回记录草稿与测试集预测（不写盘）。
     Train one run and return the record draft plus test predictions (no writing here).
@@ -1325,9 +1326,14 @@ def train_one(
               **测试集只在这一步被读一次**，且只用于算指标，不参与任何选择。
         输入：data —— `TaskData`；config；fold —— 官方折名；seed —— 模型种子；
               device —— 覆盖自动选择（测试用）；max_epochs / patience —— 冒烟用覆盖；
-              n_level —— 训练集档位（`"30"`…`"all"` / None = 无这一维，B-3/B-4 走 None）。
+              n_level —— 训练集档位（`"30"`…`"all"` / None = 无这一维，B-3/B-4 走 None）；
+              extra_record —— 调用方补的额外字段（默认 None）。D-69 的链臂 scaling 用它带三样：
+              `dataset_id`（一个任务两个数据集）、`fold_index`、`split_version`——后者必须由调用方
+              算，因为 `fold_version()` 会把带数据集前缀的折名拼成不存在的文件名
+              （`md5000_alternating_cp_fold_00.npz`），只能退回整份 manifest 的哈希，那是错的身份。
+              **同形接口在 `conventional.train_one()` 已有**，这里补上是为了两条臂的记录字段对得齐。
         输出：`TrainOutcome`。
-        数据来源：`TaskData`。配置来源：`config`（n 档种子取 `subset.seed`）。
+        数据来源：`TaskData`。配置来源：`config`（n 档种子与取法取 `subset.seed` / `subset.rule`）。
         副作用：训练模型、占显存、写日志。异常：ArmError —— 数据与折不配套、全为失败图。
     English:
         The core of B-3: (1) take the official fold, carving the fixed 10% inner validation when the
@@ -1337,7 +1343,10 @@ def train_one(
         model (target scaler on training labels only); (3) train to `max_epochs` or until early
         stopping; (4) predict once on the **official test split**; (5) draft the record.
         Args: data; config; official fold name; seed; device; max_epochs/patience overrides;
-        n_level (None = no such dimension, as in B-3/B-4). Returns: a TrainOutcome.
+        n_level (None = no such dimension, as in B-3/B-4); extra_record, the caller's extra fields
+        (D-69's chain arm uses it for `dataset_id`, `fold_index` and `split_version`, because the
+        generic helper cannot build a dataset-prefixed fold file name and would fall back to the
+        manifest digest - the wrong identity). Returns: a TrainOutcome.
         Raises: ArmError when the fold does not fit the data or every graph failed.
     """
     import lightning.pytorch as pl
@@ -1414,7 +1423,21 @@ def train_one(
                 f"{config.path.name} 有 n 档但没有 `subset.seed`：子集取法必须钉死一个种子，"
                 "否则同一条 run 换个进程就换一批训练行（D-35）"
             )
-        train_rows, n_info = n_level_rows(train_rows, n_level, seed=int(subset_cfg["seed"]))
+        train_rows, n_info = n_level_rows(
+            train_rows,
+            n_level,
+            seed=int(subset_cfg["seed"]),
+            # 取法由实验配置声明，与 `conventional.train_one()` 是**同一行口径**：OpenPoly 的 n 档是
+            # "固定种子打乱后取前缀"（D-35），PolyBench26 的 scaling 档位是官方 `train_pool[:N]`
+            # 前缀（D-69）。同一个实现、两个参数，不是两套代码。
+            # 默认值 `shuffle_prefix` 保证"没写 rule 的配置"行为与改前逐位相同（A3 主表不走 n 档，
+            # OpenPoly 的配置显式写了 shuffle_prefix）。
+            # The rule comes from the experiment config, exactly as in conventional.train_one():
+            # OpenPoly shuffles then takes a prefix (D-35), PolyBench26's scaling tiers are the
+            # official train_pool[:N] prefix (D-69). One implementation, two parameters. The default
+            # keeps every config that does not declare `rule` bit-identical to the previous behaviour.
+            rule=str(subset_cfg.get("rule", "shuffle_prefix")),
+        )
         if train_rows.size == 0:
             raise ArmError(f"{data.task_id}/{fold}/n={n_level}：截完训练行为 0，这条 run 不能跑")
 
@@ -1610,6 +1633,13 @@ def train_one(
         )
     if fold_sha:
         record["split_fold_sha256"] = fold_sha
+    if extra_record:
+        # 调用方补的字段放在**最后**覆盖，与 `conventional.train_one()` 同一位置、同一语义。
+        # 唯一真正要用"覆盖"语义的是 `split_version`：带数据集前缀的折名拼不出文件名，
+        # 通用助手会退回整份 manifest 的哈希，而正确身份是那一折 npz 的字节哈希（D-69）。
+        # Caller-supplied fields are applied last, at the same point and with the same meaning as in
+        # conventional.train_one(). The only field that needs the override is `split_version`.
+        record.update({str(key): value for key, value in extra_record.items()})
     if data.n_failed:
         LOGGER.warning(
             "%s/%s：%d 行没有图（前几条：%s），已从 train/val/test 中跳过并记进记录",

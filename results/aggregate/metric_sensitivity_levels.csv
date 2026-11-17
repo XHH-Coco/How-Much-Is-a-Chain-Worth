@@ -1,0 +1,17 @@
+dataset,metric,level,n_train_median,n_folds,value_mean,value_lo,value_hi
+md5000_alternating_cp,lambda,300,300,5,0.294594,0.253585,0.330569
+md5000_alternating_cp,lambda,1000,1000,5,0.502895,0.477771,0.536623
+md5000_alternating_cp,lambda,3000,3000,5,0.367504,0.353443,0.38123
+md5000_alternating_cp,lambda,10000,10000,5,0.278503,0.254082,0.304089
+md5000_alternating_cp,lambda,all,22242,5,0.191488,0.168255,0.215349
+md5000_alternating_cp,delta_r2,300,300,5,0.039543,0.035715,0.043662
+md5000_alternating_cp,delta_r2,1000,1000,5,0.037478,0.03333,0.041999
+md5000_alternating_cp,delta_r2,3000,3000,5,0.017923,0.016513,0.018883
+md5000_alternating_cp,delta_r2,10000,10000,5,0.010896,0.009668,0.012123
+md5000_alternating_cp,delta_r2,all,22242,5,0.006607,0.005613,0.007671
+md5000_homopolymer_cp,lambda,300,300,5,0.041517,-0.457625,0.382852
+md5000_homopolymer_cp,lambda,1000,1000,5,0.479709,0.399825,0.559593
+md5000_homopolymer_cp,lambda,all,1440,5,0.482441,0.397479,0.567404
+md5000_homopolymer_cp,delta_r2,300,300,5,0.012503,-0.023026,0.045364
+md5000_homopolymer_cp,delta_r2,1000,1000,5,0.019817,0.014147,0.024658
+md5000_homopolymer_cp,delta_r2,all,1440,5,0.016586,0.012667,0.020242

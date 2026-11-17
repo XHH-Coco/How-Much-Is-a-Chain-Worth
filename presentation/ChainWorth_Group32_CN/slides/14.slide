@@ -1,0 +1,36 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>08 · 结论</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        四条站得住的结论 —— 并标明各自的强度
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'column', marginTop: 10 }}>
+        {[
+            ['01', '链信息在多数任务上没有带来增益', '19 格里 12 格为负，中位 −0.098。最稳的负值出现在数据最充足的任务上：op_tm × A3 = −0.859，75 行可算。'],
+            ['02', '分层假设被证伪，但检验不干净', 'ρ = +0.000 / +0.239。同 n 下 tier1 仍低于 tier2（−0.033 / −0.087，区间排除 0）—— 折断在 tier3 内部，不是样本量混淆。'],
+            ['03', '多给数据也买不回来', 'κ = −0.0863 [−0.1053, −0.0672]，Λ 减半比 0.650。换绝对口径同一条曲线减半（0.167）—— 并列报在 H2 旁边，从不合并。'],
+            ['04', '「信息还是架构」仍然答不了', 'A5 用现有数据构造不出来，所以它的 0 条是边界而不是欠账。替代物是逐任务地板：中位 0.0022，8 个任务里 6 个过门槛。'],
+        ].map(([num, head, body], i) => (
+            <Box key={num} style={{ flexDirection: 'row', gap: 26, paddingTop: 12, paddingBottom: 12, borderTop: i === 0 ? '0px solid #1D2A40' : '1px solid #1D2A40' }}>
+                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#4D8DFF', width: 46, lineHeight: 1.2 }}>{num}</Text>
+                <Box style={{ flexDirection: 'column', flex: 1 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.4 }}>{head}</Text>
+                    <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 5, lineHeight: 1.7 }}>{body}</Text>
+                </Box>
+            </Box>
+        ))}
+    </Box>
+
+    <Box style={{ marginTop: 'auto', padding: '10px 18px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 14, color: '#FFFFFF', lineHeight: 1.65 }}>
+            在我们测到的范围内，链并不是重复单元表示所漏掉的那个东西 —— 而这句话的分量，
+            被两个不可判点与一支根本无法存在的臂限制住了。
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>14 / 17</Text>
+    </Box>
+</Slide>

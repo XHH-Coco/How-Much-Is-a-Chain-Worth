@@ -1,6 +1,6 @@
-# 主表单元格口径 · 唯一出处（v2，2026-11-14 按 D-48 修订：A5 撤除，144 → 96）
-# The main-table cell convention - the single source of truth (v2, revised 2026-11-14 per D-48:
-# A5 withdrawn, 144 -> 96)
+# 主表单元格口径 · 唯一出处（v3，2026-11-17 按 D-61 修订 `cell` 段；条数口径沿用 v2 的 96）
+# The main-table cell convention - the single source of truth (v3, revised 2026-11-17 per D-61:
+# the `cell` block now matches the artifact; the 96-run count is unchanged from v2)
 #
 # 这份文件只做一件事：**把"主表一共多少条"算清楚，并写下来**。之后所有文档、所有交付说明只引
 # 这里的 `expected_runs` 一个数，不许在别处另算一遍（分工_C-a §2 口径框：不许倒推）。
@@ -8,21 +8,26 @@
 # later document cites this one number; nobody recomputes it elsewhere.
 
 experiment: main_table
-version: "2.0"
-supersedes: "1.0（2026-11-13，144 口径，含 a5_chain）"
-frozen_at: "2026-11-14"
+version: "3.0"
+supersedes: "2.0（2026-11-14，A5 撤除、144 → 96）、1.0（2026-11-13，144 口径，含 a5_chain）"
+frozen_at: "2026-11-17"
 owner: C-a
 status: frozen
 
-# ---- 0. 相对 v1 的唯一改动 ----
-# The only change from v1.
+# ---- 0. v3 相对 v2 的唯一改动：第 4 节 `cell` 段 ----
+# The only change from v2: the `cell` block in section 4.
 revision_note: >-
-  v1 把 a5_chain 算进主表（16 x 3 arms x 3 seeds = 144）。D-48 判定 A5 **不可构造**：三条链输入
-  （重复单元数 / wPSMILES 连接权重 / 多单元序列）在现有数据里都不存在（D-47 实测），0 条记录。
-  故主表只保留 A1 / A2 两臂：16 x 2 x 3 = 96。这不是"A5 增益为零"，是"A5 没有运行过"——
-  状态一律写 not_constructible_data_unavailable，不许写 zero_gain。
-  **96 条记录在改口径之前就已产出**（a1_floor 48 + a2_conventional 48），故不触发全表重跑；
-  v1→v2 改的是条数声明，不是任何一条 run 的数字或 config_hash。
+  v3 只改**第 4 节 `cell` 段**，把"一格是什么"写对：一格 = 同一 (任务, 臂) 的**全部 run**，
+  PB26 的两格是 15 个 run（5 折 × 3 种子），PolyBench 的六格是 3 个 run（1 折 × 3 种子）。
+  v2 写的是"一格 = (任务, 折, 臂) 的三个种子"，与产物 `main_table.csv` 不符——那张表 32 格 =
+  24 格 × 3 + 8 格 × 15；D 若按 v2 读，误差棒只含种子方差、把折间方差整块漏掉，而
+  `pb26_homopolymer_density` 的 ±0.03 里 **95% 来自折间**（跨折 sd 0.032 vs 折内 0.0015）。
+  **`expected_runs` 一个数没动**：96 是 **run 数**（16 单元 × 2 臂 × 3 种子），不是**格数**；
+  没有一条 run 重跑，96 条记录的 `config_hash`、R²、预测全部不变。
+  历史（v2 原文保留）：v1 把 a5_chain 算进主表（16 x 3 arms x 3 seeds = 144）。D-48 判定 A5
+  **不可构造**：三条链输入（重复单元数 / wPSMILES 连接权重 / 多单元序列）在现有数据里都不存在
+  （D-47 实测），0 条记录。故主表只保留 A1 / A2 两臂：16 x 2 x 3 = 96。这不是"A5 增益为零"，
+  是"A5 没有运行过"——状态一律写 not_constructible_data_unavailable，不许写 zero_gain。
 
 # ---- 1. 评估单元 = 16 ----
 # Evaluation units = 16: six PolyBench tasks on their single official 70/30 split, plus two
@@ -84,10 +89,18 @@ expected_runs:
     （若 A2 把 RF / kNN 也放进主表就会多出来）。改口径 = 换本文件版本号并全表重跑，不许只改数字。
 
 # ---- 4. 单元格定义 ----
+# 一格 = 同一 (任务, 臂) 的**全部 run**，折与种子都平均掉；`std_*` 是该格全部 run 的**样本**标准差，
+# 它同时含折间与种子方差——PB26 的 ±0.03 主要来自折，不是模型不稳。
+# A cell is every run of one (task, arm): folds and seeds are both averaged in, and std_* is the
+# sample standard deviation over those runs (fold variance included).
 cell:
   metric: r2                     # 记录里的 metrics.r2；mae / rmse 一并落盘但不进主表的判据
-  aggregation: mean_over_seeds   # 主表一格 = 同一 (任务, 折, 臂) 三个种子的均值
-  spread: sample_std_3_seeds     # 另一列给样本标准差（n=3），D 画误差棒用
+  aggregation: mean_over_folds_and_seeds
+  spread: sample_std_over_cell_runs
+  runs_per_cell:
+    polybench: 3                 # 1 个官方折 × 3 种子
+    polybench26: 15              # 5 个官方折 × 3 种子
+  cell_count: 32                 # 8 任务 × 4 臂（A1/A2 由 C 出，A3/A4 由 B 出，D-48）
   prediction_file: results/aggregate/predictions/<run_id>.parquet
   missing_cell: blocked_no_gpu   # 缺格留灰标，**不许填 0、不许填均值**
   missing_reason_column: missing_reason
@@ -95,9 +108,15 @@ cell:
     主表的缺格列名是 `missing_reason`，取值 `blocked_no_gpu` / `not_constructible_data_unavailable`。
     这两个枚举只属于这张表；run 记录的 `status`（ok / blocked_no_gpu / failed）回答的是
     "这次运行怎么了"，两者不是一回事，不要互相借用（D-48）。
+  leaderboard_diff_class_note: >-
+    排行榜差值的分类列只允许 `implementation` / `scale_only` / `unexplained` / `protocol`。
+    `protocol` 是 v1 的粗标签，v3 起拆成 `scale_only`（换成官方尺度后差距消失）与
+    `unexplained`（同尺度仍是实质差距）。标签只描述"差在哪"，不改任何数字（D-63）。
   index_for_cc: results/aggregate/a1_a2_index.csv
   index_note: >-
     C-c 只读 a1_a2_index.csv 填表，不去翻 96 个 JSON；每一格都能点回 run_id。
+    这张索引的任务×臂白名单来自本文件的 `units` 与 `arms`（`04_run_cpu.py index` 读它们，
+    D-61），所以索引行数与 `expected_runs.total` 必须相等。
 
 # ---- 5. 与 A3/A4 的关系 ----
 # A3/A4 的 48+48 条由 B 交付，不在本文件的 expected_runs 里（那两列的口径见分工_B）。

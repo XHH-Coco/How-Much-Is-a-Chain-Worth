@@ -1,0 +1,71 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>05 · HYPOTHESES</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        Four hypotheses, criteria fixed before the first run
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Table
+        style={{ width: 1160, height: 300, marginTop: 22 }}
+        defaultTextStyle={{ fontSize: 14, textAlign: 'left', color: '#C3D0E2' }}
+        defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
+        cells={[
+            [
+                { text: '', cellStyle: { background: { color: '#16233A' } } },
+                { text: 'Hypothesis', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+                { text: 'Benchmark', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+                { text: 'Refuted if — verbatim criterion', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
+            ],
+            [
+                { text: 'H1', textStyle: { bold: true, color: '#4D8DFF' } },
+                { text: 'Λ orders the same way as the benchmark\'s own three tiers', textStyle: { bold: true, color: '#FFFFFF' } },
+                'PolyBench',
+                'Spearman ρ < 0.5, or any inversion spanning ≥ 2 tiers',
+            ],
+            [
+                { text: 'H2', textStyle: { bold: true, color: '#4D8DFF' } },
+                { text: 'A tenfold increase in data cannot halve Λ', textStyle: { bold: true, color: '#FFFFFF' } },
+                'PolyBench26',
+                'κ significantly < 0 AND Λ at the largest n is below half of Λ at the smallest n',
+            ],
+            [
+                { text: 'H3', textStyle: { bold: true, color: '#4D8DFF' } },
+                { text: 'The gain comes from chain input, not from a different model', textStyle: { bold: true, color: '#FFFFFF' } },
+                'OpenPoly',
+                'A shuffle control must erase the gain',
+            ],
+            [
+                { text: 'H4', textStyle: { bold: true, color: '#4D8DFF' } },
+                { text: 'An n* exists beyond which changing architecture stops paying', textStyle: { bold: true, color: '#FFFFFF' } },
+                'OpenPoly',
+                'Descriptive only — no significance test is defined',
+            ],
+        ]}
+    />
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 24 }}>
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 6 }}>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.6 }}>
+                Every criterion was written into the proposal (v1.3, §H1–H4) before the first fit.
+            </Text>
+            <Text style={{ fontSize: 13, color: '#7E93AE', lineHeight: 1.6 }}>
+                Consequences are accepted as written: a hypothesis can come out refuted, and no criterion is re-read after the numbers arrive.
+            </Text>
+        </Box>
+        <Box style={{ width: 470, flexDirection: 'column', gap: 6 }}>
+            <Text style={{ fontSize: 13, color: '#FFB020', lineHeight: 1.55 }}>
+                <span style={{ fontWeight: 'bold' }}>H2′ is not on this list.</span> It is the same claim read on the absolute gain:
+                <span style={{ fontStyle: 'italic' }}> a tenfold increase cannot halve ΔR²</span> (slide 12).
+            </Text>
+            <Text style={{ fontSize: 12.5, color: '#7E93AE', lineHeight: 1.55 }}>
+                Stated after the numbers, so it is reported beside H2 and never merged into its verdict — swapping a criterion for a
+                better-looking one is exactly what pre-registration forbids.
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>Group 32 · How Much Is a Chain Worth?</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>6 / 17</Text>
+    </Box>
+</Slide>

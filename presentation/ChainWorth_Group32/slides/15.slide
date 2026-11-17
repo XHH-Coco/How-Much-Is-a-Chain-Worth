@@ -1,0 +1,60 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>09 · LIMITS AND NEXT STEPS</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        What is still open, and what we would do next
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 14 }}>
+        Next steps are ordered by benefit ÷ cost. The first two need no new training runs — they are analysis and re-registration only.
+    </Text>
+
+    <Box style={{ flexDirection: 'row', gap: 48, marginTop: 18 }}>
+        <Box style={{ flex: 1, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 11, color: '#FF6B6B', letterSpacing: 1.4, fontWeight: 'bold' }}>LIMITS WE DID NOT HIDE</Text>
+            <Box style={{ flexDirection: 'column', marginTop: 10 }}>
+                {[
+                    ['01', 'Tuning is asymmetric', 'A2 was tuned 30 times, A3 never. Part of the negative Λ may be tuning, not chain harm.'],
+                    ['02', 'κ lives in the amplified region', '23 of 40 scaling cells have a denominator below 0.05; the negative sign there is a ratio effect.'],
+                    ['03', 'Tier 3 cannot be matched upward', '228 / 279 rows are too few to lift to tier 1 — the confound is solved for t1 vs t2 only.'],
+                    ['04', 'One label source', '6 of 6 main tasks are experimental, so cross-source τ and leave-one-source-out are not evaluable.'],
+                ].map(([num, head, body], i) => (
+                    <Box key={num} style={{ flexDirection: 'row', gap: 14, paddingTop: 10, paddingBottom: 10, borderTop: i === 0 ? '0px solid #1D2A40' : '1px solid #1D2A40' }}>
+                        <Text style={{ fontSize: 12, color: '#7E93AE', width: 20, lineHeight: 1.5 }}>{num}</Text>
+                        <Box style={{ flexDirection: 'column', flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.35 }}>{head}</Text>
+                            <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4, lineHeight: 1.55 }}>{body}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+
+        <Box style={{ width: 1, background: '#24334C' }} />
+
+        <Box style={{ flex: 1, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 11, color: '#4D8DFF', letterSpacing: 1.4, fontWeight: 'bold' }}>WHAT WE WOULD DO NEXT</Text>
+            <Box style={{ flexDirection: 'column', marginTop: 10 }}>
+                {[
+                    ['01', 'Give A3 the same 30-trial budget', 'Directly tests the weakest assumption behind the first conclusion.'],
+                    ['02', 'Pre-register H2′ as its own hypothesis', 'Both rulers under one protocol, with "halved" defined separately for each.'],
+                    ['03', 'Re-rank H1 on a continuous axis', 'A2\'s own R² or n-bins instead of three discrete tiers — is the break the label or the difficulty?'],
+                    ['04', 'Add a second label source', 'DFT or MD labels would make the source-heterogeneity clause of the proposal testable.'],
+                ].map(([num, head, body], i) => (
+                    <Box key={num} style={{ flexDirection: 'row', gap: 14, paddingTop: 10, paddingBottom: 10, borderTop: i === 0 ? '0px solid #1D2A40' : '1px solid #1D2A40' }}>
+                        <Text style={{ fontSize: 12, color: '#4D8DFF', width: 20, lineHeight: 1.5 }}>{num}</Text>
+                        <Box style={{ flexDirection: 'column', flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.35 }}>{head}</Text>
+                            <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4, lineHeight: 1.55 }}>{body}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>Group 32 · How Much Is a Chain Worth?</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>15 / 17</Text>
+    </Box>
+</Slide>

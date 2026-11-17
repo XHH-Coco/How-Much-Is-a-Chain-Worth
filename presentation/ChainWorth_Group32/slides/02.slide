@@ -1,0 +1,67 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>01 · MOTIVATION</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        Polymers carry one level of description that crystals do not
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'row', gap: 48, marginTop: 30 }}>
+        <Box style={{ width: 470, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.4, fontWeight: 'bold' }}>INORGANIC CRYSTAL</Text>
+            <Box style={{ flexDirection: 'column', alignItems: 'center', marginTop: 14 }}>
+                {['Composition', 'Unit cell', 'Property'].map((label, i) => (
+                    <Box key={label} style={{ flexDirection: 'column', alignItems: 'center' }}>
+                        {i > 0 ? <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text> : null}
+                        <Box style={{ width: 300, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                            <Text style={{ fontSize: 15, color: '#C3D0E2' }}>{label}</Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+            <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 14, lineHeight: 1.5 }}>
+                Two levels are enough: composition plus cell geometry fixes the structure.
+            </Text>
+        </Box>
+
+        <Box style={{ width: 1, background: '#24334C' }} />
+
+        <Box style={{ width: 590, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#FFB020', letterSpacing: 1.4, fontWeight: 'bold' }}>POLYMER</Text>
+            <Box style={{ flexDirection: 'column', alignItems: 'center', marginTop: 14 }}>
+                <Box style={{ width: 340, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 15, color: '#C3D0E2' }}>Composition</Text>
+                </Box>
+                <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text>
+                <Box style={{ width: 340, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 15, color: '#C3D0E2' }}>Repeat unit — one PSMILES string</Text>
+                </Box>
+                <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text>
+                <Box style={{ width: 470, padding: '12px 16px', background: '#16233A', border: '1px solid #FFB020', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 15, color: '#FFB020', fontWeight: 'bold' }}>Chain — dropped by the compression</Text>
+                    <Text style={{ fontSize: 13, color: '#C3D0E2', marginTop: 6, lineHeight: 1.5 }}>
+                        molar-mass distribution · sequence (random / block / alternating) · tacticity · morphology · processing history
+                    </Text>
+                </Box>
+                <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text>
+                <Box style={{ width: 340, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 15, color: '#C3D0E2' }}>Measured property</Text>
+                </Box>
+            </Box>
+        </Box>
+    </Box>
+
+    <Box style={{ marginTop: 'auto', padding: '14px 20px', background: '#111B2E', borderLeft: '2px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.6 }}>
+            The benchmark's own stated limitation: the current version does not explicitly encode molar-mass distribution, tacticity,
+            morphology, processing history, device architecture or measurement protocol.
+        </Text>
+        <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 4 }}>
+            Paraphrased from PolyBench, Polym. Sci. Technol. 2026 — the gap is acknowledged upstream, not invented here.
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>Group 32 · How Much Is a Chain Worth?</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>2 / 17</Text>
+    </Box>
+</Slide>

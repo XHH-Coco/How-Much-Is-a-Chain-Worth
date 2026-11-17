@@ -215,6 +215,18 @@ python scripts/00e_arch_floor.py
 三个官方脚本的 `--help` 已逐条抄在上面 §1.1 / §2 / §3 的命令里；不要自己重写"加权合成"，
 `summarize_weighted_predictions.py` 会对「组分缺预测」「摩尔分数不合 1」「psmiles 重复」直接抛错。
 
+**三条不明显的约束（2026-11-17 本机整链复跑时实测，见 `docs/重跑_arch_异机复现_2026-11-17.md`）**：
+
+1. **第 0 步不能省**。`00c` 的清单只记上游字节，`wPSMILES/polyVERSE/...` 是**派生**数据，不在清单里，
+   而上游也没有这个路径（直接取会拿到 404 正文）。缺了它，第 1 步报
+   `FileNotFoundError: ...wPSMILES\polyVERSE\electron_affinity\...csv`。
+2. **第 2 步不能省，也不能并进 `arch --setup`**。`--setup` 只做折与 ID 特征；跳过 `00d` 会让
+   `arch --ood` 的第一行断言就退：`RuntimeError: 组分覆盖不完备：missing=[...]`。
+   这个断言是设计好的闸，不是在报环境问题。
+3. **第 1 步不幂等**。`create_shared_splits()` 用的是 `output_dir.mkdir(parents=True)`，没有 `exist_ok`：
+   上一次失败留下的**空目录**会让重跑直接 `FileExistsError: [WinError 183]`。先 `rmdir` 再跑，或用 `--overwrite`
+   （后者会 `shutil.rmtree` 整个输出目录，想清楚再用）。
+
 ---
 
 ## 7. 本轮没做（以及为什么）
@@ -225,3 +237,49 @@ python scripts/00e_arch_floor.py
 | chemprop / polyBERT / periodic-graph 三条臂的地板 | **没做** | 分工_C-b 只要"官方地板"一条（RDKit RF）；另外三条要 GPU 与各自环境，且不属于 C-b |
 | OOD 的 `IP`（电离能）一侧 | **没做** | task4 只做 `electron_affinity` 一个性质（`SOURCES.md`【坑七】已核实） |
 | `legacy_train.csv` 的用途 | 只取未用 | 官方 README 未把它并入 task4 协议（5 折与 holdout 都来自 VIPEA + polyVERSE）；留着是为了核对时能追 |
+
+---
+
+## 8. 交接状态（2026-11-17 补）：45 份行级产物现在在哪
+
+`results/aggregate/arch_ood_artifacts_manifest.csv` 里 45 条（30 份 `arch_component_preds/*.csv` +
+15 份 `arch_ood_vectors/*.parquet`）都写着 `committed: no`。以前的信息只到这一步——"留本地"，
+但**没写哪台机器、什么时候能删**，于是 D 要算 OOD 的 bootstrap 区间时没有任何落点（D-62）。
+
+现在清单多了三列：`where`、`created_at`、`deletable_after`。当前状态是 **45/45 `unrecorded`**——
+这是如实记录的缺口，不是填好了。**需要 C-c 本人在物化机上补一次**：
+
+```bash
+python scripts/04_run_cpu.py arch --verify-ood
+```
+
+这条命令分三件事报，不要混读：
+
+| 报什么 | 含义 | 该怎么办 |
+|:--|:--|:--|
+| 缺 N 份 | 这台机器上没有这些文件 | 按打印的 `reconstruct` 命令重建，或向 C-c 取件 |
+| 哈希不符 N 份 | 文件被改过（或清单是旧版） | 先查是谁改的，**不要**用改过的文件算区间 |
+| `where` 未登记 N 份 | 文件在，但不知道它在哪台机器上 | 在清单里填机器标识与 `deletable_after` |
+
+**取件另有两条路，都不依赖 C-c 在线**：① 重建——`arch --setup` 需要上游 19 份文件，
+`00c_fetch_task4.py` 按 `data/manifests/external_task4_sources.csv` 的 URL + sha256 幂等拉取；
+② 重跑 `arch --ood`——但它同样需要物化输入，所以在没有 `generated/` 的机器上等价于重建整条链。
+两条路都需要那份 163 MB 级别的上游数据，**这就是为什么清单里的 `where` 比哈希更重要**。
+
+### 8.1 2026-11-17：本机重建完成，45 份不再"下落不明"
+
+在一台 `DSC6020_Project_Core`（Python 3.10.14 / rdkit 2024.3.5 / xgboost 2.0.3 / sklearn 1.4.2 /
+numpy 1.26.4 / pandas 2.2.2 / pyarrow 17.0.0，七项与 `env_core.json` 全同）的机器上，按 §6 的五步
+从上游重建了整条链，然后跑 `arch --run` 与 `arch --ood`：
+
+| 判据 | 结果 |
+|:--|:--|
+| `canonical_sha256` | `632aa02d…`，与记录一致 |
+| `features_sha256` / `pack_sha256` | `fed6173b…`，与记录一致 |
+| `split_version` | `ad424d72…`，与记录一致 |
+| 15 条记录指标 | Δ=**0.000e+00**（`git diff` 只有 `wall_clock_s` 与两个时间戳三行） |
+| 135 个 OOD 指标值 | Δ=**0.000e+00** |
+| 45 份产物 sha256 | **45/45 与清单一致** |
+
+结论：**在环境可校验的前提下，确定性重跑可以替代"取件"**。清单的 `where` 已由 `unrecorded` 改为
+`local:DESKTOP-6C1JF93（E:/How-Much-Is-a-Chain-Worth）`，`arch --verify-ood` 四项归零（D-65）。

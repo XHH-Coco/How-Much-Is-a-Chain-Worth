@@ -1,0 +1,19 @@
+arm,analysis,group,n_points,n_sources,spearman_rho,kendall_tau,result,note
+a3_graph,by_source,experimental,6,1,+0.000000,nan,not_evaluable_single_source,全部 6 个点的 source_kind 都是 `experimental`，跨来源 τ 无定义
+a3_graph,leave_one_source_out,(全部),6,1,nan,nan,not_evaluable_single_source,只有一个来源（experimental），去掉即空集
+a3_graph,confound,tier_vs_log10_n_labels,6,1,-0.956183,,confounded,"tier 与样本量反序（tier1 8,055/3,796 行 vs tier3 279/228）：tier 同时代理「需要链信息」与「数据少 30 倍」，两者对 Λ 方向相反——H1 不是干净对照"
+a3_graph,leave_one_task_out,drop:pb_t1_tg,5,1,+0.158114,,verdict_holds,去掉 tier1 的 pb_t1_tg（n_labels=8055）后 ρ=+0.1581、跨层倒序 1 处 → H1_refuted
+a3_graph,leave_one_task_out,drop:pb_t1_tm,5,1,-0.158114,,verdict_holds,去掉 tier1 的 pb_t1_tm（n_labels=3796）后 ρ=-0.1581、跨层倒序 1 处 → H1_refuted
+a3_graph,leave_one_task_out,drop:pb_t2_modulus,5,1,+0.000000,,verdict_holds,去掉 tier2 的 pb_t2_modulus（n_labels=1034）后 ρ=+0.0000、跨层倒序 2 处 → H1_refuted
+a3_graph,leave_one_task_out,drop:pb_t2_permeability,5,1,+0.000000,,verdict_holds,去掉 tier2 的 pb_t2_permeability（n_labels=711）后 ρ=+0.0000、跨层倒序 2 处 → H1_refuted
+a3_graph,leave_one_task_out,drop:pb_t3_dielectric_loss,5,1,+0.527046,,verdict_flips,去掉 tier3 的 pb_t3_dielectric_loss（n_labels=279）后 ρ=+0.5270、跨层倒序 0 处 → H1_not_refuted
+a3_graph,leave_one_task_out,drop:pb_t3_iwlt,5,1,-0.527046,,verdict_holds,去掉 tier3 的 pb_t3_iwlt（n_labels=228）后 ρ=-0.5270、跨层倒序 2 处 → H1_refuted
+a4_polybert,by_source,experimental,6,1,+0.239046,nan,not_evaluable_single_source,全部 6 个点的 source_kind 都是 `experimental`，跨来源 τ 无定义
+a4_polybert,leave_one_source_out,(全部),6,1,nan,nan,not_evaluable_single_source,只有一个来源（experimental），去掉即空集
+a4_polybert,confound,tier_vs_log10_n_labels,6,1,-0.956183,,confounded,"tier 与样本量反序（tier1 8,055/3,796 行 vs tier3 279/228）：tier 同时代理「需要链信息」与「数据少 30 倍」，两者对 Λ 方向相反——H1 不是干净对照"
+a4_polybert,leave_one_task_out,drop:pb_t1_tg,5,1,+0.158114,,verdict_holds,去掉 tier1 的 pb_t1_tg（n_labels=8055）后 ρ=+0.1581、跨层倒序 1 处 → H1_refuted
+a4_polybert,leave_one_task_out,drop:pb_t1_tm,5,1,+0.158114,,verdict_holds,去掉 tier1 的 pb_t1_tm（n_labels=3796）后 ρ=+0.1581、跨层倒序 1 处 → H1_refuted
+a4_polybert,leave_one_task_out,drop:pb_t2_modulus,5,1,+0.158114,,verdict_holds,去掉 tier2 的 pb_t2_modulus（n_labels=1034）后 ρ=+0.1581、跨层倒序 2 处 → H1_refuted
+a4_polybert,leave_one_task_out,drop:pb_t2_permeability,5,1,+0.158114,,verdict_holds,去掉 tier2 的 pb_t2_permeability（n_labels=711）后 ρ=+0.1581、跨层倒序 2 处 → H1_refuted
+a4_polybert,leave_one_task_out,drop:pb_t3_dielectric_loss,5,1,+0.948683,,verdict_flips,去掉 tier3 的 pb_t3_dielectric_loss（n_labels=279）后 ρ=+0.9487、跨层倒序 0 处 → H1_not_refuted
+a4_polybert,leave_one_task_out,drop:pb_t3_iwlt,5,1,-0.105409,,verdict_holds,去掉 tier3 的 pb_t3_iwlt（n_labels=228）后 ρ=-0.1054、跨层倒序 2 处 → H1_refuted

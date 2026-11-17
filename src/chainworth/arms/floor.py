@@ -101,15 +101,22 @@ def train_one(
     max_epochs: int | None = None,
     patience: int | None = None,
     n_level: str | None = None,
+    label_transform: str = "raw",
     **_: Any,
 ) -> C.TaskOutcome:
     """用训练集均值预测测试集；三种子的数**完全相同**（均值没有随机性），记录里如实反映。
     Predict the training mean; the three seeds give identical numbers and the record says so.
 
-    中文：输入：data；config；fold；seed。输出：`C.TaskOutcome`。
-          数据来源：`FloorData`。副作用：无（不训练）。异常：G.ArmError —— 折名不存在或集合为空。
-    English: Args: data, config, fold, seed. Returns: an outcome with the training mean as its
-    prediction. Raises on an unknown fold or an empty train/test set.
+    中文：输入：data；config；fold；seed；label_transform —— `raw`（默认）/ `ln`。
+          输出：`C.TaskOutcome`。数据来源：`FloorData`。副作用：无（不训练）。
+          异常：G.ArmError —— 折名不存在或集合为空。
+          为什么地板也要跟着换尺度：A1 是"瞎猜有多差"的分母。若 A2 在 ln 空间得 0.62、A1 还在
+          raw 空间得 −0.0018，两列不能相减，读者会以为"换尺度后增益变大"——实际是分母换了。
+          所以 `ln` 下的 A1 = `mean(ln y_train)` 作为一个常数预测，R² 也在 ln 空间算。
+    English: Args: data, config, fold, seed, label_transform (raw by default, or ln). Returns: an
+    outcome with the training mean as its prediction. Raises on an unknown fold or an empty set.
+    The floor has to move with the scale too: A1 is the "how bad is guessing" denominator, and if
+    A2 is scored on ln while A1 stays on raw, the two columns cannot be subtracted.
     """
     by_name = {spec.name: spec for spec in data.split.folds}
     if fold not in by_name:
@@ -122,7 +129,8 @@ def train_one(
 
     started = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     clock = time.perf_counter()
-    mean = float(np.mean(data.y[train_index]))
+    y_space = C.label_values(data.y, label_transform)
+    mean = float(np.mean(y_space[train_index]))
     y_pred = np.full(test_index.size, mean, dtype=np.float64)
     wall = time.perf_counter() - clock
     finished = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
@@ -145,7 +153,7 @@ def train_one(
         "config_hash": G.config_hash(config),
         "n_train": int(train_index.size),
         "n_test": int(test_index.size),
-        "metrics": G.metrics(data.y[test_index], y_pred),
+        "metrics": G.metrics(y_space[test_index], y_pred),
         "wall_clock_s": wall,
         "device": "cpu",
         "env_fingerprint": ENV_FINGERPRINT,
@@ -158,6 +166,15 @@ def train_one(
             f"interpreter Python {sys.version.split()[0]} (D-40)"
         ),
     }
+    if label_transform != "raw":
+        # 与 A2 同一道闸门：run_id 里没有尺度段，写进 raw_runs/ 就是覆盖主表的同名地板记录。
+        # Same gate as A2: the run_id has no scale segment, so this must never reach raw_runs/.
+        record["label_transform"] = label_transform
+        record["notes"] = (
+            record["notes"]
+            + f"; label transform = {label_transform}(y); metrics are on the {label_transform} "
+            "scale (Q-10 / D-66); must NOT be written to results/raw_runs/"
+        )
     return C.TaskOutcome(record=record, row_id=data.row_id[test_index], y_pred=y_pred)
 
 

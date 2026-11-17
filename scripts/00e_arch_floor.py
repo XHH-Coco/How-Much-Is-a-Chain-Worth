@@ -265,7 +265,8 @@ def main(argv: list[str] | None = None) -> int:
             "verdict": (
                 "OOD combined 与官方差 > 0.1：按分工_C-b 验收②先查物化（行数/组分覆盖/加权），不许调模型"
                 if alarm
-                else "OOD combined 与官方差 ≤ 0.1：物化与合成链路复现得上，可以交给 C-c 跑 30 runs"
+                else "OOD combined 与官方差 ≤ 0.1：物化与合成链路复现得上，"
+                "可以交给 C-c 跑 15 runs（D-49 单臂 a2_conventional；原稿写的是 30 runs = a2+a3）"
             ),
         },
         "counts": {

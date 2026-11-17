@@ -1,0 +1,61 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (1/6)</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        In 12 of 19 cells the chain arm adds nothing
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 22 }}>
+        <Box style={{ width: 300, flexDirection: 'column', justifyContent: 'flex-start', gap: 22 }}>
+            <Box style={{ flexDirection: 'column' }}>
+                <Text style={{ fontSize: 52, fontWeight: 'bold', color: '#FF6B6B', lineHeight: 1.05 }}>12 / 19</Text>
+                <Text style={{ fontSize: 13, color: '#8FA3BC', marginTop: 4, lineHeight: 1.45 }}>cells with Λ &lt; 0, across both chain arms</Text>
+            </Box>
+            <Box style={{ flexDirection: 'column' }}>
+                <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.05 }}>−0.098</Text>
+                <Text style={{ fontSize: 13, color: '#8FA3BC', marginTop: 4, lineHeight: 1.45 }}>median over the 303 usable run-level values</Text>
+            </Box>
+            <Box style={{ flexDirection: 'column' }}>
+                <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.05 }}>−0.859</Text>
+                <Text style={{ fontSize: 13, color: '#8FA3BC', marginTop: 4, lineHeight: 1.45 }}>most stable negative: op_tm × A3, 75 computable rows</Text>
+            </Box>
+            <Box style={{ flexDirection: 'column' }}>
+                <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>+0.638</Text>
+                <Text style={{ fontSize: 13, color: '#8FA3BC', marginTop: 4, lineHeight: 1.45 }}>largest positive — but only 6 of 15 rows are computable</Text>
+            </Box>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column' }}>
+            <Table
+                style={{ width: 816, height: 396 }}
+                defaultTextStyle={{ fontSize: 13, textAlign: 'left', color: '#C3D0E2' }}
+                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1A2639' } }, background: { color: '#0E1728' } }}
+                cells={[
+                    [
+                        { text: 'Cell — task × chain arm', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
+                        { text: 'Λ via A3 (MPNN)', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12, textAlign: 'right' }, cellStyle: { background: { color: '#16233A' } } },
+                        { text: 'Λ via A4 (polyBERT)', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12, textAlign: 'right' }, cellStyle: { background: { color: '#16233A' } } },
+                    ],
+                    ['pb26_homopolymer_density', { text: '+0.638', textStyle: { color: '#35D0A5', textAlign: 'right' } }, { text: '−0.532', textStyle: { color: '#FF6B6B', textAlign: 'right' } }],
+                    ['op_dielectric_constant_total', { text: '+0.116', textStyle: { color: '#35D0A5', textAlign: 'right' } }, { text: 'not run', textStyle: { color: '#55687F', textAlign: 'right' } }],
+                    ['pb_t3_iwlt', { text: '+0.068', textStyle: { color: '#35D0A5', textAlign: 'right' } }, { text: '+0.170', textStyle: { color: '#35D0A5', textAlign: 'right' } }],
+                    ['pb26_polymetrix_tg', { text: '+0.005', textStyle: { color: '#35D0A5', textAlign: 'right' } }, { text: '−0.473', textStyle: { color: '#FF6B6B', textAlign: 'right' } }],
+                    ['pb_t1_tg', { text: '−0.004', textStyle: { color: '#FF6B6B', textAlign: 'right' } }, { text: '−0.549', textStyle: { color: '#FF6B6B', textAlign: 'right' } }],
+                    ['pb_t2_permeability', { text: '−0.008', textStyle: { color: '#FF6B6B', textAlign: 'right' } }, { text: '+0.003', textStyle: { color: '#35D0A5', textAlign: 'right' } }],
+                    ['op_tg', { text: '−0.010', textStyle: { color: '#FF6B6B', textAlign: 'right' } }, { text: 'not run', textStyle: { color: '#55687F', textAlign: 'right' } }],
+                    ['pb_t2_modulus', { text: '−0.016', textStyle: { color: '#FF6B6B', textAlign: 'right' } }, { text: '+0.028', textStyle: { color: '#35D0A5', textAlign: 'right' } }],
+                    ['pb_t1_tm', { text: '−0.192', textStyle: { color: '#FF6B6B', textAlign: 'right' } }, { text: '−0.296', textStyle: { color: '#FF6B6B', textAlign: 'right' } }],
+                    ['op_tm', { text: '−0.859', textStyle: { color: '#FF6B6B', textAlign: 'right', bold: true } }, { text: 'not run', textStyle: { color: '#55687F', textAlign: 'right' } }],
+                    ['pb_t3_dielectric_loss', { text: '−1.479', textStyle: { color: '#FF6B6B', textAlign: 'right', bold: true } }, { text: '−0.905', textStyle: { color: '#FF6B6B', textAlign: 'right' } }],
+                ]}
+            />
+        </Box>
+    </Box>
+
+    <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>
+            lambda_ci.csv · A3 was never tuned, A2 was tuned 30 times — part of the negative sign may be tuning asymmetry, not chain harm.
+        </Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>8 / 17</Text>
+    </Box>
+</Slide>

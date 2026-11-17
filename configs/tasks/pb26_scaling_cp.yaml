@@ -1,4 +1,17 @@
-# FROZEN v1 | 2026-11-12 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+# FROZEN v2 | 2026-11-17 | sha256 见 configs/tasks/SHA256SUMS（自指，故登记配套文件）
+#
+# v1 → v2 只动 `arms` 一行：加 `a3_graph`。**数据集、档位、划分、行数、单位一个字节都没动**，
+# 所以 v1 时期跑出的 40 条 A2 记录仍然成立——它们的 `config_hash` 是 `scaling.yaml` 的字节哈希，
+# 不是这个文件的（实测 40/40 条记录的 `config_hash` 都是 `sha256:60841fcd…`）。
+# 唯一的算术后果是 `eval_unit` 从"写着 2 arms 却只有 1 个"变成名副其实。
+#
+# 为什么必须补 A3：κ 的定义是 dΛ/dlog₁₀n，而 Λ 需要**两支**（链臂 − 单元臂）。v1 只声明了
+# A2，于是 H2 的横轴齐了、纵轴缺一半（验收_P3_分工C-c §2 与 D-69 记的就是这一条）。
+# v1 -> v2 adds `a3_graph` to `arms` and nothing else: the datasets, tiers, splits, row counts and
+# units are byte-identical, so the 40 A2 records from v1 still stand - their `config_hash` is
+# scaling.yaml's digest, not this file's. The chain arm is required because kappa = dLambda/dlog10 n
+# needs both branches (chain minus unit); v1 declared only the unit arm.
+
 task_id: pb26_scaling_cp
 dataset_name: MD_5000 Cp (alternating + homopolymer)
 benchmark: polybench26
@@ -14,9 +27,10 @@ source_kind: md
 n_labels: 29602
 n_source: 官方 manifest.json 的 n_rows 相加：27,802（alternating_Cp）+ 1,800（homopolymer_Cp），2026-11-12 本地核
 data_ref: null
-eval_unit: official tiers x 5 folds x 2 arms
+eval_unit: official tiers x 5 folds x 2 arms（A2 单元臂 A2 之外的那一支 = A3 链臂，D-69）
 arms:
 - a2_conventional
+- a3_graph                   # v2 新增（D-69）：κ 的纵轴需要链臂，否则 40 条记录只有分母
 split_ref: splits/polybench26/pb26_scaling_cp/
 split_status: present
 split_protocol: official_scaling_indices_5fold_seed42
@@ -38,4 +52,4 @@ datasets:
   - 1000
   canonical_source: PSMILES/MD_5000/Cp/homopolymer_Cp.csv
   official_indices_path: Datasets/scaling_indices/MD_5000/Cp/homopolymer_Cp/seed_42
-notes: 只承担 H2（κ）。拟合矩阵（档位 × 折 × 臂）由 C-3 的 configs/experiments/scaling.yaml 定义，本文件只管任务身份。homopolymer 没有 3000 档是事实不是失败（官方 README）。
+notes: 只承担 H2（κ）。拟合矩阵（档位 × 折 × 臂）由两份实验配置定义——单元臂 configs/experiments/scaling.yaml（C-b-1 冻结，80 行表）、链臂 configs/experiments/scaling_chain.yaml（D-69 新建，40 条记录），本文件只管任务身份。homopolymer 没有 3000 档是事实不是失败（官方 README）。

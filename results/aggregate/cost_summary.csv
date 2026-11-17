@@ -1,0 +1,6 @@
+scope,device,arm,n_rows,wall_clock_s,hours,note
+runs,cpu,a1_floor,48,0.003,0.000001,来自 gpu_hours.csv，按 device + arm 分组（D-64）
+runs,cpu,a2_conventional,328,933.625,0.259340,来自 gpu_hours.csv，按 device + arm 分组（D-64）
+runs,cuda,a3_graph,498,3714.748,1.031874,来自 gpu_hours.csv，按 device + arm 分组（D-64）
+runs,cuda,a4_polybert,48,6.012,0.001670,来自 gpu_hours.csv，按 device + arm 分组（D-64）
+ood,cpu,a2_conventional,0,,,缺 arch_ood_audit.json：需在物化机上跑一次 arch --ood（D-60）

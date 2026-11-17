@@ -198,10 +198,18 @@ def _arch_records() -> list[dict]:
     return records
 
 
-@pytest.mark.skipif(not SPLIT_MANIFEST.exists(), reason="本地未物化：先跑 scripts/04_run_cpu.py arch --setup")
 def test_records_share_the_frozen_config_hash(config: G.ArmConfig) -> None:
     """15 条记录的 config_hash 逐条等于 arch_transfer.yaml 的字节哈希。
     Every arch record's config_hash equals this file's byte hash.
+
+    中文：
+        用途：**不挂 `skipif`**。这条只读 `results/raw_runs/*.json`（入库物），与物化无关；
+              挂了物化的 skipif 会让它在干净克隆上整条不跑，于是"配置改了一个空格"也不会红——
+              这正是 C-c 验收 §5.3 查出来的守门虚设（D-62）。
+    English:
+        Deliberately unguarded: this reads only results/raw_runs/*.json, so a materialisation
+        skipif would stop it from running on a clean clone - and a one-space edit to the config
+        would not turn anything red (acceptance C-c section 5.3).
     """
     records = _arch_records()
     assert len(records) == 15
@@ -209,10 +217,12 @@ def test_records_share_the_frozen_config_hash(config: G.ArmConfig) -> None:
         assert record["config_hash"] == f"sha256:{config.sha256}"
 
 
-@pytest.mark.skipif(not SPLIT_MANIFEST.exists(), reason="本地未物化：先跑 scripts/04_run_cpu.py arch --setup")
 def test_records_carry_id_tier_metrics() -> None:
     """每条记录都带 ID 两档分开的指标与条数（验收①：不许合并成一个 ID）。
     Each record carries the two ID tiers separately (never merged), with counts alongside.
+
+    中文：同样**不挂 `skipif`**——它只读记录，与物化无关（D-62）。
+    English: Also unguarded - it reads the records only, never the materialised splits (D-62).
     """
     for record in _arch_records():
         tiers = record["id_tier_metrics"]
@@ -222,3 +232,57 @@ def test_records_carry_id_tier_metrics() -> None:
         for tier in ("alternating", "homopolymer"):
             for metric in ("rmse", "mae", "r2"):
                 assert metric in tiers[tier]
+
+
+def test_ensemble_keeps_the_audit_fields() -> None:
+    """集成结果必须带重拟合一致性与 OOD 墙钟四项；缺的时候写 null + 说明，不许静默省略（D-60）。
+    The ensemble must carry the refit identity and the OOD wall clock; when absent it writes null
+    plus a note rather than dropping the keys (D-60).
+
+    中文：
+        用途：`refit_matches_id` 是"重拟合出来的模型与落盘 ID 预测逐位相同"的唯一证据，OOD 的墙钟
+              也不写 run 记录。这两项以前只活在内存和日志里，第三方无从核对。这条测试锁住"键必须
+              在"：**允许值是 null（旧运行）+ 说明**，不允许键直接消失——键消失了，读的人会以为
+              这条流程本来就没有这个证据。
+    English:
+        refit_matches_id is the only evidence that the re-fitted model reproduces the stored ID
+        predictions, and the OOD wall clock never reaches a run record. The keys must exist; null
+        plus a note is allowed for old runs, silent omission is not.
+    """
+    path = REPO / "results" / "aggregate" / "arch_ood_ensemble.json"
+    if not path.is_file():
+        pytest.skip("还没有 arch_ood_ensemble.json（先跑 arch --ood）")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    for key in ("refit_matches_id", "refit_all_match", "ood_wall_clock_s", "ood_audit_path"):
+        assert key in payload, f"集成结果缺 {key}（D-60）"
+    if payload["refit_matches_id"] is None:
+        assert payload.get("ood_audit_note"), "null 必须配一条说明，不许留空让人猜"
+
+
+def test_verify_ood_reports_missing_and_unrecorded_separately(tmp_path: Path) -> None:
+    """`arch --verify-ood` 必须把「缺件」与「where 未登记」**分开报**（D-62）。
+    arch --verify-ood must report a missing file and an unrecorded host as two findings (D-62).
+
+    中文：
+        用途：这两个发现对应两种动作——缺件要重建、缺机器名要人填。把 where 的检查塞在"文件存在"
+              之后，就会出现"45 份全缺 + 45 份未登记"只报前一半的情况（本轮实测撞到并修掉）。
+              这条用 tmp 清单把两种情形钉死：缺件 + 未登记的行，两个列表都要有它。
+    English:
+        A missing file needs a rebuild, a missing host name needs a human. The where check used to
+        sit after the existence test, so a row that was both missing and unrecorded only appeared
+        in "missing". Both lists must see it.
+    """
+    from chainworth.experiments import arch as A
+
+    manifest = tmp_path / "arch_ood_artifacts_manifest.csv"
+    manifest.write_text(
+        "path,sha256,size_bytes,committed,where,created_at,deletable_after,note\n"
+        "results/aggregate/arch_ood/never_written.csv,deadbeef,1,no,unrecorded,unrecorded,x,\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    report = A.verify_ood_artifacts(manifest_path=manifest)
+    assert report["n_artifacts"] == 1
+    assert report["missing"] and report["unrecorded_hosts"]
+    assert report["missing"] == report["unrecorded_hosts"]
+    assert report["ok"] is False

@@ -1,0 +1,37 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>03 · THE QUESTION</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        One question, and why it deserves a clean test
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ marginTop: 26, padding: '22px 26px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 25, color: '#FFFFFF', lineHeight: 1.45 }}>
+            If a whole chain is compressed into one repeat unit, how much property variance becomes
+            unexplainable — and does that share shrink when the data grows tenfold?
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 30 }}>
+        {[
+            ['01', 'It reframes a decade of data', 'If Λ is positive and κ is near zero, the field has been buying interpolation accuracy inside its measured distribution — not chain physics.'],
+            ['02', 'It is not a sampling story', 'A gap that survives a tenfold increase in data behaves like a missing coordinate. More data is then the wrong remedy, and that is a claim worth attacking.'],
+            ['03', 'It is decidable with what exists', 'One Λ per (task, arm) cell, one slope per dataset. No new measurement, no new synthesis — only public benchmarks and frozen splits.'],
+        ].map(([idx, head, body]) => (
+            <Box key={idx} style={{ flex: 1, flexDirection: 'column' }}>
+                <Text style={{ fontSize: 13, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 1.6 }}>{idx}</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, lineHeight: 1.35 }}>{head}</Text>
+                <Text style={{ fontSize: 14, color: '#A8B8CE', marginTop: 10, lineHeight: 1.65 }}>{body}</Text>
+            </Box>
+        ))}
+    </Box>
+
+    <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 24 }}>
+        None of the four course topics covers organic or polymer materials — and polymer is the largest material class by production volume.
+    </Text>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>Group 32 · How Much Is a Chain Worth?</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>4 / 17</Text>
+    </Box>
+</Slide>

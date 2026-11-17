@@ -23,7 +23,7 @@
     },
     "alarm_threshold": 0.1,
     "alarm": false,
-    "verdict": "OOD combined 与官方差 ≤ 0.1：物化与合成链路复现得上，可以交给 C-c 跑 30 runs"
+    "verdict": "OOD combined 与官方差 ≤ 0.1：物化与合成链路复现得上，可以交给 C-c 跑 15 runs（D-49 单臂 a2_conventional；原稿写的是 30 runs = a2+a3）"
   },
   "counts": {
     "canonical_rows": 6478,

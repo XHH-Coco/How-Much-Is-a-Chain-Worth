@@ -1,0 +1,132 @@
+# PolyBench26 数据量扫描 · **链臂**（A3 图臂）拟合矩阵 · 冻结配置 v1
+# PolyBench26 data-size scan - the **chain arm** (A3 graph) fit matrix - frozen config v1
+#
+# 冻结于 2026-11-17（D-69）。**本文件的字节哈希就是这 40 条记录的 `config_hash`**，
+# 所以跑之前改一个空格，40 条记录就整体作废（与 `scaling.yaml` 对那 80 行表的关系一模一样）。
+# Frozen on 2026-11-17 (D-69). **This file's byte hash is the `config_hash` of the 40 records**, so
+# a single space edited before a run invalidates all of them - exactly like `scaling.yaml`.
+#
+# ---- 为什么是**另一个文件**，不是改 `scaling.yaml` ----
+# `scaling.yaml` 那份已经被 C-b-1 冻结，它的字节哈希 `60841fcd…` 写在 40 条 A2 记录的
+# `config_hash` 里。往里加一节链臂 = 换哈希 = `index` 把 40 条 A2 记录判成旧协议并整体剔除，
+# κ 的左半边（分母）当场消失，而且**不报错**（D-35/D-36 的同一面）。所以链臂另起一份。
+# Why a separate file rather than editing `scaling.yaml`: that one is frozen by C-b-1 and its digest
+# `60841fcd...` sits in the `config_hash` of 40 A2 records. Adding a chain section there would change
+# the digest, `index` would quietly drop all 40 (D-35/D-36), and kappa's denominator would vanish.
+#
+# ---- 超参为什么在这里重复一遍 ----
+# `train_one()` 只读一份配置，而 A3 的超参在 `configs/arms/a3_graph.yaml` 里。**不能改那份**：
+# 它的哈希 `f9c2264e…` 写在 48 条 A3 主表记录的 `config_hash` 里。所以这里逐字抄一份，并由
+# `tests/test_scaling_chain.py::test_hyperparameters_match_the_frozen_a3_arm` 守住"一个键都不许漂"——
+# 抄写有风险，但**断言把风险变成红灯**；改 `a3_graph.yaml` 而不改这里，那条测试会立刻失败。
+# Why the hyper-parameters appear twice: `train_one()` reads one config, and A3's live in
+# `configs/arms/a3_graph.yaml`, which must not be edited (its digest is in 48 main-table records).
+# So they are copied verbatim, and a test asserts key-by-key equality - drift becomes a red test
+# instead of a silent second convention.
+#
+# ---- 这一批回答什么 ----
+# κ = dΛ/dlog₁₀n：训练集涨 10 倍，Λ = (R²_链 − R²_单元)/(1 − R²_单元) 会不会移动。
+# 横轴 8 个档位都是官方前缀（`train_pool[:N]`），**不是我们挑的**；纵轴两支各跑自己的臂。
+# kappa = dLambda/dlog10 n on the official eight tiers; each branch runs its own arm.
+#
+# 不写 `scaling_cpu.csv`：那张表是 A2 的（里面还混着不写记录的 RF 行），链臂另落
+# `results/aggregate/scaling_chain.csv`，两张表按 (dataset, tier, fold, seed) 对齐后求 Λ。
+# Not written into scaling_cpu.csv (that table is A2's, and already mixes in record-less RF rows).
+
+arm: a3_graph
+experiment: scaling_chain
+version: "1.0"
+frozen_at: "2026-11-17"
+owner: D
+
+# ---- 网格：8 个(数据集,档位) × 5 折 × 1 种子 = 40 条 ----
+# 交替 5 档（300/1000/3000/10000/all），均聚 3 档（300/1000/all）——档位来自官方 manifest，
+# 缺档是事实（均聚官方没有 3000/10000），硬凑会让 κ 曲线失真。
+# 为什么只有 seed 0：单元臂那 40 条也是 seed 0。链臂跑 3 个种子、分母只有 1 个，得到的不是
+# 置信区间而是不对称。κ 的区间来自**按测试行配对 bootstrap**（test_metrics/analysis.ci 那套），
+# 不来自种子方差；种子方差另用 n=300 端点 2 个种子做诊断（不进点估计）。
+seeds: [0]
+expected_fits: 40
+runs:
+  polybench26:
+    tasks:
+      - pb26_scaling_cp
+    folds:
+      - md5000_alternating_cp_fold_00
+      - md5000_alternating_cp_fold_01
+      - md5000_alternating_cp_fold_02
+      - md5000_alternating_cp_fold_03
+      - md5000_alternating_cp_fold_04
+      - md5000_homopolymer_cp_fold_00
+      - md5000_homopolymer_cp_fold_01
+      - md5000_homopolymer_cp_fold_02
+      - md5000_homopolymer_cp_fold_03
+      - md5000_homopolymer_cp_fold_04
+
+# ---- 档位取法：官方前缀 ----
+# `train_pool[:N]`，`create_scaling_splits.py` 的原样定义（红线 1）。**不打乱**——打乱就不再是
+# 官方那一档。`seed` 这一行是形状对齐（prefix 不消耗随机数），与 `scaling.yaml` 同一写法。
+subset:
+  rule: prefix
+  nested: true
+  train_only: true
+  seed: 0
+
+# ---- 架构：与 `configs/arms/a3_graph.yaml` 逐键相同（由测试守门） ----
+architecture:
+  implementation: chemprop.models.MPNN
+  message_passing: BondMessagePassing
+  aggregation: NormAggregation
+  depth: 3
+  hidden: 300
+  aggregation_norm: 100
+  dropout: 0.0
+  batch_norm: false
+  activation: relu
+  undirected: false
+  atom_feature_dim: 72
+  bond_feature_dim: 14
+  ffn_hidden: 300
+  ffn_layers: 1
+  output_transform: unscale
+
+# ---- 训练：同上一份，逐键相同 ----
+training:
+  loss: rmse
+  batch_size: 64
+  max_epochs: 100
+  patience: 15
+  monitor: val_loss
+  warmup_epochs: 2
+  init_lr: 1.0e-4
+  max_lr: 1.0e-3
+  final_lr: 1.0e-4
+  target_scaling: train_zscore
+  # 官方 scaling 划分**自带** val（2,780 行/折），所以这一批走 `val_source=official`，
+  # 不从训练集里切 10%——两支臂的训练行数才能严格相等（A2 用的是同一个 N）。
+  # The official scaling split ships a validation set, so `val_source=official`: the chain arm
+  # trains on exactly N rows, the same N as A2, and no 10% carve-out shrinks it.
+  val_fraction_if_missing: 0.10
+  val_split_seed: 20261121
+
+device:
+  prefer: cuda
+  per_process_memory_fraction: 0.90
+  cudnn_deterministic: true
+  num_workers: 0
+
+# ---- 预算 ----
+budget:
+  # 实测外推：n=22,242 时约 570 秒/run（0.52 s/epoch × 79 epoch，来自 B-3 的 3 条 n≈2,000 记录），
+  # 40 条合计约 1.4 GPU-h；申请把 P2 从 6 提到 8（已用 4.21）。
+  predicted_gpu_hours: [1.2, 1.8]
+  approved_cap_gpu_hours: 8
+  note: >-
+    单 run 超过 12 分钟就停下查 batch 与 num_workers，不许悄悄改小 max_epochs；
+    跑完把实测写进 gpu_hours.csv（按 arm=a3_graph 筛，不整表求和）。
+
+records:
+  raw_runs: results/raw_runs
+  predictions: results/aggregate/predictions
+  gpu_hours: results/aggregate/gpu_hours.csv
+  env_fingerprint: results/env_fingerprints/env_gnn.json

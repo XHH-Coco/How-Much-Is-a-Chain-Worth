@@ -78,6 +78,49 @@ SENS_TABLE = REPO_ROOT / "results" / "aggregate" / "learner_sensitivity.csv"
 SENS_PARAMS = REPO_ROOT / "results" / "aggregate" / "learner_sensitivity_params.csv"
 CONTROL_CONFIG = REPO_ROOT / "configs" / "experiments" / "pb26_control.yaml"
 CONTROL_TABLE = REPO_ROOT / "results" / "aggregate" / "pb26_controlled_control.csv"
+# Q-10 的 ln 尺度敏感性（D-66）：4 个重尾任务 × 2 臂 × 3 种子 = 24 行，另存一张表。
+# **不写 `raw_runs/`**：run_id 里没有"尺度"这一段，写进去就是覆盖主表的同名记录。
+# Q-10's ln-scale sensitivity (D-66): 24 rows in their own table. Never written to raw_runs/,
+# because the run_id has no scale segment and would overwrite the main-table record.
+LOG_TARGET_TABLE = REPO_ROOT / "results" / "aggregate" / "log_target_sensitivity.csv"
+# 官方 R² 的唯一出处：这张表由 `04b_official_compare.py polybench` 生成，`official_best_tree_r2`
+# 列就是"官方最佳树集成格"的值。**本脚本一个官方数都不手抄**，全部从这里读。
+# The single source of the official R^2 values: written by 04b, read here. Nothing is hand-copied.
+OFFICIAL_COMPARE = REPO_ROOT / "results" / "aggregate" / "polybench_official_compare.csv"
+MAIN_TABLE_CONFIG = REPO_ROOT / "configs" / "experiments" / "main_table.yaml"
+
+
+def _main_table_scope() -> tuple[set[str], set[str], int]:
+    """主表口径：允许进 `a1_a2_index.csv` 的**任务集合**、**臂集合**、期望条数。
+    The main-table scope: which tasks and arms may enter the index, and how many rows to expect.
+
+    中文：
+        用途：`index` 的唯一白名单来源。以前它只挡"带 `n_level` 的记录"，于是 arch 的 15 条
+              （没有 `n_level`、臂名又正好是 `a2_conventional`）会被并进索引，96 变 111，
+              **不报错**（验收 C-a §5.1）。白名单改成"任务在 `units` 里、臂在 `arms` 里且
+              `in_main_table: true`"，新增任务不会自动混进来。
+        输入：无。输出：(tasks, arms, expected_runs)。数据来源：`main_table.yaml`（唯一出处）。
+        副作用：只读。异常：文件缺字段时抛 KeyError/TypeError——宁可炸，也不许默默放宽。
+    English:
+        The single allow-list behind `index`. It used to filter only on "has no n_level", so the 15
+        arch records (no n_level, arm literally a2_conventional) were merged in and the index went
+        from 96 to 111 without any error (acceptance C-a section 5.1). The allow-list is now "task
+        in units and arm in arms with in_main_table: true", so a new task cannot slip in.
+    """
+    raw = yaml.safe_load(MAIN_TABLE_CONFIG.read_text(encoding="utf-8")) or {}
+    tasks: set[str] = set()
+    for block in (raw.get("units") or {}).values():
+        if isinstance(block, dict):
+            tasks.update(str(task) for task in (block.get("tasks") or []))
+    arms = {
+        str(arm)
+        for arm, spec in (raw.get("arms") or {}).items()
+        if isinstance(spec, dict) and spec.get("in_main_table")
+    }
+    expected = int((raw.get("expected_runs") or {}).get("total") or 0)
+    if not tasks or not arms:
+        raise SystemExit(f"{MAIN_TABLE_CONFIG} 里读不到 units.tasks / arms：index 的白名单不能为空")
+    return tasks, arms, expected
 CONTROL_SUMMARY = REPO_ROOT / "results" / "aggregate" / "pb26_controlled_control_summary.json"
 NULL_CONFIG = REPO_ROOT / "configs" / "experiments" / "null_calibration.yaml"
 NULL_TABLE = REPO_ROOT / "results" / "aggregate" / "null_calibration.csv"
@@ -94,6 +137,11 @@ OPENPOLY_GPU_N_INDEX = REPO_ROOT / "results" / "aggregate" / "openpoly_n_index.c
 # C-b-1：PolyBench26 的数据量扫描（H2 的 κ）。档位是官方 `train_sizes` 的前缀。
 # C-b-1: PolyBench26's data-size scan (H2's kappa); a tier is a prefix of the official train_sizes.
 SCALING_CONFIG = REPO_ROOT / "configs" / "experiments" / "scaling.yaml"
+# D-69：链臂（A3）的拟合矩阵。**单独一份文件**，因为 `scaling.yaml` 的字节哈希已经写进 40 条
+# A2 记录的 config_hash，往那份里加一节 = 40 条记录整体作废（且不报错）。
+# D-69: the chain arm's fit matrix lives in its own file; editing scaling.yaml would silently
+# invalidate the 40 A2 records whose config_hash is that file's digest.
+SCALING_CHAIN_CONFIG = REPO_ROOT / "configs" / "experiments" / "scaling_chain.yaml"
 # C-c-1/C-c-2：架构迁移 15 runs（D-49 单臂）+ OOD 三段式。冻结后其字节哈希进每条记录的 config_hash。
 # C-c-1/C-c-2: the architecture transfer 15 runs (D-49 single arm) + OOD three stages.
 ARCH_CONFIG = REPO_ROOT / "configs" / "experiments" / "arch_transfer.yaml"
@@ -128,6 +176,27 @@ CONTROL_COLUMNS = (
     "rmse",
     "wall_clock_s",
     "hyperparams",
+)
+# 24 行的列定义。`official_target_scale` 是**从官方对照表读来的**，不是写死的字面量：
+# 若哪天官方把某个任务改回 raw，这一列会当场变成 raw，而不是我们这边悄悄还是 ln。
+LOG_TARGET_COLUMNS = (
+    "task",
+    "arm",
+    "label_transform",
+    "official_target_scale",
+    "fold",
+    "seed",
+    "n_train",
+    "n_test",
+    "r2",
+    "mae",
+    "rmse",
+    "wall_clock_s",
+    "official_best_tree_r2",
+    "delta_vs_official",
+    "official_best_tree_algorithm",
+    "official_best_tree_descriptor",
+    "note",
 )
 NULL_COLUMNS = (
     "task",
@@ -189,6 +258,15 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     sens.add_argument("--seeds", nargs="+", type=int, metavar="S")
     sens.add_argument("--dry-run", action="store_true", help="只打印计划，不训练不写文件")
 
+    # Q-10 的 ln 尺度敏感性（D-66）。任务由官方对照表反查，不在命令行里写死。
+    logt = sub.add_parser(
+        "log-target",
+        help="Q-10 的 ln 尺度敏感性：4 个重尾任务 × 2 臂 × 3 种子，落独立 CSV，不进主表、不写 raw_runs",
+    )
+    logt.add_argument("--tasks", nargs="+", metavar="TASK", help="默认=官方对照表里全部 ln 任务")
+    logt.add_argument("--seeds", nargs="+", type=int, metavar="S", help="默认 0 1 2")
+    logt.add_argument("--dry-run", action="store_true", help="只打印计划，不训练不写文件")
+
     ctl = sub.add_parser(
         "control", help="PB26 受控对照：训练量 / 特征 / 模型各自单改，拆开与官方的差"
     )
@@ -228,6 +306,15 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "scaling", help="C-b-1：数据量扫描（双数据集的 pack、档位前缀、60–80 fits）"
     )
     scl.add_argument("--config", default=None)
+    scl.add_argument(
+        "--arm",
+        default=None,
+        choices=["a2_conventional", "a3_graph"],
+        help=(
+            "哪一支臂：a2_conventional（默认，单元臂，写 scaling_cpu.csv）或 "
+            "a3_graph（链臂，D-69，写 scaling_chain.csv 与 40 条 run 记录）"
+        ),
+    )
     scl.add_argument("--datasets", nargs="+", metavar="DATASET")
     scl.add_argument("--tiers", nargs="+", metavar="N")
     scl.add_argument("--folds", nargs="+", metavar="FOLD")
@@ -271,6 +358,10 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="划分落位 splits/polybench26/arch/ + 造 ID 特征（6,478 × 2,253）",
     )
     arch.add_argument("--verify", action="store_true", help="只读复核：物化行数、组分覆盖、特征哈希")
+    arch.add_argument(
+        "--verify-ood", action="store_true",
+        help="只读核对 45 份 OOD 行级产物：在不在、哈希对不对、where 有没有登记（D-62）",
+    )
     arch.add_argument(
         "--search", action="store_true",
         help="按 D-51 的预注册协议搜一次 pb26_arch_transfer_ea 的超参（写 a2_best_params.csv 第 13 行）",
@@ -515,6 +606,208 @@ def _sensitivity(
     print(f"写出 {len(rows)} 行 → {table.relative_to(REPO_ROOT).as_posix()}")
     for (task, learner), values in summary.items():
         print(f"  {task} [{learner}] mean r2 = {float(np.mean(values)):.4f} (n={len(values)})")
+    return 0
+
+
+def _official_ln_reference() -> dict[str, dict[str, Any]]:
+    """读出"官方在 ln 尺度、我方在 raw 尺度"的任务，连同官方最佳树 R²。
+    Read the tasks the benchmark scores on ln(y) while we score on raw, plus their official R^2.
+
+    中文：
+        用途：Q-10 那四个任务**不写死在这个脚本里**，而是从官方对照表反查：条件就两条——
+              `official_target_scale == "ln"` 且 `ours_target_scale == "raw"`。
+              这样"哪几个任务需要换尺子"和"官方数是多少"都只有一个出处（`04b` 的产物），
+              官方哪天改口径，这里跟着变，不会出现"我们这边还写着 ln"的静默漂移。
+        输入：无。输出：{task: {official_best_tree_r2, algorithm, descriptor, target_scale}}，
+              顺序 = 官方对照表的行序。
+        数据来源：`results/aggregate/polybench_official_compare.csv`。副作用：只读。
+        异常：SystemExit —— 表缺、或表里一行 ln 都没有（那说明前提变了，不该继续跑）。
+    English:
+        The four Q-10 tasks are not hard-coded here: they are looked up from the official comparison
+        table on two conditions (official scale is ln, ours is raw), so both "which tasks" and
+        "what the official number is" have exactly one source.
+    """
+    if not OFFICIAL_COMPARE.is_file():
+        raise SystemExit(
+            f"缺 {OFFICIAL_COMPARE.relative_to(REPO_ROOT).as_posix()}：先跑 "
+            "`python scripts/04b_official_compare.py polybench`（官方数不许手抄）"
+        )
+    reference: dict[str, dict[str, Any]] = {}
+    with OFFICIAL_COMPARE.open("r", encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            if (row.get("official_target_scale") or "").strip() != "ln":
+                continue
+            if (row.get("ours_target_scale") or "").strip() != "raw":
+                continue
+            task = str(row["task"])
+            reference[task] = {
+                "official_target_scale": "ln",
+                "official_best_tree_r2": float(row["official_best_tree_r2"]),
+                "official_best_tree_algorithm": (row.get("official_best_tree_algorithm") or "").strip(),
+                "official_best_tree_descriptor": (row.get("official_best_tree_descriptor") or "").strip(),
+            }
+    if not reference:
+        raise SystemExit(
+            f"{OFFICIAL_COMPARE.name} 里没有一行同时满足 official_target_scale=ln / "
+            "ours_target_scale=raw：Q-10 的前提不成立，先查这张表而不是继续跑"
+        )
+    return reference
+
+
+def _non_raw_records_in_raw_runs() -> list[str]:
+    """扫 `results/raw_runs/`：`label_transform` 不是 `raw` 的记录一律算脏。
+    Scan raw_runs/: any record whose label_transform is not raw is a defect.
+
+    中文：
+        用途：唯一能挡住"ln 结果覆盖主表"的运行时闸门。run_id 里没有尺度段，覆盖后
+              `config_hash` / `split_version` / `pack_sha256` / `n_train` 全都不变，
+              审计与 schema 校验一条也红不了——只有这个字段能暴露它。
+        输入：无。输出：脏记录的文件名列表（按名字排序）。
+        数据来源：`results/raw_runs/*.json`。副作用：只读（只读磁盘，不改文件）。
+        异常：无——读不了的 JSON 跳过（那是另一条审计的事，不在这里重复报）。
+    English:
+        The one runtime gate that can stop an ln result from overwriting the main table: the run_id
+        carries no scale segment, so an overwrite leaves config_hash, split_version, pack_sha256 and
+        n_train all unchanged and no schema check would notice. Only this field gives it away.
+    """
+    root = REPO_ROOT / "results" / "raw_runs"
+    dirty: list[str] = []
+    for path in sorted(root.glob("*.json")):
+        if path.name.startswith("_"):
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        transform = payload.get("label_transform")
+        if transform not in (None, "raw"):
+            dirty.append(path.name)
+    return dirty
+
+
+def _log_target(tasks: Sequence[str] | None, seeds: Sequence[int], *, dry_run: bool) -> int:
+    """Q-10 的 ln 尺度敏感性：4 个重尾任务 × 2 臂 × 3 种子，落独立 CSV。
+    Q-10's ln-scale sensitivity: four heavy-tailed tasks by two arms by three seeds, into one CSV.
+
+    中文：
+        用途：把"换同一把尺子之后还差多少"从**单点手抄**变成**可复算的三点**。D-63 的
+              `scale_only` / `unexplained` 标签原来只靠一次临时复跑（seed 0、单折、未入账）撑着，
+              那四个数（0.3413 / 0.6226 / 0.1737 / 0.4640）在仓库里没有任何记录能重算出来。
+              本命令把它们连同 A1 的同尺度地板一起写成 24 行，任何人都能一条命令重建。
+              三个口径写死在这里：
+              ① **不进主表**：`expected_runs` 还是 96，`a1_a2_index.csv` 还是 96 行；
+              ② **不写 `raw_runs/`**：不调 `run_grid`，直接循环 `train_one`，写完再扫一遍
+                 `raw_runs/` 自检（`_non_raw_records_in_raw_runs`），有脏记录就退非零；
+              ③ **只是单臂敏感性，不是 Q-10 的答案**：Q-10 要求"四臂同时施加"，这里只动 A2 与
+                 A1。要正式改协议 = 四臂全改 + `config_hash` 换版本 + 96 条重跑，那是另一件事。
+        输入：tasks（None = 官方对照表里全部 ln 任务）；seeds（None/空 = 0,1,2）；
+              dry_run —— 只打印计划。
+        输出：写 `log_target_sensitivity.csv`（24 行），返回 0。副作用：训练、写一张 CSV。
+        异常：SystemExit —— 任务不在 ln 口径里、网格对不上、或事后自检发现 raw_runs 有脏记录。
+    English:
+        Turns "how big is the gap on the same ruler" from a hand-copied single point into three
+        recomputable seeds, together with A1's floor on the same scale. Three rules are hard-coded:
+        it never enters the main table (expected_runs stays 96), it never writes raw_runs/ (it loops
+        train_one directly and then scans raw_runs/ for stray non-raw records), and it is a
+        single-arm sensitivity, not an answer to Q-10 - which requires all four arms to change at
+        once, a new config version and a full 96-run re-run.
+    """
+    reference = _official_ln_reference()
+    chosen = list(tasks) if tasks else list(reference)
+    unknown = [task for task in chosen if task not in reference]
+    if unknown:
+        raise SystemExit(
+            f"这些任务不是「官方 ln / 我方 raw」口径：{unknown}；可选的是 {list(reference)}"
+        )
+    seeds = list(seeds) if seeds else [0, 1, 2]
+    a2_raw = yaml.safe_load(ARM_CONFIGS["a2_conventional"].read_text(encoding="utf-8"))
+    grid = dict(_task_grid(a2_raw))
+    missing = [task for task in chosen if task not in grid]
+    if missing:
+        raise SystemExit(f"这些任务不在 A2 配置的 runs 里，网格对不上：{missing}")
+
+    total = sum(len(grid[task]) for task in chosen) * len(seeds) * len(ARM_MODULES)
+    print(
+        f"log-target：{len(chosen)} 个任务 × {len(ARM_MODULES)} 个臂 × "
+        f"{sum(len(grid[task]) for task in chosen)} 个折 × {len(seeds)} 个种子 = {total} 行"
+        f"（写 {LOG_TARGET_TABLE.name}，**不写 raw_runs/、不进主表**）"
+    )
+    for task in chosen:
+        print(
+            f"  {task}: folds={grid[task]} 官方最佳树 R²="
+            f"{reference[task]['official_best_tree_r2']:.4f}"
+            f"（{reference[task]['official_best_tree_algorithm']}/"
+            f"{reference[task]['official_best_tree_descriptor']}）"
+        )
+    if dry_run:
+        print(f"dry-run：没有训练，也没有写 {LOG_TARGET_TABLE.name}")
+        return 0
+
+    rows: list[dict[str, Any]] = []
+    summary: dict[tuple[str, str], list[float]] = {}
+    for task in chosen:
+        official = reference[task]
+        for arm in ("a1_floor", "a2_conventional"):
+            module = ARM_MODULES[arm]
+            config = G.load_arm_config(ARM_CONFIGS[arm])
+            data = module.build_task_data(task)
+            for fold in grid[task]:
+                for seed in seeds:
+                    outcome = module.train_one(
+                        data, config, fold=fold, seed=seed, label_transform="ln"
+                    )
+                    metrics = outcome.record["metrics"]
+                    r2 = float(metrics["r2"])
+                    rows.append(
+                        {
+                            "task": task,
+                            "arm": arm,
+                            "label_transform": "ln",
+                            "official_target_scale": official["official_target_scale"],
+                            "fold": fold,
+                            "seed": seed,
+                            "n_train": outcome.record["n_train"],
+                            "n_test": outcome.record["n_test"],
+                            "r2": f"{r2:.10f}",
+                            "mae": f"{metrics['mae']:.10f}",
+                            "rmse": f"{metrics['rmse']:.10f}",
+                            "wall_clock_s": f"{outcome.record['wall_clock_s']:.3f}",
+                            "official_best_tree_r2": f"{official['official_best_tree_r2']:.10f}",
+                            "delta_vs_official": f"{r2 - official['official_best_tree_r2']:.10f}",
+                            "official_best_tree_algorithm": official["official_best_tree_algorithm"],
+                            "official_best_tree_descriptor": official["official_best_tree_descriptor"],
+                            "note": (
+                                "Q-10 单臂敏感性：冻结超参放回 ln(y) 空间（D-66）；只答 A2 一臂，"
+                                "不构成协议改版，不进主表"
+                                if arm == "a2_conventional"
+                                else "同尺度地板：mean(ln y_train) 常数预测；与 A2 的 ln 值同空间可相减"
+                            ),
+                        }
+                    )
+                    summary.setdefault((task, arm), []).append(r2)
+                    print(
+                        f"  {task} [{arm}] {fold} seed{seed}: ln r2={r2:.4f} "
+                        f"（官方 {official['official_best_tree_r2']:.4f}，"
+                        f"差 {r2 - official['official_best_tree_r2']:+.4f}）"
+                        f" n_train={outcome.record['n_train']} "
+                        f"wall={outcome.record['wall_clock_s']:.2f}s",
+                        flush=True,
+                    )
+
+    _write_rows(LOG_TARGET_TABLE, LOG_TARGET_COLUMNS, rows)
+    print(f"写出 {len(rows)} 行 → {LOG_TARGET_TABLE.relative_to(REPO_ROOT).as_posix()}")
+    for (task, arm), values in summary.items():
+        array = np.asarray(values, dtype=np.float64)
+        spread = float(array.std(ddof=1)) if array.size > 1 else 0.0
+        print(f"  {task} [{arm}] ln r2 = {float(array.mean()):.4f} ± {spread:.4f} (n={array.size})")
+
+    dirty = _non_raw_records_in_raw_runs()
+    if dirty:
+        raise SystemExit(
+            f"自检失败：results/raw_runs/ 里有 {len(dirty)} 条非 raw 尺度的记录 {dirty[:3]}——"
+            "它们会静默覆盖主表同名记录，先查是哪个调用点写进去的"
+        )
+    print("自检通过：results/raw_runs/ 里没有任何非 raw 尺度的记录（主表 96 条未受影响）")
     return 0
 
 
@@ -1190,6 +1483,7 @@ def _scaling(
     workers: int = 0,
     search: bool = False,
     search_dataset: str = "md5000_alternating_cp",
+    arm: str | None = None,
 ) -> int:
     """C-b-1：造两份 pack → 80 fits → 写 `scaling_cpu.csv`。
     C-b-1: build the two packs, run the 80 fits, write scaling_cpu.csv.
@@ -1212,6 +1506,22 @@ def _scaling(
     """
     from chainworth.experiments import scaling as S
 
+    if str(arm or "").lower() == "a3_graph":
+        # 链臂走自己的入口：产物（记录 + scaling_chain.csv）与 A2 那张表完全分开。
+        # 放在这里而不是另开一个子命令，是因为"同一个扫描换一条臂"就是一个语义，
+        # 分成两个子命令会让 `--tiers/--datasets/--folds` 的白名单实现出现两份。
+        # The chain arm has its own entry point: its artefacts (records + scaling_chain.csv) are
+        # kept apart from A2's table. One subcommand, one semantic; two would duplicate the
+        # --tiers/--datasets/--folds whitelist logic.
+        return _scaling_chain(
+            config_path,
+            datasets,
+            tiers_wanted,
+            folds,
+            dry_run=dry_run,
+            table_only=table_only,
+        )
+
     config = G.load_arm_config(Path(config_path) if config_path else SCALING_CONFIG)
     chosen_datasets = list(datasets) if datasets else S.dataset_ids()
 
@@ -1224,9 +1534,13 @@ def _scaling(
     if build or build_only:
         for dataset_id in chosen_datasets:
             info = S.build_pack(dataset_id, force=force, workers=workers)
+            rebuilt_note = ""
+            if info.get("pack_sha256_rebuilt"):
+                rebuilt_note = f"、本次重造 {str(info['pack_sha256_rebuilt'])[:12]}…（host_sensitive）"
             print(
                 f"pack {dataset_id}：{info['n_rows']} 行、唯一结构 {info.get('n_unique_structures', '?')}、"
-                f"pack_sha256={str(info['pack_sha256'])[:12]}…（{'重造' if info.get('rebuilt') else '沿用'}）"
+                f"身份 {str(info['pack_sha256'])[:12]}…{rebuilt_note}"
+                f"（{'重造' if info.get('rebuilt') else '沿用'}）"
             )
         if build_only:
             return 0
@@ -1297,6 +1611,147 @@ def _scaling(
     return 0
 
 
+def _scaling_chain(
+    config_path: str | None,
+    datasets: Sequence[str] | None,
+    tiers_wanted: Sequence[str] | None,
+    folds: Sequence[str] | None,
+    *,
+    dry_run: bool,
+    table_only: bool,
+) -> int:
+    """D-69：PolyBench26 数据量扫描的**链臂**（A3）——8 档 × 5 折 = 40 条记录。
+    D-69: the **chain arm** (A3) of the PolyBench26 scan - 8 tiers x 5 folds = 40 records.
+
+    中文：
+        用途：κ = dΛ/dlog₁₀n 的纵轴。三件事与 A2 那条路刻意不同：
+              ① **每条都落 run 记录与预测**（`arm=a3_graph`，schema 枚举里有它）；表另落
+                 `scaling_chain.csv`，不并进 `scaling_cpu.csv`；配置是 `scaling_chain.yaml`，
+                 与 A2 那份**不同文件**（否则 40 条 A2 记录的 config_hash 作废）；
+              ② **档位取法 = 官方前缀**，由 `graph.n_level_rows()` 的 `rule="prefix"` 执行，
+                 与 A2 同一份实现 → 两支臂在每个档位落在同一批训练行上（`n_subset_sha256` 相同）；
+              ③ `--build/--search` 在本支无效：pack 与超参都是 A2 那一批已经冻好的，链臂不许重搜。
+        输入：config_path；datasets / tiers_wanted / folds —— 白名单；dry_run；table_only。
+        输出：0 成功。数据来源：两份 pack + `splits/`。副作用：训练、写记录/预测/工时表/表。
+        异常：SystemExit —— 档位不在官方文件里；ArmError —— 任务配置没声明这条臂。
+    English:
+        The vertical axis of kappa. Three deliberate differences from A2's path: every fit writes a
+        record and predictions (the chain arm is a real schema arm) and the table is separate; the
+        tier rule is the official prefix executed by the *same* `n_level_rows()` call, so both arms
+        sit on the same training rows at every tier; and `--build/--search` do not apply here - the
+        packs and the hyper-parameters are already frozen by A2's batch.
+    """
+    from chainworth.experiments import scaling as S
+
+    config = G.load_arm_config(Path(config_path) if config_path else SCALING_CHAIN_CONFIG)
+    chosen = list(datasets) if datasets else S.dataset_ids()
+    wanted = {str(value).lower() for value in tiers_wanted} if tiers_wanted else None
+    seeds = [int(value) for value in (config.raw.get("seeds") or [0])]
+
+    plan: list[tuple[str, str, int]] = []
+    for dataset_id in chosen:
+        available = S.tiers(dataset_id)
+        if wanted is not None:
+            unknown = sorted(wanted - set(available))
+            if unknown:
+                raise SystemExit(f"{dataset_id} 没有这些档位 {unknown}：官方文件里的是 {available}")
+        # 折数**按数据集各自数**：交替集与均聚集各有 5 折，两个数据集加起来是 10 折，
+        # 但每个档位只跑自己那 5 折。写成"总折数 × 总档位"会把 40 条算成 80 条。
+        # Fold count is per dataset: 5 + 5 = 10 across the task, but one tier only ever runs its
+        # own dataset's five folds.
+        n_fold_dataset = len(folds) if folds else len(
+            S.split_manifest(dataset_id).get("folds") or []
+        )
+        for level in available:
+            if wanted is not None and level not in wanted:
+                continue
+            plan.append((dataset_id, level, n_fold_dataset))
+    expected = sum(item[2] for item in plan) * len(seeds)
+    print(
+        f"scaling 链臂：{len(chosen)} 数据集 × {len(plan)} 个(数据集,档位) = {sum(i[2] for i in plan)} 折次 × "
+        f"{len(seeds)} 种子 = {expected} 条；配置 {config.path.name}"
+        f"（expected_fits={config.raw.get('expected_fits', '未写')}，"
+        f"config_hash={config.hash[:19]}…）"
+    )
+    if dry_run:
+        for dataset_id, level, n_fold_dataset in plan:
+            print(f"  {dataset_id} tier={level}（{n_fold_dataset} 折）")
+        print("dry-run：没有训练，也没有写表")
+        return 0
+
+    if table_only:
+        rows = _chain_rows_from_disk(chosen)
+    else:
+        rows = S.run_scaling_chain(
+            config,
+            datasets=chosen,
+            tiers_wanted=tiers_wanted,
+            folds=folds,
+            seeds=seeds,
+        )
+
+    merged: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    if S.CHAIN_TABLE_PATH.is_file():
+        for row in S.read_chain_table():
+            merged[_chain_key(row)] = row
+    for row in rows:
+        merged[_chain_key(row)] = row
+    path = S.write_chain_table(list(merged.values()))
+    print(f"写出 {len(merged)} 行 → {path.relative_to(REPO_ROOT).as_posix()}")
+
+    per_cell: dict[tuple[str, str], list[float]] = {}
+    for row in merged.values():
+        if row.get("r2") in ("", None):
+            continue
+        per_cell.setdefault((str(row["dataset"]), str(row["tier"])), []).append(float(row["r2"]))
+    for (dataset_id, level), values in sorted(per_cell.items(), key=lambda item: (item[0][0], _scaling_tier_key(item[0][1]))):
+        print(
+            f"  {dataset_id:<26} n={level:<6} {len(values)} 折  R² 中位 {float(np.median(values)):+.4f}  "
+            f"（{min(values):+.4f} … {max(values):+.4f}）"
+        )
+    total_wall = sum(float(row.get("wall_clock_s") or 0.0) for row in merged.values())
+    print(f"  墙钟合计 {total_wall / 3600:.3f} GPU-h（{total_wall / 60:.1f} 分钟；按 arm=a3_graph 记进 gpu_hours.csv）")
+    return 0
+
+
+def _chain_key(row: Mapping[str, Any]) -> tuple[str, str, str, str]:
+    """`scaling_chain.csv` 的合并键。／ The merge key of one scaling_chain.csv row."""
+    return (
+        str(row.get("dataset", "")),
+        str(row.get("tier", "")),
+        str(row.get("fold", "")),
+        str(row.get("seed", "")),
+    )
+
+
+def _scaling_tier_key(tier: Any) -> tuple[int, int, str]:
+    """档位排序键：数字档按大小、`all` 最后（与 `scaling.py::_tier_sort_key` 同一口径）。"""
+    text = str(tier)
+    if text == "all":
+        return (1, 0, text)
+    try:
+        return (0, int(text), text)
+    except ValueError:                                  # pragma: no cover - 只在配置写错时
+        return (2, 0, text)
+
+
+def _chain_rows_from_disk(datasets: Sequence[str]) -> list[dict[str, Any]]:
+    """`--table-only`：不训练，只按磁盘上的 `arm=a3_graph` 记录重建链臂表。
+    `--table-only`: rebuild the chain table from the records already on disk, without training.
+    """
+    from chainworth.experiments import scaling as S
+
+    wanted = set(datasets)
+    rows: list[dict[str, Any]] = []
+    for path in sorted(G.RAW_RUNS_DIR.glob("pb26_scaling_cp__a3_graph__*.json")):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        dataset_id = str(record.get("dataset_id", ""))
+        if dataset_id not in wanted:
+            continue
+        rows.append(S._chain_row_from_record(record, dataset_id))
+    return rows
+
+
 def _scaling_key(row: Mapping[str, Any]) -> tuple[str, str, str, str, str]:
     """`scaling_cpu.csv` 的合并键。／ The merge key of one scaling_cpu.csv row."""
     return (
@@ -1347,6 +1802,7 @@ def _arch(
     *,
     setup: bool,
     verify: bool,
+    verify_ood: bool,
     search: bool,
     ood: bool,
     table_only: bool,
@@ -1381,6 +1837,26 @@ def _arch(
     from chainworth.experiments import arch as A
 
     config = G.load_arm_config(Path(config_path) if config_path else ARCH_CONFIG)
+    if verify_ood:
+        report = A.verify_ood_artifacts()
+        print(
+            f"OOD 行级产物：清单 {report['n_artifacts']} 份，盘上到位 {report['present']} 份、"
+            f"缺 {len(report['missing'])} 份、哈希不符 {len(report['mismatch'])} 份；"
+            f"where 未登记 {len(report['unrecorded_hosts'])} 份"
+        )
+        for rel in report["missing"][:5]:
+            print(f"  ✗ 缺 {rel}")
+        if len(report["missing"]) > 5:
+            print(f"  … 另有 {len(report['missing']) - 5} 份缺失")
+        for item in report["mismatch"][:5]:
+            print(f"  ✗ 哈希不符 {item['path']}：清单 {item['expected'][:12]}… 实际 {item['actual'][:12]}…")
+        if report["unrecorded_hosts"]:
+            print(
+                "  ⚠ where 未登记：D 无法按清单取件。请在清单里填机器标识与可删条件（D-62）"
+            )
+        if not report["ok"]:
+            print(f"重建命令：{report['reconstruct']}")
+        return 0 if report["ok"] else 1
     if setup:
         if verify:
             problems = A.verify_arch_setup()
@@ -1601,7 +2077,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "这里比验收④的 r2 差 < 1e-9 更严：直接比预测向量。"
             ),
         }
-        out = Path(args.out) if args.out else REPO_ROOT / "results" / "aggregate" / "a2_repeatability.json"
+        # `--out` 允许相对路径：相对路径按仓库根解析。以前直接 `Path(args.out)` 再
+        # `relative_to(REPO_ROOT)`，传相对路径会抛 ValueError（只有绝对路径能用）。
+        # --out accepts a relative path, resolved against the repo root; passing a relative path used
+        # to raise ValueError in relative_to(REPO_ROOT).
+        if args.out:
+            out = Path(args.out)
+            out = out if out.is_absolute() else (REPO_ROOT / out)
+        else:
+            out = REPO_ROOT / "results" / "aggregate" / "a2_repeatability.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(
@@ -1632,25 +2116,44 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "index":
-        # 只收**没有 n 档**的记录：`a1_a2_index.csv` 是 C-c 填主表三列的唯一入口（96 条），
-        # C-b 的 scaling / OpenPoly 记录（带 `n_level`）另有两张表，混进来会让主表多出 285 行。
-        # Only records **without** an n level: a1_a2_index.csv is C-c's single entry for the main
-        # table's three columns (96 rows); C-b's scaling and OpenPoly records carry `n_level` and
-        # have their own two tables, and mixing them in would add 285 rows to the main table.
+        # `a1_a2_index.csv` 是 C-c 填主表三列的唯一入口（96 条）。白名单有三个条件，缺一条就会让
+        # 索引悄悄变长：① 不带 `n_level`（挡 C-b 的 scaling / OpenPoly，D-52）；② 任务在
+        # `main_table.yaml` 的 `units` 里；③ 臂在 `arms` 里且 `in_main_table: true`。
+        # ②③ 是 C-a 验收 §5.1 补的：arch 的 15 条 A2 记录既没有 `n_level`、臂名又正好是
+        # `a2_conventional`，只靠 ① 会把主表从 96 撑到 111，而且不报错（D-61）。
+        # a1_a2_index.csv is C-c's only entry for the main table's three columns (96 rows). Three
+        # conditions; drop any and the index silently grows: (1) no n_level (keeps out C-b's
+        # scaling/OpenPoly rows, D-52); (2) task listed under units; (3) arm listed under arms with
+        # in_main_table: true. Conditions (2) and (3) come from acceptance C-a section 5.1.
+        tasks, arms, expected = _main_table_scope()
         records = [
             record
-            for record in _records_on_disk(("a1_floor", "a2_conventional"))
+            for record in _records_on_disk(tuple(sorted(arms)))
             if record.get("n_level") is None
+            and str(record.get("task", "")) in tasks
+            and str(record.get("arm", "")) in arms
         ]
+        unique = {str(record["run_id"]): record for record in records}
         if args.dry_run:
-            print(f"磁盘上 A1/A2 的 ok 记录 {len(records)} 条（不含 n 档记录）")
+            print(
+                f"主表口径内的 A1/A2 ok 记录 {len(unique)} 条"
+                f"（{len(tasks)} 个任务 × {len(arms)} 个臂，期望 {expected}）"
+            )
             return 0
-        path = C.write_index(records)
-        print(f"索引已重建：{path}（{len(records)} 条）")
+        if expected and len(unique) > expected:
+            raise SystemExit(
+                f"主表口径是 {expected} 条，盘上却选出 {len(unique)} 条：多出来的会被写进 "
+                f"a1_a2_index.csv，而主表、索引行数与文档三者会同时失真。先查是哪个任务的网格多了"
+            )
+        path = C.write_index(list(unique.values()))
+        print(f"索引已重建：{path}（{len(unique)} 条，期望 {expected}）")
         return 0
 
     if args.command == "sensitivity":
         return _sensitivity(args.tasks, args.learners, args.seeds or [], dry_run=args.dry_run)
+
+    if args.command == "log-target":
+        return _log_target(args.tasks, args.seeds or [], dry_run=args.dry_run)
 
     if args.command == "control":
         return _control(args.tasks, args.variants, args.seeds or [], dry_run=args.dry_run)
@@ -1683,6 +2186,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             workers=args.workers,
             search=args.search,
             search_dataset=args.search_dataset,
+            arm=args.arm,
         )
 
     if args.command == "arch":
@@ -1690,6 +2194,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.config,
             setup=args.setup,
             verify=args.verify,
+            verify_ood=args.verify_ood,
             search=args.search,
             ood=args.ood,
             table_only=args.table_only,

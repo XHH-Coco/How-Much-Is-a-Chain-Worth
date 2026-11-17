@@ -33,7 +33,11 @@ English:
 
 from __future__ import annotations
 
+import csv
 import json
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -86,6 +90,96 @@ def test_main_table_expected_runs_is_96() -> None:
     assert expected["per_arm"] == n_units * len(seeds) == 48
     assert expected["total"] == n_units * len(arms) * len(seeds) == 96
     assert sum(expected["breakdown"].values()) == expected["total"]
+
+
+def test_main_table_cell_is_task_and_arm_not_fold() -> None:
+    """一格 = (任务, 臂)，折与种子都平均掉；PB26 格 15 条、PolyBench 格 3 条（D-61）。
+
+    The cell is (task, arm): folds and seeds are both averaged in - 15 runs for PB26, 3 for
+    PolyBench (D-61).
+
+    中文：
+        用途：`main_table.yaml` 的 `cell` 段以前写"一格 = (任务,折,臂) 三个种子"，看起来自洽，
+              但与产物不符。这条测试把**声明**和**产物**钉在一起：`runs_per_cell` 必须与
+              `main_table.csv` 里 `n_runs` 的实际分布一致（24 格 × 3 + 8 格 × 15）。
+              D 按这一段算误差棒，写错就是把折间方差整块漏掉。
+    """
+    payload = yaml.safe_load(
+        (REPO_ROOT / "configs" / "experiments" / "main_table.yaml").read_text(encoding="utf-8")
+    )
+    cell = payload["cell"]
+    assert payload["version"] >= "3.0"
+    assert cell["aggregation"] == "mean_over_folds_and_seeds"
+    assert cell["spread"] == "sample_std_over_cell_runs"
+    assert cell["runs_per_cell"] == {"polybench": 3, "polybench26": 15}
+    assert cell["cell_count"] == 32
+    table = REPO_ROOT / "results" / "aggregate" / "main_table.csv"
+    if not table.is_file():
+        pytest.skip("还没有 main_table.csv")
+    with table.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == cell["cell_count"]
+    seen: dict[str, set[int]] = {}
+    for row in rows:
+        seen.setdefault(row["benchmark"], set()).add(int(row["n_runs"]))
+    assert seen == {
+        "polybench": {cell["runs_per_cell"]["polybench"]},
+        "polybench26": {cell["runs_per_cell"]["polybench26"]},
+    }, f"产物里的 n_runs 分布与 cell 段不符：{seen}"
+
+
+def test_index_scope_is_the_main_table_not_every_a2_record() -> None:
+    """`index --dry-run` 必须报主表口径的 96 条，而不是盘上全部 A2 记录（D-61）。
+
+    `index --dry-run` must report the main-table 96, not every A2 record on disk (D-61).
+
+    中文：
+        用途：arch 的 15 条 A2 记录既没有 `n_level`、臂名又正好是 `a2_conventional`，
+              旧过滤会把它们并进索引（96 → 111）且不报错。这里用命令行跑一遍，断言它
+              打印的就是 96——把白名单钉在行为上，而不是钉在实现细节上。
+    """
+    script = REPO_ROOT / "scripts" / "04_run_cpu.py"
+    if not script.is_file():
+        pytest.skip("找不到 04_run_cpu.py")
+    completed = subprocess.run(
+        [sys.executable, str(script), "index", "--dry-run"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=str(REPO_ROOT),
+    )
+    assert completed.returncode == 0, completed.stderr[-800:]
+    expected = yaml.safe_load(
+        (REPO_ROOT / "configs" / "experiments" / "main_table.yaml").read_text(encoding="utf-8")
+    )["expected_runs"]["total"]
+    assert f"{expected} 条" in completed.stdout, completed.stdout
+
+
+def test_main_table_diff_class_names_what_differs() -> None:
+    """差因分类不许再出现笼统的 `protocol`：只允许 `implementation` / `scale_only` / `unexplained`（D-63）。
+
+    The difference class may no longer be the blanket "protocol": only implementation, scale_only
+    and unexplained are allowed (D-63).
+
+    中文：
+        用途：`protocol` 把"换尺子就差 2%"和"换尺子仍差 38%、甚至方向反转"混成一类，读者会读错。
+              这条测试锁住三件事：① 枚举里没有 `protocol`；② 每个非空标签都落在三个值里；
+              ③ 标了 `scale_only` / `unexplained` 的行必须在 `notes` 里写出同尺度复跑的数，
+              否则标签就是无凭据的断言。
+    """
+    table = REPO_ROOT / "results" / "aggregate" / "main_table.csv"
+    if not table.is_file():
+        pytest.skip("还没有 main_table.csv")
+    allowed = {"implementation", "scale_only", "unexplained"}
+    with table.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    for row in rows:
+        label = (row["leaderboard_diff_class"] or "").strip()
+        assert label in allowed | {""}, f"{row['task']}/{row['arm']}: 分类 {label!r} 不在枚举内"
+        if label in {"scale_only", "unexplained"}:
+            assert "ln" in row["notes"], (
+                f"{row['task']}/{row['arm']}: 标了 {label} 但 notes 里没有同尺度复跑的数"
+            )
 
 
 # 8 个 BCUT2D 描述符在每一个 pack 上都是 100% NaN（D-48）：RDKit 对重复单元边界的
@@ -450,16 +544,23 @@ def test_null_calibration_baseline_reproduces_a2_seed0() -> None:
         for row in csv.DictReader(fh):
             if row["condition"] == "baseline":
                 baseline[(row["task"], row["fold"], int(row["seed"]))] = float(row["r2"])
-    assert len(baseline) == 6, "pb_t1_tg 单折 + pb26_polymetrix_tg 五折"
+    assert len({task for task, _fold, _seed in baseline}) == 8, "D-79：地板覆盖全部 8 个主表任务"
+    per_task: dict[str, set[str]] = {}
+    for task, fold, _seed in baseline:
+        per_task.setdefault(task, set()).add(fold)
+    # 折数由任务的官方划分决定：PolyBench 6 个任务各 1 折，PB26 的 2 个各 5 折
+    assert sum(len(v) for v in per_task.values()) == len(baseline) == 16, (
+        f"单元数应等于逐任务折数之和；实际 {len(baseline)} 行、{per_task}"
+    )
     for (task, fold, seed), r2 in baseline.items():
         path = REPO_ROOT / "results" / "raw_runs" / f"{task}__a2_conventional__{fold}__seed{seed}.json"
         record = json.loads(path.read_text(encoding="utf-8"))
         assert abs(r2 - float(record["metrics"]["r2"])) < 1e-9, f"{task}/{fold} 与 A2 记录不一致"
 
 
-def test_null_calibration_covers_six_units_and_three_conditions() -> None:
-    """6 单元 × 3 条件 = 18 行；列数 2253 / 2256；置换列必须能追到具体描述符下标。
-    6 units x 3 conditions = 18 rows; 2253 / 2256 columns; shuffled columns name their indices.
+def test_null_calibration_covers_all_main_tasks_and_three_conditions() -> None:
+    """8 个主表任务 × 各自折数 × 3 条件 = 48 行（D-79）；列数 2253 / 2256；置换列必须能追到下标。
+    Eight main-table tasks x their folds x 3 conditions = 48 rows (D-79); 2253 / 2256 columns.
     """
     if not NULL_CSV.is_file():
         pytest.skip("还没有 null_calibration.csv")
@@ -467,13 +568,16 @@ def test_null_calibration_covers_six_units_and_three_conditions() -> None:
 
     with NULL_CSV.open(encoding="utf-8", newline="") as fh:
         rows = list(csv.DictReader(fh))
-    assert len(rows) == 18, f"期望 18 行，实际 {len(rows)}"
     base = [r for r in rows if r["condition"] == "baseline"]
     const = [r for r in rows if r["condition"] == "constant3"]
     shuffled = [r for r in rows if r["condition"] == "shuffled3"]
-    for cells in (base, const, shuffled):
-        assert len(cells) == 6
-        assert len({(r["task"], r["fold"]) for r in cells}) == 6
+    assert len({r["task"] for r in rows}) == 8, "D-79：地板覆盖全部 8 个主表任务"
+    assert len(base) == 16, f"单元数 = 6×1 + 2×5；实际 {len(base)}"
+    # 三个条件必须落在**同一批** (task, fold) 上，否则地板与零点不可比
+    keys = {(r["task"], r["fold"]) for r in base}
+    for cells in (const, shuffled):
+        assert {(r["task"], r["fold"]) for r in cells} == keys
+    assert len(rows) == 3 * len(base), f"期望 {3 * len(base)} 行，实际 {len(rows)}"
     assert all(int(r["n_features"]) == 2253 and int(r["added_columns"]) == 0 for r in base)
     assert all(int(r["n_features"]) == 2256 and int(r["added_columns"]) == 3 for r in const)
     assert all(int(r["n_features"]) == 2256 and int(r["added_columns"]) == 3 for r in shuffled)
@@ -485,7 +589,7 @@ def test_null_calibration_covers_six_units_and_three_conditions() -> None:
     summary = json.loads(NULL_JSON.read_text(encoding="utf-8"))
     assert summary["n_features_base"] == 2253
     for name in ("constant3", "shuffled3"):
-        assert summary["overall"][name]["units"] == 6
+        assert summary["overall"][name]["units"] == len(base) * 1, "汇总里的单元数必须与表里一致"
         assert summary["overall"][name]["max_abs_delta"] > 0.0
 
 
@@ -508,3 +612,197 @@ def test_structure_table_still_has_no_chain_length() -> None:
     fields = wpsmiles.str.split("|")
     assert (fields.str[1] == "1").all(), "重复字段 |1| 若出现别的值，说明有了链长"
     assert fields.str[2].nunique() == 1, "权重段若不再唯一，说明有了可用权重"
+
+
+# ---- D-66：Q-10 的 ln 尺度敏感性 / Q-10's ln-scale sensitivity ----
+#
+# 这四条守的是同一件事：`main_table.csv` 里标 `scale_only` / `unexplained` 的那四行，其 `notes`
+# 里的同尺度数**必须能在一张可复算的表里找回**。D-63 当时只有一句"临时跑的、未入账"，
+# 四个数（0.3413 / 0.6226 / 0.1737 / 0.4640）在仓库里没有任何东西能重算出来，
+# 而守门测试只断言 `"ln" in notes`——把 0.3413 改成 0.9999 也照样绿。
+# All four guard the same thing: the ln values quoted in main_table.csv's notes must be findable in
+# a recomputable table. D-63 had only "ran it once, not recorded", so nothing in the repo could
+# reproduce those numbers, and the old gate merely asserted `"ln" in notes`.
+
+LOG_TARGET_TABLE = REPO_ROOT / "results" / "aggregate" / "log_target_sensitivity.csv"
+OFFICIAL_COMPARE_TABLE = REPO_ROOT / "results" / "aggregate" / "polybench_official_compare.csv"
+LN_TASKS = {
+    "pb_t2_modulus",
+    "pb_t2_permeability",
+    "pb_t3_dielectric_loss",
+    "pb_t3_iwlt",
+}
+LOG_TARGET_COLUMNS = (
+    "task",
+    "arm",
+    "label_transform",
+    "official_target_scale",
+    "fold",
+    "seed",
+    "n_train",
+    "n_test",
+    "r2",
+    "mae",
+    "rmse",
+    "wall_clock_s",
+    "official_best_tree_r2",
+    "delta_vs_official",
+    "official_best_tree_algorithm",
+    "official_best_tree_descriptor",
+    "note",
+)
+
+
+def test_label_values_is_natural_log_or_nothing() -> None:
+    """`label_values` 只认 `raw` 与 `ln`，且 `ln` 必须拒收非正标签。
+    label_values accepts raw and ln only, and ln must reject non-positive labels.
+
+    中文：这个仓库被 log10 坑过一次（PolyBench 的 `property_log` 是自然对数，D-16 差点当 log10 用），
+          所以枚举里不许有第三个值；`ln(0) = −inf` 会让 R² 静默变 NaN，宁可当场抛。
+    """
+    values = np.array([1.0, np.e, np.e**2], dtype=np.float64)
+    assert np.allclose(C.label_values(values, "raw"), values)
+    assert np.allclose(C.label_values(values, "ln"), [0.0, 1.0, 2.0]), "ln 必须是自然对数"
+    assert C.label_values(values, "ln")[1] == pytest.approx(1.0)
+    with pytest.raises(G.ArmError):
+        C.label_values(np.array([0.0, 1.0]), "ln")
+    with pytest.raises(G.ArmError):
+        C.label_values(np.array([-1.0]), "ln")
+    with pytest.raises(G.ArmError):
+        C.label_values(values, "log10")
+
+
+def _ln_rows() -> list[dict[str, str]]:
+    if not LOG_TARGET_TABLE.is_file():
+        pytest.skip(
+            f"还没有 {LOG_TARGET_TABLE.name}：跑 `python scripts/04_run_cpu.py log-target`"
+        )
+    with LOG_TARGET_TABLE.open("r", encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _ln_mean(task: str, arm: str) -> float:
+    values = [
+        float(row["r2"]) for row in _ln_rows() if row["task"] == task and row["arm"] == arm
+    ]
+    assert values, f"{task}/{arm} 在 {LOG_TARGET_TABLE.name} 里没有行"
+    return float(np.mean(values))
+
+
+def test_log_target_table_shape() -> None:
+    """24 行 = 4 任务 × 2 臂 × 3 种子；列齐全；尺度和官方尺度都写死在行里。
+    Twenty-four rows (4 tasks x 2 arms x 3 seeds), every column present, both scales recorded.
+    """
+    rows = _ln_rows()
+    assert list(rows[0].keys()) == list(LOG_TARGET_COLUMNS)
+    assert len(rows) == len(LN_TASKS) * 2 * 3, f"应为 24 行，实际 {len(rows)}"
+    assert {row["task"] for row in rows} == LN_TASKS
+    assert {row["arm"] for row in rows} == {"a1_floor", "a2_conventional"}
+    assert {row["label_transform"] for row in rows} == {"ln"}, "这张表只放 ln 尺度的行"
+    assert {row["official_target_scale"] for row in rows} == {"ln"}, (
+        "官方尺度必须从对照表读成 ln；若这里变成 raw，说明官方改了口径"
+    )
+    for task in LN_TASKS:
+        seeds = sorted(
+            int(row["seed"]) for row in rows
+            if row["task"] == task and row["arm"] == "a2_conventional"
+        )
+        assert seeds == [0, 1, 2], f"{task} 的种子不是 0/1/2：{seeds}"
+
+
+def test_log_target_official_reference_comes_from_the_compare_table() -> None:
+    """表里的官方数必须与 `polybench_official_compare.csv` 逐位相同——不许手抄。
+    The official values must equal the comparison table's, i.e. nothing is hand-copied.
+    """
+    if not OFFICIAL_COMPARE_TABLE.is_file():
+        pytest.skip("没有 polybench_official_compare.csv（04b 的产物）")
+    with OFFICIAL_COMPARE_TABLE.open("r", encoding="utf-8", newline="") as handle:
+        reference = {
+            str(row["task"]): float(row["official_best_tree_r2"])
+            for row in csv.DictReader(handle)
+            if (row.get("official_target_scale") or "").strip() == "ln"
+            and (row.get("ours_target_scale") or "").strip() == "raw"
+        }
+    assert set(reference) == LN_TASKS, f"官方对照表里的 ln 任务变了：{sorted(reference)}"
+    for row in _ln_rows():
+        expected = reference[row["task"]]
+        assert float(row["official_best_tree_r2"]) == pytest.approx(expected, abs=1e-9), (
+            f"{row['task']} 的官方数 {row['official_best_tree_r2']} 与对照表的 {expected} 不符"
+        )
+        assert float(row["delta_vs_official"]) == pytest.approx(
+            float(row["r2"]) - expected, abs=1e-9
+        )
+
+
+def test_log_target_notes_match_the_table() -> None:
+    """`main_table.csv` 的 `notes` 里写的 ln 值必须等于本表同任务的 3 种子均值（4 位小数）。
+    The ln values quoted in main_table.csv's notes must equal this table's three-seed mean.
+
+    中文：这是把 D-63 那条"notes 里得有 ln 字样"的弱断言换成强断言——数错了、或者有人只改了
+          notes 没重跑，这条都会红。措辞（"差在协议"之类）不受约束，只有数字被锁。
+    English: replaces D-63's weak "notes must mention ln" with a numeric check, so a stale or
+    hand-edited number turns red. Only the digits are locked, not the wording.
+    """
+    table = REPO_ROOT / "results" / "aggregate" / "main_table.csv"
+    if not table.is_file():
+        pytest.skip("还没有 main_table.csv")
+    with table.open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    checked = 0
+    for row in rows:
+        if (row["leaderboard_diff_class"] or "").strip() not in {"scale_only", "unexplained"}:
+            continue
+        match = re.search(r"ln R²=([0-9]+\.[0-9]+)", row["notes"] or "")
+        assert match, f"{row['task']}/{row['arm']}: 标了差因分类但 notes 里没有 `ln R²=` 形式的数"
+        quoted = float(match.group(1))
+        expected = _ln_mean(row["task"], "a2_conventional")
+        assert quoted == pytest.approx(expected, abs=5e-5), (
+            f"{row['task']}: notes 写 {quoted}，log_target_sensitivity.csv 的均值是 {expected:.4f}"
+        )
+        checked += 1
+    assert checked == 4, f"应有 4 行标了 scale_only/unexplained，实际 {checked} 行"
+
+
+def test_raw_runs_never_hold_a_non_raw_transform() -> None:
+    """`results/raw_runs/` 里不许出现 `label_transform` 非 `raw` 的记录。
+    No record under results/raw_runs/ may carry a non-raw label_transform.
+
+    中文：这是唯一能挡住"ln 结果覆盖主表"的机器判据。run_id 只有 `task__arm__fold__seed`，
+          不含尺度；一旦写进去就是**同名覆盖**，而 `config_hash` / `split_version` /
+          `pack_sha256` / `n_train` / `n_test` 全都不变——schema 校验、审计、主表重建没有一处会红
+          （D-34 ③ 的微调踩的是同一个坑，所以它也被赶出了 `raw_runs/`）。
+    English: the only machine check that can stop an ln result from overwriting the main table. The
+    run_id has no scale segment, and an overwrite leaves every identity field unchanged, so nothing
+    else in the repo would notice (the same trap D-34 section 3 hit with fine-tuning).
+    """
+    root = REPO_ROOT / "results" / "raw_runs"
+    if not root.is_dir():
+        pytest.skip("没有 results/raw_runs/")
+    offenders: list[str] = []
+    for path in sorted(root.glob("*.json")):
+        if path.name.startswith("_"):
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        transform = payload.get("label_transform")
+        if transform not in (None, "raw"):
+            offenders.append(f"{path.name}={transform!r}")
+    assert not offenders, (
+        f"raw_runs/ 里有 {len(offenders)} 条非 raw 尺度的记录（会静默覆盖主表同名记录）："
+        f"{offenders[:3]}；ln 的产物只能落 results/aggregate/log_target_sensitivity.csv"
+    )
+
+
+def test_log_target_floor_is_a_floor() -> None:
+    """A1 在 ln 空间也必须是"瞎猜"：R² 贴近 0（绝对值 < 0.05），否则地板就不是地板。
+    A1 must still be guessing on the ln scale: |R²| < 0.05, or it is not a floor.
+
+    中文：主表里 A1 的 raw 值有 −0.0329（iwlt）这种"比均值还差"的数，读者会以为地板坏了。
+          换到 ln 空间之后四个任务都在 −0.0002…−0.0171，这条把"地板在同尺度下依然贴地"锁住，
+          也顺带证明 A2 的 0.17–0.62 不是被分母抬起来的。
+    """
+    for task in sorted(LN_TASKS):
+        value = _ln_mean(task, "a1_floor")
+        assert abs(value) < 0.05, f"{task} 的 ln 地板 R²={value:.4f}，不像瞎猜的地板"
+        floor_r2 = value
+        model_r2 = _ln_mean(task, "a2_conventional")
+        assert model_r2 > floor_r2, f"{task}: ln 空间 A2 ({model_r2:.4f}) 不高于地板 ({floor_r2:.4f})"

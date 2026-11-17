@@ -547,6 +547,57 @@ def search_task(
     return best
 
 
+# ---- 4b. 标签尺度 / The label scale ----
+
+# 只有两个值：`raw` 原样、`ln` 自然对数。**不加第三个**——`log10` 是这个仓库踩过的坑
+# （PolyBench 的 `property_log` 是自然对数，D-16 差点被当 log10 用）。
+# Two values only: raw and natural log. There is deliberately no `log10`: PolyBench's
+# `property_log` is the NATURAL log (D-16), and that is exactly how a log10 assumption goes wrong.
+LABEL_TRANSFORMS = ("raw", "ln")
+
+
+def label_values(y: Any, transform: str = "raw") -> np.ndarray:
+    """把标签变换到训练空间：`raw` 原样返回，`ln` 取自然对数。
+    Map labels into the training space: raw as-is, ln as the natural log.
+
+    中文：
+        用途：Q-10 的四个重尾任务（permeability / modulus / dielectric_loss / iwlt）官方在 ln
+              尺度上评估，而主表 96 条跑在原始空间（D-44 / S27）。换尺子做对照时必须**只换这一处**，
+              否则"差在协议"这句话就没有单一实现可核。**它不改配置**：这是一次数据维度的选择，
+              按仓库判据（换它会改标签 → 数据 → 走显式参数，不写进 yaml）——所以 `config_hash`
+              一个字节都不动，96 条记录的身份不受影响。
+              `ln` 要求标签严格为正：`ln(0)` 是 −inf，会让 R² 静默变成 NaN，宁可当场抛。
+        输入：y —— 一维标签序列；transform —— `LABEL_TRANSFORMS` 里的一个值。
+        输出：float64 数组，长度与输入相同。数据来源：调用方。
+        配置来源：无（尺度是参数，不是配置）。副作用：无。
+        异常：G.ArmError —— 未知 transform、标签非有限、或 `ln` 遇到 ≤ 0 的行。
+    English:
+        Purpose: Q-10's four heavy-tailed tasks are scored on ln(y) by the benchmark while the 96
+                 main-table runs sit on the raw scale. Swapping the scale has to live in exactly one
+                 place, or "the difference is the protocol" has no single implementation to check.
+                 It deliberately does NOT touch the config: changing the scale changes the labels,
+                 which makes it data, which the repo's own rule routes through an explicit argument -
+                 so `config_hash` stays byte-identical and the 96 records keep their identity.
+                 ln requires strictly positive labels; ln(0) is -inf and would turn R^2 into a
+                 silent NaN, so this raises instead.
+        Args: y (a label sequence), transform (one of LABEL_TRANSFORMS).
+        Returns: a float64 array of the same length. Raises ArmError on an unknown transform,
+        a non-finite label, or a non-positive label under `ln`.
+    """
+    values = np.asarray(y, dtype=np.float64)
+    if transform == "raw":
+        return values
+    if transform != "ln":
+        raise G.ArmError(f"不认识的 label_transform {transform!r}：只认 {LABEL_TRANSFORMS}")
+    if not np.isfinite(values).all():
+        bad = int((~np.isfinite(values)).sum())
+        raise G.ArmError(f"ln 尺度：有 {bad} 行标签不是有限值，先查标签调和（A-3）")
+    if (values <= 0).any():
+        bad = int((values <= 0).sum())
+        raise G.ArmError(f"ln 尺度：有 {bad} 行标签 <= 0，自然对数没有定义")
+    return np.log(values)
+
+
 # ---- 5. 训练一条 run / Train one run ----
 
 
@@ -577,6 +628,7 @@ def train_one(
     learner_override: str | None = None,
     params_override: Mapping[str, Any] | None = None,
     extra_record: Mapping[str, Any] | None = None,
+    label_transform: str = "raw",
 ) -> TaskOutcome:
     """在一条 (任务, 折, 种子) 上训练并评估，返回可落盘的记录与预测。
     Train and evaluate one (task, fold, seed) and return the record plus predictions.
@@ -587,13 +639,21 @@ def train_one(
               超参来自 `a2_best_params.csv`（先跑 `search_task()`）；缺失就报错，绝不用默认值偷偷跑。
         输入：data；config；fold；seed；其余参数为兼容网格而接收、本臂不使用；
               learner_override / params_override —— 只给敏感性表与受控对照用（默认 None = 读冻结配置），
-              主表 96 条记录的调用两者都是 None，行为与改前逐位相同。
+              主表 96 条记录的调用两者都是 None，行为与改前逐位相同；
+              label_transform —— `raw`（默认）/ `ln`。**只影响 `y` 与 `metrics` 的评估空间**，
+              超参仍是 `a2_best_params.csv` 里那一份冻结值（D-63 的口径："同一套冻结超参放回 ln 空间"）。
+              非 `raw` 时记录的 `notes` 与新增字段 `label_transform` 会写明，且**不许落 `raw_runs/`**：
+              run_id 里没有尺度这一段，写进去就是覆盖主表同名记录（由 `04_run_cpu.py log-target`
+              与 `tests/test_arms_classical.py` 两侧守着）。
         输出：`TaskOutcome`。数据来源：`TaskData` + 冻结的超参。
-        副作用：训练（内存中）。异常：G.ArmError —— 折名不存在、超参未定。
+        副作用：训练（内存中）。异常：G.ArmError —— 折名不存在、超参未定、ln 遇到非正标签。
     English:
         An injection point of `graph.run_grid()` with the same signature as A3/A4's `train_one`, so
         the orchestration exists once. Hyper-parameters come from `a2_best_params.csv`; a missing
         row raises instead of silently falling back to defaults.
+        `label_transform` changes only the space in which `y` is fitted and scored; the frozen
+        hyper-parameters stay the same (D-63). A non-raw value must never reach `raw_runs/`, where
+        the run_id has no scale segment and would overwrite the main-table record of the same name.
     """
     by_name = {spec.name: spec for spec in data.split.folds}
     if fold not in by_name:
@@ -647,11 +707,19 @@ def train_one(
         if train_index.size == 0:
             raise G.ArmError(f"{data.task_id}/{fold}/n={n_level}：截完训练行为 0，这条 run 不能跑")
 
+    # 标签尺度在这里落地，且**只在这里**：`y_space` 同时喂给 fit 和 `metrics`，所以 R² 是在
+    # 训练空间里算的（官方也是同一口径）。若只在 fit 前取对数、却拿原始 y 算 R²，两个空间的
+    # 方差不同，R² 会变成一个既不是 raw 也不是 ln 的数——这种错不报错，只能靠这里写成一处来防。
+    # The label scale lands here and nowhere else: `y_space` feeds both the fit and `metrics`, so
+    # R^2 is computed in the training space (the benchmark's own convention). Taking the log before
+    # the fit but scoring against raw y would mix two variances into a number that is neither scale.
+    y_space = label_values(data.y, label_transform)
+
     started = _now_iso()
     clock = time.perf_counter()
     y_pred = _fit_predict(
         X_train=data.X[train_index],
-        y_train=data.y[train_index],
+        y_train=y_space[train_index],
         X_test=data.X[test_index],
         learner=learner,
         params=params,
@@ -659,7 +727,7 @@ def train_one(
     )
     wall = time.perf_counter() - clock
     finished = _now_iso()
-    scores = G.metrics(data.y[test_index], y_pred)
+    scores = G.metrics(y_space[test_index], y_pred)
     split_version, _ = G.fold_version(data.split, fold)
     run_key = G.RunKey(
         task=data.task_id,
@@ -698,6 +766,23 @@ def train_one(
             f"{sys.version.split()[0]} (D-40: packages match env_core.json, interpreter patch differs)"
         ),
     }
+    if label_transform != "raw":
+        # 只在非 raw 时写这个字段：主表 96 条的记录因此逐字不变（schema 的 additionalProperties
+        # 允许新增字段）。写它不是为了好看——`tests/test_arms_classical.py` 靠它守着
+        # "results/raw_runs/ 里不许出现非 raw 的记录"，那是唯一能机器判住"同名 run 静默覆盖主表"
+        # 的闸门：run_id 里没有尺度这一段，覆盖后 config_hash / split_version / pack_sha256
+        # 全都不变，审计一条也红不了（D-34 ③ 的微调就是这个坑）。
+        # Written only when non-raw, so the 96 main-table records stay byte-identical. It exists so
+        # a test can assert that no non-raw record ever reaches raw_runs/: the run_id has no scale
+        # segment, and an overwrite would leave config_hash and split_version unchanged, i.e.
+        # invisible to every audit (the same trap D-34 section 3 hit with fine-tuning).
+        record["label_transform"] = label_transform
+        record["notes"] = (
+            record["notes"]
+            + f"; label transform = {label_transform}(y) applied before the fit, metrics are on the "
+            f"{label_transform} scale (Q-10 / D-66); this record must NOT be written to "
+            "results/raw_runs/ - use scripts/04_run_cpu.py log-target"
+        )
     if entry is not None and not overrides:
         record["search_cv_r2"] = entry["cv_score"]
         record["search_trials"] = entry["trials"]

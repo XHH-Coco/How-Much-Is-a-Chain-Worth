@@ -86,6 +86,13 @@ FEATURES_DIR = REPO_ROOT / "data" / "processed" / "features"
 MANIFEST_DIR = REPO_ROOT / "data" / "manifests"
 MANIFEST_PATH = MANIFEST_DIR / "task_features_manifest.csv"
 UNRESOLVED_PATH = MANIFEST_DIR / "task_feature_unresolved.csv"
+# `data/processed/features/` 下住着**两族** pack：03b 装配出来的任务 pack（`task_features_manifest.csv`
+# 管）与 C-b 的造包流程产出的 scaling pack（`scaling_features_manifest.csv` 管，D-52）。
+# 两本账各记一半，读的时候必须两份都看——只看一份会把另一族的 pack 报成"清单里没有这一行"。
+# Two families of packs live in data/processed/features/: the task packs assembled by 03b, and the
+# scaling packs built by C-b's pipeline. Two registries; reading only one reports the other family
+# as "not in the manifest".
+SCALING_MANIFEST_PATH = MANIFEST_DIR / "scaling_features_manifest.csv"
 
 # 清单列。顺序即写入顺序，读的人不用猜。
 # The manifest's columns, in write order so a reader never has to guess.
@@ -721,9 +728,20 @@ def verify_features(task_ids: Sequence[str] | None = None, *, sample: int = 100)
         return [f"{repo_relative(FEATURES_DIR)} 下没有任何 .npz：先跑 scripts/03b_assemble.py"]
     manifest = {row.get("task_id", ""): row for row in read_manifest_rows(MANIFEST_PATH)}
     unresolved_rows = read_manifest_rows(UNRESOLVED_PATH)
+    # scaling pack 的 `task_id` 是 `pb26_scaling_cp`、包名是 `<task_id>_<dataset_id>`：按包名建集合，
+    # 它们由另一本账（`scaling_features_manifest.csv`）管，跳过——否则只要有人物化了 scaling pack，
+    # 这条"自洽性"检查就会报一个假红（2026-11-17 实测撞到）。
+    # Scaling packs are named <task_id>_<dataset_id> and are registered in the other manifest; skip
+    # them, otherwise materialising one turns this consistency check into a false red.
+    other_registry = {
+        f"{row.get('task_id', '')}_{row.get('dataset_id', '')}"
+        for row in read_manifest_rows(SCALING_MANIFEST_PATH)
+    }
     rng = np.random.default_rng(0)
 
     for task_id in tasks:
+        if task_id in other_registry:
+            continue
         record = manifest.get(task_id)
         if record is None:
             problems.append(f"{task_id}：清单里没有这一行（03b 没跑全，或跑了 .partial）")

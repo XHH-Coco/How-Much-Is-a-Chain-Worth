@@ -1,8 +1,9 @@
 # 交付 C-c · 架构迁移主跑（15 runs + OOD 三段式）与主表/审计收口
 
 > 本文件是 C-c 的交付说明：C-c-1（arch 15 runs）、C-c-2（OOD 逐组分预测 + 官方三段式合成）。
-> 主表 32 格与审计套件在 2026-11-15 的收口见 `docs/Main Table Notes.md` 与 `docs/Audit Log.md`
-> 的 642 条记录；本文件只讲 **2026-11-16 新增的 arch 批**（642 → **657** 条）。
+> 主表 32 格与审计套件在 2026-11-15 的收口见 `docs/Main Table Notes.md` 与 `docs/Audit Log.md`；
+> 本文件只讲 **2026-11-16 新增的 arch 批**（642 → 657 条；全仓总数当时还没算进 C-b 的 265，
+> 现统一为 **922**，见 Audit Log「条数对账」）。
 > 数字全部由训练脚本落盘，审计只有退回权（红线 4）；本文档不手写任何 run 数字。
 
 ---
@@ -35,6 +36,10 @@
 | 均聚（每折 37 行，单独报） | **0.3952** | 0.3007 – 0.4832 | 0.8169（均聚档均值） |
 
 - 两档**从不合并**成一个 "ID"（验收①）；每折 test = 交替 611 + 均聚 37，行数与官方物化逐折核过。
+- **覆盖口径必须写清**：官方脚本把训练集切成 **10 个 partition**，第 `k` 折 test 取 `k`、val 取 `k+5`，
+  所以 5 折 test 互不重叠、**并集 = 全量的一半**：**3,240 / 6,478 行**（交替 3,055 / 6,110、均聚 185 / 368）。
+  上表的 0.1431 / 0.9569 是"每折 648 行的平均"，**不是**"在 6,478 行上"的值；报告里写后者就是错的
+  （`tests/step` 的 10-partition 事实见 `create_task4_shared_splits.py` 的 `assign_folds(train, num_folds*2)`）。
 - 训练行数逐折 = [5,182, 5,182, 5,182, 5,183, 5,183]、验证 [648, 648, 648, 647, 647]，
   与官方 `create_task4_shared_splits.py` 的产物一致。
 - 墙钟合计 131.9 秒（15 条，每条 8.5–10.6 秒，CPU）；0 条 GPU 记录。
@@ -88,11 +93,15 @@
 
 ## 6. 审计
 
-- `pytest tests/test_run_records.py`：**14 passed**，657 条（546 + 96 + 15）0 退单。套件加了
+- `pytest tests/test_run_records.py`：交付时 **14 passed**（在 657 条上）。2026-11-17 起分诊落地后是
+  **12 passed / 3 skipped**（在 **922** 条上）：3 条 skip 全部是"arch 划分未物化"的显式跳过，
+  不是退单；在物化机上必须 15 passed（`test_materialisation_present_means_green` 守着）。套件加了
   `_resolve_fold` 一个分支（D-57）：任务配置的 `split_ref` 是目录、记录 `split_version` 指向 npz 文件时，
   按该 npz 的 `test` 数组核对折名与测试行（字节哈希仍在前段逐条核过，无放宽）；其余断言一条未动。
-- `pytest tests/test_arch_transfer.py`：**11 passed**（config_hash = 文件字节、15 条网格、超参不内联、
-  OOD 三段式口径、train_rows 核对、v3 的 deferred+目录契约、`A._load_arch_split()` 行数）。
+- `pytest tests/test_arch_transfer.py`：交付时写的是 **11 passed**，实测是 **7 passed / 4 skipped**——
+  其中两条（`test_records_share_the_frozen_config_hash`、`test_records_carry_id_tier_metrics`）只读
+  `raw_runs/*.json`，与物化无关，却被 `skipif` 一起带走了。**2026-11-17 已删掉那两条装饰器**，
+  现在 **11 passed / 2 skipped**（剩余 2 条确实需要物化产物的 skip；D-62）。
 - Audit Log 已加 2026-11-16 一行（15 条 0 退单），条数对账 642 → 657。
 
 ## 7. 环境与许可
@@ -105,8 +114,14 @@
 ## 8. 留给 D 与仓库所有者
 
 - **D 要 bootstrap 区间时的取件路径**：五折预测向量是行级 GTRC 派生产物，不入库（D-08，同 C-b 的
-  组分表先例）。两条路：① 本机跑 `python scripts/04_run_cpu.py arch --ood` 重建（先 `--setup`，再照
-  `data/manifests/external_task4_sources.csv` 取件物化）；② 向 C-c 取 45 份文件，逐份核
-  `data/manifests/arch_ood_artifacts_manifest.csv` 的 sha256。合成入口只有官方脚本，重建即同数。
+  组分表先例）。三条路，按省事排序：
+  ① **直接取本机现成的 45 份**（2026-11-17 已落在 `local:DESKTOP-6C1JF93（E:/How-Much-Is-a-Chain-Worth）`，
+  清单的 `where` 已登记），逐份核 `data/manifests/arch_ood_artifacts_manifest.csv` 的 sha256；
+  ② 在任意一台 RDKit 构建相同的机器上重跑 `arch --ood` 重建——**已实测逐位复现**（见
+  `docs/重跑_arch_异机复现_2026-11-17.md`：15 条记录 Δ=0、135 个 OOD 值 Δ=0、45 份产物哈希 45/45 一致）；
+  ③ 向 C-c 取件，同样逐份核 sha256。
+- **OOD 的两项"内存事实"已落盘**：`results/aggregate/arch_ood_audit.json` 记 `refit_all_match: true`
+  （15/15 重拟合与落盘 ID 预测逐位相同）与 `wall_clock_s_total: 190.702`；`arch_ood_ensemble.json` 引用它们，
+  不再是 `null`（D-60、D-65）。
 - H1 架构子句的措辞需处理 D-58 的"后半不成立"：建议表述交给所有者拍板（Q-11 同款流程）。
 - 主表不动：arch 是机制实验，不进 32 格（Proposal §3.1 表 C）；32 格定稿见 `docs/Main Table Notes.md`。

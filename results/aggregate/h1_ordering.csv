@@ -1,0 +1,17 @@
+arm,scope,task,tier,property,source_kind,n_labels,n_seeds,lambda,lambda_lo,lambda_hi,lambda_width,undecidable,rank_tier,rank_lambda,spearman_rho,n_points,n_cross_layer_inversions,result,note
+a3_graph,point,pb_t1_tg,1,玻璃化转变温度 Tg,experimental,8055,3,-0.003564,-0.080717,0.067685,0.148402,false,1.5,5.0,,6,,,玻璃化转变温度 Tg
+a3_graph,point,pb_t1_tm,1,熔点 Tm,experimental,3796,3,-0.191931,-0.310833,-0.081458,0.229375,false,1.5,2.0,,6,,,熔点 Tm
+a3_graph,point,pb_t2_modulus,2,拉伸模量,experimental,1034,3,-0.016321,-0.157364,0.252200,0.409564,true,3.5,3.0,,6,,,拉伸模量
+a3_graph,point,pb_t2_permeability,2,气体渗透系数,experimental,711,3,-0.007864,-0.014376,0.750806,0.765182,true,3.5,4.0,,6,,,气体渗透系数
+a3_graph,point,pb_t3_dielectric_loss,3,介电损耗因子 DLF,experimental,279,3,-1.478758,-2.235244,-0.049396,2.185848,true,5.5,1.0,,6,,,介电损耗因子 DLF
+a3_graph,point,pb_t3_iwlt,3,等温失重时间 IWLT,experimental,228,3,0.068018,0.003383,0.172423,0.169040,false,5.5,6.0,,6,,,等温失重时间 IWLT
+a3_graph,summary_all,,,,,,,,,,,,,,+0.000000,6,2,H1_refuted,主判据：提案 §H1 的原口径（全部 6 个点）；Spearman ρ = +0.0000 < 0.5；2 处跨 ≥2 层倒序
+a3_graph,summary_decidable,,,,,,,,,,,,,,+0.866025,3,0,H1_not_refuted,敏感性：只留 undecidable=false 的点
+a4_polybert,point,pb_t1_tg,1,玻璃化转变温度 Tg,experimental,8055,3,-0.549422,-0.659054,-0.452749,0.206305,false,1.5,2.0,,6,,,玻璃化转变温度 Tg
+a4_polybert,point,pb_t1_tm,1,熔点 Tm,experimental,3796,3,-0.296308,-0.428045,-0.180112,0.247934,false,1.5,3.0,,6,,,熔点 Tm
+a4_polybert,point,pb_t2_modulus,2,拉伸模量,experimental,1034,3,0.028108,-0.082983,0.224479,0.307463,true,3.5,5.0,,6,,,拉伸模量
+a4_polybert,point,pb_t2_permeability,2,气体渗透系数,experimental,711,3,0.003414,-0.198881,0.005135,0.204017,false,3.5,4.0,,6,,,气体渗透系数
+a4_polybert,point,pb_t3_dielectric_loss,3,介电损耗因子 DLF,experimental,279,3,-0.904581,-1.375472,-0.106892,1.268580,true,5.5,1.0,,6,,,介电损耗因子 DLF
+a4_polybert,point,pb_t3_iwlt,3,等温失重时间 IWLT,experimental,228,3,0.169582,-0.280776,0.284150,0.564926,true,5.5,6.0,,6,,,等温失重时间 IWLT
+a4_polybert,summary_all,,,,,,,,,,,,,,+0.239046,6,2,H1_refuted,主判据：提案 §H1 的原口径（全部 6 个点）；Spearman ρ = +0.2390 < 0.5；2 处跨 ≥2 层倒序
+a4_polybert,summary_decidable,,,,,,,,,,,,,,+0.866025,3,0,H1_not_refuted,敏感性：只留 undecidable=false 的点

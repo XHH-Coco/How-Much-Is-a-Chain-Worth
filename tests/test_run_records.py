@@ -247,6 +247,40 @@ def _split_spec_cache() -> dict[str, Any]:
     return cache
 
 
+# ---- 3.5 物化缺失 vs 记录错：两种"红"必须分开 ----
+# 不入库的物化产物（D-57）在新 clone 上必然不存在。把"文件没物化"判成"记录有问题"，会让
+# 审计套件在别人的机器上一律变红，于是所有人学会忽略红灯——C-c 验收 §5.2 的根因。
+# Materialised-but-not-committed artifacts (D-57) never exist on a fresh clone. Reporting "not
+# materialised" as "the record is wrong" turns the whole suite red on somebody else's machine, and
+# everyone learns to ignore red - the root cause found in acceptance C-c section 5.2.
+MATERIALISED_NOT_COMMITTED = ("splits/polybench26/arch/",)
+MATERIALISATION_GAP = "MATERIALISATION_GAP::"
+
+
+def _is_materialisation_gap(problem: str) -> bool:
+    """这条问题是"产物没物化"（环境）还是"记录/文件对不上"（数据）。
+    Is this problem a missing materialisation (environment) or a genuine mismatch (data)?
+    """
+    return problem.startswith(MATERIALISATION_GAP)
+
+
+def _split_problems(problems: list[str]) -> tuple[list[str], list[str]]:
+    """把问题列表拆成 (真实问题, 物化缺口)。／ Split into (real problems, materialisation gaps)."""
+    gaps = [p for p in problems if _is_materialisation_gap(p)]
+    real = [p for p in problems if not _is_materialisation_gap(p)]
+    return real, gaps
+
+
+def _gap_message(gaps: list[str]) -> str:
+    """物化缺口统一给一条可执行的提示，而不是让人去猜。／ One actionable hint, not a guess."""
+    return (
+        f"{len(gaps)} 处划分未物化（不入库，D-57）：审计的行数断言没有对象可核。\n"
+        "重建：python scripts/04_run_cpu.py arch --setup && python scripts/04_run_cpu.py arch --ood\n"
+        "在物化机上这条测试必须全绿（见 test_materialisation_present_means_green）。\n"
+        "首条：" + (gaps[0] if gaps else "")
+    )
+
+
 def _resolve_fold(
     record: dict[str, Any], name: str, cache: dict[str, Any]
 ) -> tuple[Any, list[str]]:
@@ -276,6 +310,13 @@ def _resolve_fold(
     prefix, rel = parts
     split_path = REPO / rel
     if not split_path.exists():
+        # 只对**登记过"入库但未物化"**的前缀报缺口；其他路径缺失仍是真问题（写错路径、文件被删）。
+        # Only the registered "committed but not materialised" prefixes count as a gap; any other
+        # missing path is still a real problem (a typo, or a deleted file).
+        if any(rel.startswith(prefix) for prefix in MATERIALISED_NOT_COMMITTED):
+            return None, [
+                f"{MATERIALISATION_GAP}{name}: {rel} 未物化（该产物不入库，D-57）"
+            ]
         return None, [f"{name}: split_version 指向的 {rel} 不存在"]
     if split_path.is_file():
         digest = hashlib.sha256(split_path.read_bytes()).hexdigest()[:12]
@@ -631,7 +672,10 @@ def test_3_prediction_rows_match_split_test_length(real_records: dict[str, Any])
         for name, r in real_records.items()
         for p in _audit_prediction_rows(r, name, PREDICTIONS, cache)
     ]
-    assert not problems, "\n".join(problems[:20])
+    real, gaps = _split_problems(problems)
+    assert not real, "\n".join(real[:20])
+    if gaps:
+        pytest.skip(_gap_message(gaps))
 
 
 def test_4_run_ids_unique_and_filenames_match(real_records: dict[str, Any]) -> None:
@@ -663,7 +707,46 @@ def test_6_device_matches_env_fingerprint(real_records: dict[str, Any]) -> None:
 def test_composed_audit_is_clean_on_real_records(real_audit: list[str]) -> None:
     """组合审计在真实记录上必须零问题（六条 + 第 0 条一次跑完）。
     The composed audit must be clean on the real records.
+
+    中文：
+        用途：唯一一条"全绿"总闸。**分诊规则**：真实问题一律红；只剩"未物化"时 skip 并打印
+              重建命令——环境缺件与记录错是两件事，混在一起就等于教大家忽略红灯（D-62）。
+    English:
+        The single "all green" gate. Triage: a genuine problem is red; when only missing
+        materialisation remains, skip with the rebuild command - an absent artifact and a wrong
+        record are different things, and merging them teaches everyone to ignore red (D-62).
     """
+    real, gaps = _split_problems(real_audit)
+    assert not real, "\n".join(real[:30])
+    if gaps:
+        pytest.skip(_gap_message(gaps))
+
+
+def test_materialisation_present_means_green(real_audit: list[str]) -> None:
+    """反向测试：物化产物在盘上时，审计必须**零问题**（连"缺口"也不许有）。
+    Reverse test: when the materialisation is on disk, the audit must be spotless.
+
+    中文：
+        用途：防止分诊把真问题也放行。分诊只在"文件确实不存在"时生效；文件存在却对不上，
+              仍然走真问题分支。这条测试在有物化产物的机器（C-c 那台）上跑，断言 `real_audit`
+              完全为空——包括不允许出现任何 `MATERIALISATION_GAP`。
+        输入：real_audit。输出：无。数据来源：仓库。副作用：只读。异常：断言失败即红。
+    English:
+        Guards the triage against over-permissiveness: the gap branch fires only when the file is
+        really absent, so on a machine that has the artifacts the audit must be completely empty.
+    """
+    arch_dir = REPO / MATERIALISED_NOT_COMMITTED[0]
+    # `rglob` 不是 `glob`：实际物化落在 `arch/seed_42/fold_XX.npz`（记录里的 `split_version`
+    # 写的就是这个路径）。用 `glob` 会永远匹配不到，于是这条"防分诊放水"的反向测试在物化机上
+    # 也一直 skip——闸门本身成了摆设（2026-11-17 在本机物化后实测）。
+    # rglob, not glob: materialisation lands in arch/seed_42/fold_XX.npz (the path records cite in
+    # split_version). A flat glob never matches, so this guard would skip even on a machine that
+    # has the artifacts - the gate itself becomes decoration.
+    if not arch_dir.is_dir() or not any(arch_dir.rglob("fold_*.npz")):
+        pytest.skip(
+            f"{MATERIALISED_NOT_COMMITTED[0]} 未物化（本机就是分诊要照顾的那种 clone）；"
+            "在物化机上这条必须全绿"
+        )
     assert not real_audit, "\n".join(real_audit[:30])
 
 

@@ -1,0 +1,50 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '64px 64px 44px 64px', display: 'flex', flexDirection: 'column' }}>
+    <Box style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.4 }}>DSC6020 · 结题汇报</Text>
+            <Box style={{ width: 200, height: 1, background: '#24334C' }} />
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 0.6 }}>小组汇报</Text>
+        </Box>
+        <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '7px 20px', background: '#16233A', border: '1.5px solid #4D8DFF', borderRadius: 4 }}>
+            <Text style={{ fontSize: 13, color: '#8FA3BC', fontWeight: 'bold', letterSpacing: 2.6 }}>GROUP</Text>
+            <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5, lineHeight: 1.05 }}>32</Text>
+        </Box>
+    </Box>
+
+    <Text style={{ fontSize: 58, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.1, marginTop: 52, letterSpacing: 1 }}>
+        链值多少？
+    </Text>
+    <Text style={{ fontSize: 20, color: '#C3D0E2', lineHeight: 1.55, marginTop: 18, width: 940 }}>
+        高分子性质预测中的链信息回收率 —— 以及更多数据能否把它买回来
+    </Text>
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 46 }}>
+        {[
+            ['3', '个公开基准'],
+            ['962', '条拟合记录，全部对账'],
+            ['19', '个「任务 × 链臂」格'],
+            ['4 + 1', '支跑过的臂 / 不可构造的臂'],
+        ].map(([num, label]) => (
+            <Box key={label} style={{ flexDirection: 'column', width: 210 }}>
+                <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.1 }}>{num}</Text>
+                <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 6, lineHeight: 1.4 }}>{label}</Text>
+            </Box>
+        ))}
+    </Box>
+
+    <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <Box style={{ flexDirection: 'column', gap: 6 }}>
+            <Text style={{ fontSize: 15, color: '#FFFFFF', letterSpacing: 0.4 }}>
+                Yihui WAN · Xingshuai WANG · Peng SUN · Yixuan ZHOU
+            </Text>
+            <Text style={{ fontSize: 12, color: '#7E93AE' }}>2026 年 11 月 18 日</Text>
+        </Box>
+        <svg width='300' height='34' viewBox='0 0 300 34'>
+            <line x1='0' y1='17' x2='300' y2='17' stroke='#24334C' strokeWidth='1' />
+            <circle cx='24' cy='17' r='6' fill='none' stroke='#4D8DFF' strokeWidth='1.4' opacity='0.85' />
+            <circle cx='96' cy='17' r='6' fill='none' stroke='#4D8DFF' strokeWidth='1.4' opacity='0.6' />
+            <circle cx='168' cy='17' r='6' fill='none' stroke='#4D8DFF' strokeWidth='1.4' opacity='0.4' />
+            <circle cx='240' cy='17' r='6' fill='none' stroke='#4D8DFF' strokeWidth='1.4' opacity='0.25' />
+        </svg>
+    </Box>
+</Slide>

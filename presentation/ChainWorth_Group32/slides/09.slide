@@ -1,0 +1,80 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (2/6) — H1</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        H1 is refuted — and one undecidable point does the work
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 20 }}>
+        <Box style={{ width: 660, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.2, fontWeight: 'bold' }}>
+                RANK CORRELATION AFTER DROPPING ONE TASK (A3 ARM)
+            </Text>
+            <svg width='660' height='330' viewBox='0 0 660 330'>
+                <line x1='410' y1='8' x2='410' y2='316' stroke='#33445F' strokeWidth='1' />
+                <line x1='235' y1='8' x2='235' y2='316' stroke='#FFB020' strokeWidth='1' strokeDasharray='4 4' opacity='0.55' />
+                <line x1='585' y1='8' x2='585' y2='316' stroke='#FFB020' strokeWidth='1' strokeDasharray='4 4' opacity='0.55' />
+                <text x='235' y='322' fill='#FFB020' fontSize='11' textAnchor='middle' opacity='0.85'>−0.5</text>
+                <text x='585' y='322' fill='#FFB020' fontSize='11' textAnchor='middle' opacity='0.85'>+0.5</text>
+
+                <text x='185' y='30' fill='#A8B8CE' fontSize='12' textAnchor='end'>drop pb_t1_tg</text>
+                <rect x='410' y='18' width='55' height='16' fill='#3E5A82' />
+                <text x='475' y='30' fill='#A8B8CE' fontSize='12'>+0.158</text>
+
+                <text x='185' y='76' fill='#A8B8CE' fontSize='12' textAnchor='end'>drop pb_t1_tm</text>
+                <rect x='355' y='64' width='55' height='16' fill='#3E5A82' />
+                <text x='345' y='76' fill='#A8B8CE' fontSize='12' textAnchor='end'>−0.158</text>
+
+                <text x='185' y='122' fill='#A8B8CE' fontSize='12' textAnchor='end'>drop pb_t2_modulus</text>
+                <rect x='410' y='110' width='2' height='16' fill='#3E5A82' />
+                <text x='422' y='122' fill='#A8B8CE' fontSize='12'>0.000</text>
+
+                <text x='185' y='168' fill='#A8B8CE' fontSize='12' textAnchor='end'>drop pb_t2_permeability</text>
+                <rect x='410' y='156' width='2' height='16' fill='#3E5A82' />
+                <text x='422' y='168' fill='#A8B8CE' fontSize='12'>0.000</text>
+
+                <text x='185' y='214' fill='#FFFFFF' fontSize='12' textAnchor='end' fontWeight='bold'>drop pb_t3_dielectric_loss</text>
+                <rect x='410' y='202' width='184' height='16' fill='#FFB020' />
+                <text x='602' y='214' fill='#FFB020' fontSize='12' fontWeight='bold'>+0.527</text>
+
+                <text x='185' y='260' fill='#A8B8CE' fontSize='12' textAnchor='end'>drop pb_t3_iwlt</text>
+                <rect x='225' y='248' width='185' height='16' fill='#3E5A82' />
+                <text x='215' y='260' fill='#A8B8CE' fontSize='12' textAnchor='end'>−0.527</text>
+            </svg>
+            <Text style={{ fontSize: 12, color: '#7E93AE', lineHeight: 1.5 }}>
+                Dashed lines are the ±0.5 threshold. Only one deletion pushes |ρ| past it — so the verdict hangs on one task.
+            </Text>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 14 }}>
+            <Box style={{ flexDirection: 'row', gap: 28 }}>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FF6B6B', lineHeight: 1.05 }}>+0.000</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4 }}>ρ, A3 arm</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FF6B6B', lineHeight: 1.05 }}>+0.239</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4 }}>ρ, A4 arm</Text>
+                </Box>
+            </Box>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.6 }}>
+                Both arms also show <span style={{ color: '#FFB020', fontWeight: 'bold' }}>two cross-layer inversions</span> each. Either condition alone refutes H1.
+            </Text>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.6 }}>
+                All four inversions contain <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>pb_t3_dielectric_loss</span> — 279 rows, a bootstrap interval 2.19 wide, and an A3 R² of −0.009, worse than predicting the mean.
+            </Text>
+            <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.6 }}>
+                Dropping it turns ρ into +0.527 / +0.949 and the verdict into "not refuted". That deletion is not performed: choosing the
+                analysis after seeing the result is the one thing pre-registration exists to prevent.
+            </Text>
+            <Text style={{ fontSize: 14, color: '#FFB020', lineHeight: 1.6 }}>
+                So: refuted as pre-registered, but the refutation is driven by a point we cannot decide — "no power to test", not "tested and failed".
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>h1_ordering.csv · leave-one-task-out rows, A3 arm</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>9 / 17</Text>
+    </Box>
+</Slide>

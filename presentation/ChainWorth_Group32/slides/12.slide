@@ -1,0 +1,75 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (5/6) — H2′</Text>
+    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        Change the ruler and the same curve halves: 0.650 against 0.167
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ marginTop: 16, padding: '10px 18px', background: '#16233A', borderLeft: '2px solid #FFB020' }}>
+        <Text style={{ fontSize: 13.5, color: '#FFFFFF', lineHeight: 1.55 }}>
+            <span style={{ color: '#FFB020', fontWeight: 'bold', letterSpacing: 1 }}>H2′ — </span>
+            a tenfold increase in data cannot halve the <span style={{ fontWeight: 'bold' }}>absolute</span> gain ΔR², where ΔR² = R²_chain − R²_unit.
+            Refuted iff ΔR² at the largest n falls below half of ΔR² at the smallest n — H2&apos;s own criterion, read on R² instead of on the ratio.
+            <span style={{ color: '#8FA3BC' }}> Not pre-registered: stated after the numbers, reported beside H2, never merged into its verdict.</span>
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 14 }}>
+        <Box style={{ width: 600, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.2, fontWeight: 'bold' }}>
+                SAME FOLDS, SAME LEVELS, TWO RULERS — NORMALISED TO THE SMALLEST n
+            </Text>
+            <Chart
+                style={{ width: 600, height: 272, marginTop: 6 }}
+                chartType='lineChart'
+                colors={['#4D8DFF', '#FFB020']}
+                background='#0E1728'
+                showLegend={true}
+                showDataLabels={true}
+                legendColor='#A8B8CE'
+                axisColor='#8FA3BC'
+                dataLabelColor='#FFFFFF'
+                data={[
+                    ['training rows', 'Λ (ratio)', 'ΔR² (absolute)'],
+                    ['300', 1.0, 1.0],
+                    ['1,000', 1.707, 0.948],
+                    ['3,000', 1.247, 0.453],
+                    ['10,000', 0.945, 0.276],
+                    ['all', 0.65, 0.167],
+                ]}
+            />
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 12 }}>
+            <Box style={{ flexDirection: 'row', gap: 34 }}>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>0.650</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4, lineHeight: 1.4 }}>Λ ratio [0.570, 0.739]<br />not halved</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>0.167</Text>
+                    <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 4, lineHeight: 1.4 }}>ΔR² ratio [0.138, 0.198]<br />halved</Text>
+                </Box>
+            </Box>
+            <Text style={{ fontSize: 13.5, color: '#C3D0E2', lineHeight: 1.55 }}>
+                The two intervals <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>do not overlap</span>, so this is not a marginal disagreement between two metrics.
+            </Text>
+            <Text style={{ fontSize: 12.5, color: '#A8B8CE', lineHeight: 1.6 }}>
+                Mechanism: the denominator 1 − R²_unit falls from 0.135 to 0.034 (×0.25) while the numerator ΔR² only falls to ×0.17.
+                A ratio of two collapsing numbers can stop collapsing — that hump is arithmetic, not physics.
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ marginTop: 'auto', padding: '11px 18px', background: '#111B2E', borderLeft: '2px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 13, color: '#C3D0E2', lineHeight: 1.55 }}>
+            Two rulers, two questions: Λ asks how much of the <span style={{ fontStyle: 'italic' }}>remaining</span> variance is recovered; ΔR² asks how far R² rises in absolute terms.
+            At 22,242 rows ΔR² is 0.0066 — the same order as the per-task noise floor (median 0.0022, maximum 0.0192).
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>metric_sensitivity.csv · metric_sensitivity_levels.csv · the homopolymer is not halved under either ruler</Text>
+        <Text style={{ fontSize: 12, color: '#5E7590' }}>12 / 17</Text>
+    </Box>
+</Slide>

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-13T19:59:21+08:00",
+  "generated_at": "2026-11-18T02:03:04+08:00",
   "config": "configs/experiments/null_calibration.yaml",
   "a2_config_hash": "sha256:7d29768afc09624e962b75eef6d9fe3293fe408392f9a5ce943ec390c4b22d7f",
   "seeds": [
@@ -29,6 +29,138 @@
         }
       }
     },
+    "pb_t1_tm": {
+      "n_folds": 1,
+      "baseline_r2_mean": 0.7247574331,
+      "conditions": {
+        "baseline": {
+          "r2_mean": 0.7247574331,
+          "n": 1
+        },
+        "constant3": {
+          "r2_mean": 0.7187141017,
+          "delta_r2_vs_baseline_mean": -0.006043331399999907,
+          "max_abs_paired_delta": 0.006043331399999907,
+          "n_pairs": 1
+        },
+        "shuffled3": {
+          "r2_mean": 0.71496947,
+          "delta_r2_vs_baseline_mean": -0.009787963099999963,
+          "max_abs_paired_delta": 0.009787963099999963,
+          "n_pairs": 1
+        }
+      }
+    },
+    "pb_t2_modulus": {
+      "n_folds": 1,
+      "baseline_r2_mean": 0.024730041,
+      "conditions": {
+        "baseline": {
+          "r2_mean": 0.024730041,
+          "n": 1
+        },
+        "constant3": {
+          "r2_mean": 0.0052191304,
+          "delta_r2_vs_baseline_mean": -0.0195109106,
+          "max_abs_paired_delta": 0.0195109106,
+          "n_pairs": 1
+        },
+        "shuffled3": {
+          "r2_mean": 0.0262572977,
+          "delta_r2_vs_baseline_mean": 0.0015272567,
+          "max_abs_paired_delta": 0.0015272567,
+          "n_pairs": 1
+        }
+      }
+    },
+    "pb_t2_permeability": {
+      "n_folds": 1,
+      "baseline_r2_mean": -0.001813613,
+      "conditions": {
+        "baseline": {
+          "r2_mean": -0.001813613,
+          "n": 1
+        },
+        "constant3": {
+          "r2_mean": -0.001813613,
+          "delta_r2_vs_baseline_mean": 0.0,
+          "max_abs_paired_delta": 0.0,
+          "n_pairs": 1
+        },
+        "shuffled3": {
+          "r2_mean": -0.001813613,
+          "delta_r2_vs_baseline_mean": 0.0,
+          "max_abs_paired_delta": 0.0,
+          "n_pairs": 1
+        }
+      }
+    },
+    "pb_t3_dielectric_loss": {
+      "n_folds": 1,
+      "baseline_r2_mean": 0.5930736855,
+      "conditions": {
+        "baseline": {
+          "r2_mean": 0.5930736855,
+          "n": 1
+        },
+        "constant3": {
+          "r2_mean": 0.5930736855,
+          "delta_r2_vs_baseline_mean": 0.0,
+          "max_abs_paired_delta": 0.0,
+          "n_pairs": 1
+        },
+        "shuffled3": {
+          "r2_mean": 0.5862832039,
+          "delta_r2_vs_baseline_mean": -0.0067904815999999535,
+          "max_abs_paired_delta": 0.0067904815999999535,
+          "n_pairs": 1
+        }
+      }
+    },
+    "pb_t3_iwlt": {
+      "n_folds": 1,
+      "baseline_r2_mean": -0.041891567,
+      "conditions": {
+        "baseline": {
+          "r2_mean": -0.041891567,
+          "n": 1
+        },
+        "constant3": {
+          "r2_mean": -0.0577085186,
+          "delta_r2_vs_baseline_mean": -0.015816951600000004,
+          "max_abs_paired_delta": 0.015816951600000004,
+          "n_pairs": 1
+        },
+        "shuffled3": {
+          "r2_mean": -0.0610754556,
+          "delta_r2_vs_baseline_mean": -0.019183888600000004,
+          "max_abs_paired_delta": 0.019183888600000004,
+          "n_pairs": 1
+        }
+      }
+    },
+    "pb26_homopolymer_density": {
+      "n_folds": 5,
+      "baseline_r2_mean": 0.94728549508,
+      "conditions": {
+        "baseline": {
+          "r2_mean": 0.94728549508,
+          "n": 5
+        },
+        "constant3": {
+          "r2_mean": 0.94728549508,
+          "delta_r2_vs_baseline_mean": 0.0,
+          "max_abs_paired_delta": 0.0,
+          "n_pairs": 5
+        },
+        "shuffled3": {
+          "r2_mean": 0.9458002671199999,
+          "delta_r2_vs_baseline_mean": -0.0014852279599999907,
+          "max_abs_paired_delta": 0.0038029081999999548,
+          "n_pairs": 5
+        }
+      }
+    },
     "pb26_polymetrix_tg": {
       "n_folds": 5,
       "baseline_r2_mean": 0.8936789556000001,
@@ -54,18 +186,18 @@
   },
   "overall": {
     "constant3": {
-      "units": 6,
-      "mean_delta": -0.00125722555,
-      "mean_abs_delta": 0.0025259293499999926,
-      "max_abs_delta": 0.005402639900000006,
-      "p95_abs_delta": 0.0051541893000000005
+      "units": 16,
+      "mean_delta": -0.0030571591812499944,
+      "mean_abs_delta": 0.0035329231062499918,
+      "max_abs_delta": 0.0195109106,
+      "p95_abs_delta": 0.016740441350000003
     },
     "shuffled3": {
-      "units": 6,
-      "mean_delta": -0.0023649430333333257,
-      "mean_abs_delta": 0.0024745679999999917,
-      "max_abs_delta": 0.006251589200000018,
-      "p95_abs_delta": 0.005482475424999994
+      "units": 16,
+      "mean_delta": -0.0034906796624999893,
+      "mean_abs_delta": 0.003722696112499989,
+      "max_abs_delta": 0.019183888600000004,
+      "p95_abs_delta": 0.012136944474999974
     }
   },
   "note": "零信息地板：3 列常量与 3 列置换描述符。baseline 应与 raw_runs 里同任务同折 seed0 的 A2 记录逐位相同（差异只来自 CSV 十位小数）。不进主表、不写 raw_runs。"

@@ -29,7 +29,7 @@
 | | `docs/Arch Materialization.md`（取件凭据 + 行数 + 地板 + 复跑清单） | 1 份 | ✅ |
 | **C-b-4** | `results/aggregate/audit_backlog.csv` | 只有表头（0 退单） | ✅ |
 | | `docs/Audit Log.md` 的「运行侧执行记录（C-b 维护）」章节 | 6 批逐批记账 | ✅ |
-| **代码/测试** | `scripts/04_run_cpu.py` 新增 `openpoly` / `scaling` 两个子命令；`scripts/00c/00d/00e`；`src/chainworth/experiments/{scaling,arch}.py`；`tests/test_openpoly_classic.py`（14）+ `tests/test_scaling_scan.py`（9） | — | ✅ |
+| **代码/测试** | `scripts/04_run_cpu.py` 新增 `openpoly` / `scaling` 两个子命令；`scripts/00c/00d/00e`；`src/chainworth/experiments/{scaling,arch}.py`；`tests/test_openpoly_classic.py`（**11**）+ `tests/test_scaling_scan.py`（**13**，2026-11-17 起多一条清单指纹守卫） | — | ✅ |
 
 **总记录数**：`results/raw_runs/` 现有 **907 条** = B 的 546 + C-a 的 96 + C-b-2 的 225 + C-b-1 的 40。
 
@@ -235,11 +235,16 @@ OpenPoly 那种 `shuffle_prefix` 取到的行**不同**（否则说明参数没�
 | 5 | A5 批 | **0** | —（D-48 撤除，不是漏跑） |
 | 6 | arch 15 runs（C-c，D-49 单臂） | **0** | —（未开跑；C-b 的地基已交，臂已定） |
 
-- **条数对账**：`results/raw_runs/` 907 条 = 546 + 96 + 225 + 40（`_schema.json` 不算记录）。
+- **条数对账**：写这份文档时 `results/raw_runs/` 是 **907** 条（546 + 96 + 225 + 40）；加上 C-c 之后落盘的
+  arch 15 条，全仓现为 **922** 条（`_schema.json` 不算记录）。907 是中间态，不是错数。
 - **退单**：`results/aggregate/audit_backlog.csv` **只有表头**（0 退单，主表定稿前必须清零这条现在是清着的）。
-- **套件**：`pytest tests/test_run_records.py` = **14 passed**（在 907 条真实记录上，含四处注入变红的自测）。
-- **全量**：`pytest tests` = **250 passed / 88 skipped / 10 failed**，10 个失败全是"缺 `data/interim` 或
-  `scaling_indices`（D-38 不入库）"的既有用例——与 C-b 的改动无关，明细在 Audit Log。
+- **套件**：`pytest tests/test_run_records.py` 在 **907 条**时是 14 passed；现在 **922 条**上是
+  **12 passed / 3 skipped**——3 条 skip 是"arch 划分未物化"的分诊（D-62），不是退单。
+- **全量**：**两个数属于两种机器，不要混读**（Audit Log 已改成两行）。
+  - `cb310` 纯代码检出：250 passed / 88 skipped / 10 failed（共 348）。10 红全是缺 `data/interim` 或
+    `scaling_indices`（D-38 不入库）；88 skip 是没装 torch / chemprop。
+  - 本机（有 `data/interim`、物化了 pack）：**见 `docs/Audit Log.md` 的 2026-11-17 行**。
+    以前把 `cb310` 的 10 红写成"本机基线"，会让下一个人以为红灯可以忽略——这条已改。
 
 **本轮补了套件的一处能力缺口（不放松任何断言）**：`_resolve_fold()` 原本只走 `loaders.load_split()`，
 而双数据集任务在那条路上是**故意报错**的（D-54）→ 加一条"记录里有 `dataset_id` 就按数据集读划分"的寻址分支。
