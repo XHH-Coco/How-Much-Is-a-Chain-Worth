@@ -1,41 +1,42 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>11 · 参考文献</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
-        参考文献与数据来源
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>11 · 分工</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        四条工作流，一套共享协议
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'column', marginTop: 14 }}>
+    <Box style={{ flexDirection: 'column', marginTop: 8 }}>
         {[
-            ['1', 'PolyBench — A Reproducible Open Benchmark Platform for Repeat-Unit-Based Polymer Property Prediction',
-                'Polym. Sci. Technol. 2026, 2(10), 836–854 · DOI 10.1021/polymscitech.6c00094 · 平台 http://polybench.ciac.jl.cn · 存档 https://doi.org/10.6084/m9.figshare.30917717'],
-            ['2', 'PolyBench26 — An open benchmark for machine-learning-based polymer property prediction',
-                'arXiv:2609.27036 · https://github.com/rlearsch/PolymerBenchmark2026'],
-            ['3', 'OpenPoly — A Polymer Database Empowering Benchmarking and Multi-property Predictions',
-                'Chin. J. Polym. Sci. 2025, 43(10), 1749–1760 · DOI 10.1007/s10118-025-3402-y · https://github.com/WangGroupFDU/Openpoly_benchmark'],
-            ['4', 'chemprop 2.1.0 —— 有向消息传递网络（A3 臂，官方超参）',
-                'https://github.com/chemprop/chemprop'],
-            ['5', 'polyBERT —— 高分子语言模型嵌入（A4 臂，冻结编码器）',
-                'https://huggingface.co/kuelumbus/polyBERT'],
-            ['6', 'RDKit —— 205 个描述符与 2048 位 Morgan 指纹（A2 臂）',
-                'https://www.rdkit.org'],
-            ['7', 'XGBoost —— Chen & Guestrin, Proceedings of KDD 2016',
-                'https://xgboost.readthedocs.io'],
-        ].map(([num, title, source]) => (
-            <Box key={num} style={{ flexDirection: 'row', gap: 16, paddingTop: 9, paddingBottom: 9, borderTop: '1px solid #1A2537' }}>
-                <Text style={{ fontSize: 12, color: '#4D8DFF', width: 16, fontWeight: 'bold', lineHeight: 1.6 }}>{num}</Text>
-                <Box style={{ flexDirection: 'column', flex: 1 }}>
-                    <Text style={{ fontSize: 13, color: '#FFFFFF', lineHeight: 1.45 }}>{title}</Text>
-                    <Text style={{ fontSize: 11, color: '#7E93AE', marginTop: 2, lineHeight: 1.5 }}>{source}</Text>
+            ['Yihui WAN', '问题 · 数据 · GPU 臂',
+                '定下问题与实验设计；建冻结划分、许可台账与哈希清单，让每个数字都能追到行；再跑 GPU 臂 —— chemprop 扫描、polyBERT 嵌入、OpenPoly 扫描。'],
+            ['Yixuan ZHOU', '经典臂族',
+                '建经典臂族：A1 地板、描述符加指纹的 XGBoost（30 次调参、八个冻结超参），以及 A5 骨架 —— 一套框架、三个开关。'],
+            ['Xingshuai WANG', '规模扫描 · 迁移准备',
+                '跑 PolyBench26 的官方 n 档与 OpenPoly 经典扫描，共 265 条记录；再物化架构迁移划分与 683 个组分特征。'],
+            ['Peng SUN', '迁移 · 主表 · 审计',
+                '把架构迁移臂端到端跑完 —— 15 次运行加三阶段 OOD 评估（683 个组分）；拼出主表，并写出审计套件。'],
+        ].map(([name, role, body], i) => (
+            <Box key={name} style={{ flexDirection: 'row', gap: 30, paddingTop: 20, paddingBottom: 20, borderTop: i === 0 ? '0px solid #1D2A40' : '1px solid #1D2A40' }}>
+                <Box style={{ width: 250, flexDirection: 'column' }}>
+                    <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.25 }}>{name}</Text>
+                    <Text style={{ fontSize: 12, color: '#4D8DFF', marginTop: 4, letterSpacing: 0.8, lineHeight: 1.4 }}>{role}</Text>
                 </Box>
+                <Text style={{ flex: 1, fontSize: 16, color: '#A8B8CE', lineHeight: 1.55 }}>{body}</Text>
             </Box>
         ))}
     </Box>
 
-    <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 11, color: '#5E7590', width: 900, lineHeight: 1.6 }}>
-            本 deck 的每一个数都能由仓库里的脚本重算；逐个数字的出处见 docs/研究报告.md 附录 B。
+    <Box style={{ marginTop: 'auto', flexDirection: 'row', gap: 40 }}>
+        <Text style={{ width: 700, fontSize: 14, color: '#93A8C2', lineHeight: 1.45 }}>
+            共同规则：同一批特征、同一批划分、种子 0 / 1 / 2。这三样谁都不许改 —— 各臂能比，全靠这一条。
         </Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>17 / 17</Text>
+        <Text style={{ width: 416, fontSize: 14, color: '#93A8C2', lineHeight: 1.45 }}>
+            962 条运行记录进同一本账，每条带预测与哈希。
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>17 / 18</Text>
     </Box>
 </Slide>

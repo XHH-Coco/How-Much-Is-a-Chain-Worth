@@ -1,63 +1,56 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>02 · 两个量</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
-        先把后面要用的四个符号定下来
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>02 · 量</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        整个论证只靠两个符号
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'row', gap: 24, marginTop: 22 }}>
+    <Box style={{ flexDirection: 'row', gap: 24, marginTop: 20 }}>
         <Box style={{ flex: 1, flexDirection: 'column', padding: '18px 22px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Λ（lambda）—— 链臂收回了多少</Text>
-            <Box style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, height: 76 }}>
-                <Math latex='\Lambda \;=\; \frac{R^{2}_{\mathrm{chain}} - R^{2}_{\mathrm{unit}}}{1 - R^{2}_{\mathrm{unit}}}' width={260} color='#FFFFFF' />
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' }}>Λ —— 链臂把多少判剩的方差捞了回来</Text>
+            <Box style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, height: 84 }}>
+                <Math latex='\Lambda \;=\; \frac{R^{2}_{\mathrm{chain}} - R^{2}_{\mathrm{unit}}}{1 - R^{2}_{\mathrm{unit}}}' width={280} color='#FFFFFF' />
             </Box>
-            <Text style={{ fontSize: 13, color: '#C3D0E2', lineHeight: 1.7, marginTop: 8 }}>
-                <span style={{ color: '#FFB020', fontWeight: 'bold' }}>不 clip。</span>负的 Λ 是结果 —— 链臂在同一批测试行上确实更差；截成 0 会把这件事藏起来。
-            </Text>
-            <Text style={{ fontSize: 12, color: '#8FA3BC', lineHeight: 1.7, marginTop: 8 }}>
-                R²_unit 只看重复单元，R²_chain 看到链。分母小于 0.05 标 unstable（40 个 scaling 格里有 23 格）—— R²_unit 高于 0.95 时这个比值会把噪声放大。
+            <Text style={{ fontSize: 18, color: '#C3D0E2', lineHeight: 1.5, marginTop: 8 }}>
+                <span style={{ color: '#FFB020', fontWeight: 'bold' }}>不截断。</span>Λ 为负是一个结果 —— 链臂在同一批测试行上做得更差。
             </Text>
         </Box>
 
         <Box style={{ flex: 1, flexDirection: 'column', padding: '18px 22px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>κ（kappa）—— Λ 随数据移动多快</Text>
-            <Box style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, height: 76 }}>
-                <Math latex='\kappa \;=\; \frac{d\Lambda}{d\,\log_{10} n}' width={200} color='#FFFFFF' />
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF' }}>斜率 κ —— Λ 随数据变化的快慢</Text>
+            <Box style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, height: 84 }}>
+                <Math latex='\kappa \;=\; \frac{d\Lambda}{d\,\log_{10} n}' width={210} color='#FFFFFF' />
             </Box>
-            <Text style={{ fontSize: 13, color: '#C3D0E2', lineHeight: 1.7, marginTop: 8 }}>
-                <span style={{ color: '#FFB020', fontWeight: 'bold' }}>不是池化 OLS。</span>池化权重是 Σ(x−x̄)²，于是档位跨度大的那一折决定斜率，而不是点数多的那一折。
-            </Text>
-            <Text style={{ fontSize: 12, color: '#8FA3BC', lineHeight: 1.7, marginTop: 8 }}>
-                先按折求斜率，再对折平均。只有跨度 ≥ 0.5 dex 且相邻档位最小间隔 ≥ 0.25 dex 时才报 κ；否则只报端点差。
+            <Text style={{ fontSize: 18, color: '#C3D0E2', lineHeight: 1.5, marginTop: 8 }}>
+                <span style={{ color: '#FFB020', fontWeight: 'bold' }}>不做池化 OLS。</span>先算每折斜率再平均 —— 一折跨度大也决定不了全局斜率。
             </Text>
         </Box>
     </Box>
 
     <Box style={{ flexDirection: 'row', gap: 24, marginTop: 16 }}>
-        <Box style={{ flex: 1, flexDirection: 'column', padding: '12px 18px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>n —— 训练行数，不是总行数</Text>
-            <Text style={{ fontSize: 12, color: '#C3D0E2', lineHeight: 1.7, marginTop: 5 }}>
-                档位 300 / 1,000 / 3,000 / 10,000 / 全量 22,242。每一档的测试行完全一样，只有训练前缀在缩。
-                tier 2 是训练 497 / 723 行，而那两个任务总共有 711 / 1,034 行。
+        <Box style={{ flex: 1, flexDirection: 'column', padding: '14px 20px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
+            <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF' }}>n —— 训练行数，不是总行数</Text>
+            <Text style={{ fontSize: 17, color: '#C3D0E2', lineHeight: 1.45, marginTop: 6 }}>
+                档位 300 / 1,000 / 3,000 / 10,000 / 全部 22,242。测试行每一档都一样，只有训练前缀在缩。
             </Text>
         </Box>
-        <Box style={{ flex: 1, flexDirection: 'column', padding: '12px 18px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>n* —— 两臂交叉的那个行数</Text>
-            <Text style={{ fontSize: 12, color: '#C3D0E2', lineHeight: 1.7, marginTop: 5 }}>
-                ΔR² 变号的那一点。只有符号在观测窗内翻转才报（Tg ≈ 56、介电常数 ≈ 59）；否则写「不报」。
-                描述性读数，没有区间。
+        <Box style={{ flex: 1, flexDirection: 'column', padding: '14px 20px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
+            <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF' }}>n* —— 两臂交叉的地方</Text>
+            <Text style={{ fontSize: 17, color: '#C3D0E2', lineHeight: 1.45, marginTop: 6 }}>
+                ΔR² 变号所对应的行数。描述性，没有区间；只在窗口内真的变号时才报。
             </Text>
         </Box>
     </Box>
 
-    <Box style={{ marginTop: 'auto', padding: '9px 16px', background: '#0E1728', border: '1px solid #24334C', borderRadius: 4 }}>
-        <Text style={{ fontSize: 11.5, color: '#8FA3BC', lineHeight: 1.6 }}>
-            一并固定的还有：ΔR² ≡ R²_chain − R²_unit（Λ 的分子）· ρ = Λ 与层号的 Spearman 秩相关（H1）· dex = log10 比值，1 dex 就是十倍。
+    <Box style={{ marginTop: 'auto', padding: '10px 16px', background: '#0E1728', border: '1px solid #24334C', borderRadius: 4 }}>
+        <Text style={{ fontSize: 15, color: '#A8B8CE', lineHeight: 1.45 }}>
+            这里一并固定：ΔR² ≡ R²_chain − R²_unit，即 Λ 的分子 · ρ = Λ 与层号的 Spearman 相关（H1）·
+            dex = 一个 log10 比值，1 dex 就是十倍。全片一致的两条规则：窗口跨度不足 0.5 dex 不报斜率；1 − R²_unit &lt; 0.05 的格子留空。
         </Text>
     </Box>
 
     <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>第 32 组 · 链值多少？</Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>3 / 17</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>3 / 18</Text>
     </Box>
 </Slide>

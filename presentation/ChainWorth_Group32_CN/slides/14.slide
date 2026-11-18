@@ -1,36 +1,38 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>08 · 结论</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
-        四条站得住的结论 —— 并标明各自的强度
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>08 · 结论</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        四条我们守得住的主张 —— 各自带着强度
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'column', marginTop: 10 }}>
+    <Box style={{ flexDirection: 'column', marginTop: 8 }}>
         {[
-            ['01', '链信息在多数任务上没有带来增益', '19 格里 12 格为负，中位 −0.098。最稳的负值出现在数据最充足的任务上：op_tm × A3 = −0.859，75 行可算。'],
-            ['02', '分层假设被证伪，但检验不干净', 'ρ = +0.000 / +0.239。同 n 下 tier1 仍低于 tier2（−0.033 / −0.087，区间排除 0）—— 折断在 tier3 内部，不是样本量混淆。'],
-            ['03', '多给数据也买不回来', 'κ = −0.0863 [−0.1053, −0.0672]，Λ 减半比 0.650。换绝对口径同一条曲线减半（0.167）—— 并列报在 H2 旁边，从不合并。'],
-            ['04', '「信息还是架构」仍然答不了', 'A5 用现有数据构造不出来，所以它的 0 条是边界而不是欠账。替代物是逐任务地板：中位 0.0022，8 个任务里 6 个过门槛。'],
+            ['01', '链感知臂大多不划算', '19 个格子里 12 个在零以下；格中位 −0.010（读数中位 −0.098）。最深的一格是介电损耗（−1.479，279 行），最稳的是 op_tm × A3（−0.859，75 条读数）—— 这是两个不同的格子。'],
+            ['02', '分层被推翻了，但没被干净地检验', 'ρ = +0.000 / +0.239。同 n 下第 1 层仍在第 2 层之下（−0.033 / −0.087，区间排除零）—— 所以断裂在第 3 层内部，不是样本量混淆。'],
+            ['03', '按比值尺没减半，按绝对尺减半了', 'Λ 比值 0.650、κ = −0.086 [−0.105, −0.067]：没减半，第一个十倍段甚至还在升（+0.073/dex）。绝对尺把同一条曲线减半到 0.0066 —— 与逐任务地板（0.0046）同一个量级。两把尺之所以相反，是因为分母从 0.135 掉到 0.034。'],
+            ['04', '信息与架构之分仍然答不了', 'A5 在这份数据里构造不出来，所以它的零是边界，不是欠账。替代品是逐任务地板：中位 0.0046，8 个任务里 5 个过线。'],
         ].map(([num, head, body], i) => (
-            <Box key={num} style={{ flexDirection: 'row', gap: 26, paddingTop: 12, paddingBottom: 12, borderTop: i === 0 ? '0px solid #1D2A40' : '1px solid #1D2A40' }}>
-                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#4D8DFF', width: 46, lineHeight: 1.2 }}>{num}</Text>
+            <Box key={num} style={{ flexDirection: 'row', gap: 24, paddingTop: 7, paddingBottom: 7, borderTop: i === 0 ? '0px solid #1D2A40' : '1px solid #1D2A40' }}>
+                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#4D8DFF', width: 44, lineHeight: 1.2 }}>{num}</Text>
                 <Box style={{ flexDirection: 'column', flex: 1 }}>
-                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.4 }}>{head}</Text>
-                    <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 5, lineHeight: 1.7 }}>{body}</Text>
+                    <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.25 }}>{head}</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 3, lineHeight: 1.4 }}>{body}</Text>
                 </Box>
             </Box>
         ))}
     </Box>
 
-    <Box style={{ marginTop: 'auto', padding: '10px 18px', background: '#16233A', borderLeft: '2px solid #4D8DFF' }}>
-        <Text style={{ fontSize: 14, color: '#FFFFFF', lineHeight: 1.65 }}>
-            在我们测到的范围内，链并不是重复单元表示所漏掉的那个东西 —— 而这句话的分量，
-            被两个不可判点与一支根本无法存在的臂限制住了。
+    <Box style={{ marginTop: 'auto', padding: '12px 22px', background: '#16233A', borderLeft: '3px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 27, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.25 }}>
+            更丰富的重复单元编码并没有把那一块找回来 —— 而链本身，在这份数据里始终没有被检验。
+        </Text>
+        <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 6, lineHeight: 1.4 }}>
+            这句话的分量被三件事压住：两个判不了的点、一支造不出来的臂、以及全部跨任务结论都在同一个测量协议之内（6/6 任务是实验标签）。
         </Text>
     </Box>
 
-    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>第 32 组 · 链值多少？</Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>14 / 17</Text>
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>14 / 18</Text>
     </Box>
 </Slide>

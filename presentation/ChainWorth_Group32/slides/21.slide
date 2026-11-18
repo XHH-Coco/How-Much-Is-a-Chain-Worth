@@ -1,0 +1,58 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>BACKUP 3 · THE 12 OF 19, TAKEN APART</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        7 of 11, and 5 of 8
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'column', width: 1128, marginTop: 20 }}>
+        <Box style={{ flexDirection: 'row', background: '#16233A', padding: '11px 16px' }}>
+            <Text style={{ width: 260, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Arm</Text>
+            <Text style={{ width: 160, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Cells</Text>
+            <Text style={{ width: 180, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Λ &lt; 0</Text>
+            <Text style={{ width: 180, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Mean Λ</Text>
+            <Text style={{ width: 348, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Usable readings</Text>
+        </Box>
+        {[
+            ['A3 · MPNN', '11', '7', '−0.158', '264'],
+            ['A4 · polyBERT + ridge', '8', '5', '−0.319', '39'],
+            ['both arms', '19', '12', '−0.226', '303'],
+        ].map(([arm, cells, neg, mean, rows], i) => (
+            <Box key={arm} style={{ flexDirection: 'row', padding: '14px 16px', background: i === 2 ? '#16233A' : '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                <Text style={{ width: 260, fontSize: 19, fontWeight: 'bold', color: i === 2 ? '#FFB020' : '#FFFFFF' }}>{arm}</Text>
+                <Text style={{ width: 160, fontSize: 19, color: '#C3D0E2', textAlign: 'right' }}>{cells}</Text>
+                <Text style={{ width: 180, fontSize: 19, color: '#FF6B6B', textAlign: 'right', fontWeight: 'bold' }}>{neg}</Text>
+                <Text style={{ width: 180, fontSize: 19, color: '#C3D0E2', textAlign: 'right' }}>{mean}</Text>
+                <Text style={{ width: 348, fontSize: 19, color: '#C3D0E2', textAlign: 'right' }}>{rows}</Text>
+            </Box>
+        ))}
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 26 }}>
+        <Box style={{ width: 540, flexDirection: 'column', gap: 10 }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>HOW A CELL IS BUILT</Text>
+            <Text style={{ fontSize: 16, color: '#C3D0E2', lineHeight: 1.45 }}>
+                One task × one arm. Its value is the <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>mean of that cell&apos;s usable runs</span>,
+                not a median and not a fold maximum.
+            </Text>
+            <Text style={{ fontSize: 16, color: '#C3D0E2', lineHeight: 1.45 }}>
+                A run is usable when 1 − R²_unit ≥ 0.05; 18 readings fail that and are left empty rather than set to zero.
+            </Text>
+        </Box>
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 10 }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>WHAT IS NEVER DONE</Text>
+            <Text style={{ fontSize: 16, color: '#C3D0E2', lineHeight: 1.45 }}>
+                The two arms are not averaged into one number: they answer different questions with different capacity. 12 / 19 is a
+                <span style={{ color: '#FFFFFF' }}> count over cells</span>, and it is the only place where the arms are added together.
+            </Text>
+            <Text style={{ fontSize: 15, color: '#93A8C2', lineHeight: 1.4 }}>
+                A4 covers 8 cells rather than 11 because it refuses n-levels by design.
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>Backup · not presented</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>B3</Text>
+    </Box>
+</Slide>

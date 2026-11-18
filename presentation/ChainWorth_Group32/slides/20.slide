@@ -1,0 +1,70 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>BACKUP 2 · WHY Λ IS NOT ADDITIVE</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        R² adds up. Λ does not.
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 18 }}>
+        <Box style={{ width: 620, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 17, color: '#C3D0E2', lineHeight: 1.45 }}>
+                R²_chain = R²_unit + ΔR², so the two pieces of R² can be added. Λ divides the same ΔR² by what is
+                <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}> left over</span> — and what is left over can be large or tiny.
+            </Text>
+            <Box style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, height: 90 }}>
+                <Math latex='\Lambda \;=\; \frac{\Delta R^{2}}{1 - R^{2}_{\mathrm{unit}}}' width={230} color='#FFFFFF' />
+            </Box>
+            <Text style={{ fontSize: 16, color: '#A8B8CE', marginTop: 10, lineHeight: 1.45 }}>
+                A ratio of two shrinking numbers: ΔR² falls 0.0395 → 0.0066 while the denominator falls 0.135 → 0.034.
+                That is the hump on slide 11, not a physical effect.
+            </Text>
+        </Box>
+
+        <Box style={{ flex: 1, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>TWO LEVELS OF ONE CURVE</Text>
+            <Box style={{ flexDirection: 'column', width: 496, marginTop: 10 }}>
+                <Box style={{ flexDirection: 'row', background: '#16233A', padding: '9px 12px' }}>
+                    <Text style={{ width: 110, fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>ΔR²</Text>
+                    <Text style={{ width: 140, fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>1 − R²_unit</Text>
+                    <Text style={{ width: 90, fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Λ</Text>
+                    <Text style={{ width: 132, fontSize: 14, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>level</Text>
+                </Box>
+                {[
+                    ['0.0395', '0.135', '0.295', '300 rows'],
+                    ['0.0066', '0.034', '0.194', '22,242 rows'],
+                ].map(([a, b, c, d]) => (
+                    <Box key={b} style={{ flexDirection: 'row', padding: '10px 12px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                        <Text style={{ width: 110, fontSize: 17, color: '#C3D0E2' }}>{a}</Text>
+                        <Text style={{ width: 140, fontSize: 17, color: '#C3D0E2' }}>{b}</Text>
+                        <Text style={{ width: 90, fontSize: 17, color: '#FFFFFF', textAlign: 'right', fontWeight: 'bold' }}>{c}</Text>
+                        <Text style={{ width: 132, fontSize: 14, color: '#93A8C2', textAlign: 'right' }}>{d}</Text>
+                    </Box>
+                ))}
+            </Box>
+            <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 10, lineHeight: 1.4 }}>
+                Both rows are the same curve at its smallest and largest n. The numerator falls ×6, the denominator ×4,
+                so Λ falls only ×1.5.
+            </Text>
+            <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 8, lineHeight: 1.4 }}>
+                Hold ΔR² at 0.0066 and swap only the denominator: 0.049 against 0.194. A ×4 swing from the denominator
+                alone — which is why Λ is a ratio, not a share.
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ marginTop: 'auto', flexDirection: 'column', gap: 8, padding: '14px 20px', background: '#111B2E', borderLeft: '3px solid #4D8DFF' }}>
+        <Text style={{ fontSize: 17, color: '#C3D0E2', lineHeight: 1.45 }}>
+            Three consequences: Λ is never averaged across arms · it is never summed across cells · and a cell whose denominator is
+            below 0.05 is left empty (18 readings), because there the ratio amplifies noise instead of measuring recovery.
+        </Text>
+        <Text style={{ fontSize: 15, color: '#93A8C2', lineHeight: 1.4 }}>
+            That is also why −1.479 is possible: on dielectric loss R²_unit is 0.593 while R²_chain is −0.009 — the chain arm does
+            worse than predicting the mean, so the numerator itself is −0.602.
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>Backup · not presented</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>B2</Text>
+    </Box>
+</Slide>

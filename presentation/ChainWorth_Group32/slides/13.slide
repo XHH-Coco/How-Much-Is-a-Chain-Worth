@@ -1,80 +1,82 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (6/6) — H3 AND H4</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (6/6) — H3 AND H4</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
         One question we cannot answer, one we can only describe
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 22 }}>
-        <Box style={{ flex: 1, flexDirection: 'column', padding: '18px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, color: '#FF6B6B', letterSpacing: 1.4, fontWeight: 'bold' }}>H3 · INFORMATION VERSUS ARCHITECTURE</Text>
-            <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, lineHeight: 1.35 }}>
-                A5 is not constructible — it was never merely unrun
+    <Box style={{ flexDirection: 'row', gap: 32, marginTop: 20 }}>
+        <Box style={{ width: 566, flexDirection: 'column', padding: '16px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+            <Text style={{ fontSize: 13, color: '#FF6B6B', letterSpacing: 1.4, fontWeight: 'bold' }}>H3 · INFORMATION VERSUS ARCHITECTURE</Text>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginTop: 6, lineHeight: 1.25 }}>
+                No labelled chain-level target — so A5 is never merely unrun
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 10, lineHeight: 1.7 }}>
-                Its three pre-registered inputs do not exist in the data: no repeat-count column among the 18,152 structures;
-                18,036 wPSMILES all carry the same repeat field <span style={{ color: '#FFFFFF' }}>|1|</span> and one identical weight block;
-                one row per repeat unit, so no multi-unit sequence.
+
+            <Box style={{ flexDirection: 'column', width: 524, marginTop: 14 }}>
+                <Box style={{ flexDirection: 'row', background: '#16233A', padding: '8px 12px' }}>
+                    <Text style={{ width: 190, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>Pre-registered input</Text>
+                    <Text style={{ width: 200, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>In the data?</Text>
+                    <Text style={{ width: 134, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>Verdict</Text>
+                </Box>
+                {[
+                    ['repeat-unit count', 'no such column, 18,152 rows', 'cannot inject'],
+                    ['connection weight block', 'identical in all 18,036', 'zero variance'],
+                    ['multi-unit sequence', 'one row per repeat unit', 'no sequence'],
+                ].map(([a, b, c]) => (
+                    <Box key={a} style={{ flexDirection: 'row', padding: '9px 12px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                        <Text style={{ width: 190, fontSize: 16, color: '#C3D0E2' }}>{a}</Text>
+                        <Text style={{ width: 200, fontSize: 16, color: '#C3D0E2' }}>{b}</Text>
+                        <Text style={{ width: 134, fontSize: 16, fontWeight: 'bold', color: '#FFB020' }}>{c}</Text>
+                    </Box>
+                ))}
+            </Box>
+
+            <Text style={{ fontSize: 17, color: '#C3D0E2', marginTop: 12, lineHeight: 1.45 }}>
+                Feeding A5 anyway would append three constant columns. Its record count is 0, its status
+                <span style={{ color: '#FFB020' }}> not_constructible_data_unavailable</span> — writing &quot;zero gain&quot; is forbidden.
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 8, lineHeight: 1.7 }}>
-                Feeding A5 anyway would append three constant columns. Its record count is 0 and its status is
-                <span style={{ color: '#FFB020' }}> not_constructible_data_unavailable</span> — writing "zero gain" is explicitly forbidden.
+
+            <Text style={{ fontSize: 15, color: '#93A8C2', marginTop: 10, lineHeight: 1.4 }}>
+                <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>What we have instead:</span> a per-task noise floor.
+                Median |ΔR²| 0.0046 across 8 tasks; A3 beats it on 5 of 8.
             </Text>
-            <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 12, letterSpacing: 1.2, fontWeight: 'bold' }}>WHAT WE HAVE INSTEAD: A PER-TASK NOISE FLOOR</Text>
-            <Table
-                style={{ width: 528, height: 108, marginTop: 8 }}
-                defaultTextStyle={{ fontSize: 12, textAlign: 'right', color: '#C3D0E2' }}
-                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-                cells={[
-                    [
-                        { text: 'task', textStyle: { bold: true, color: '#FFFFFF', fontSize: 11, textAlign: 'left' }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: 'floor |ΔR²|', textStyle: { bold: true, color: '#FFFFFF', fontSize: 11 }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: 'A3 gain', textStyle: { bold: true, color: '#FFFFFF', fontSize: 11 }, cellStyle: { background: { color: '#16233A' } } },
-                    ],
-                    [{ text: 'pb_t1_tg', textStyle: { textAlign: 'left' } }, '0.0020', { text: '0.0004 below', textStyle: { color: '#FFB020' } }],
-                    [{ text: 'pb26_polymetrix_tg', textStyle: { textAlign: 'left' } }, '0.0024', { text: '0.0006 below', textStyle: { color: '#FFB020' } }],
-                    [{ text: 'median, 8 tasks', textStyle: { textAlign: 'left', color: '#8FA3BC' } }, { text: '0.0022', textStyle: { color: '#8FA3BC' } }, { text: '6 of 8 clear it', textStyle: { color: '#8FA3BC' } }],
-                ]}
-            />
         </Box>
 
-        <Box style={{ flex: 1, flexDirection: 'column', padding: '18px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, color: '#4D8DFF', letterSpacing: 1.4, fontWeight: 'bold' }}>H4 · CROSSOVER</Text>
-            <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, lineHeight: 1.35 }}>
-                Two properties cross; the third one never does
+        <Box style={{ flex: 1, flexDirection: 'column', padding: '16px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+            <Text style={{ fontSize: 13, color: '#4D8DFF', letterSpacing: 1.4, fontWeight: 'bold' }}>H4 · CROSSOVER</Text>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginTop: 6, lineHeight: 1.25 }}>
+                Two properties cross; the third never does
             </Text>
-            <Box style={{ flexDirection: 'row', gap: 26, marginTop: 14 }}>
+            <Box style={{ flexDirection: 'row', gap: 26, marginTop: 16 }}>
                 <Box style={{ flexDirection: 'column' }}>
-                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 56</Text>
-                    <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 4 }}>Tg · window 355 rows</Text>
+                    <Text style={{ fontSize: 38, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 56</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 4 }}>Tg · labels 30–355</Text>
                 </Box>
                 <Box style={{ flexDirection: 'column' }}>
-                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 59</Text>
-                    <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 4 }}>dielectric constant · 235 rows</Text>
+                    <Text style={{ fontSize: 38, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 59</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 4 }}>dielectric · 30–235</Text>
                 </Box>
                 <Box style={{ flexDirection: 'column' }}>
-                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>none</Text>
-                    <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 4 }}>Tm · negative across 30–134</Text>
+                    <Text style={{ fontSize: 38, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>none</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 4 }}>Tm · negative 30–134</Text>
                 </Box>
             </Box>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 14, lineHeight: 1.7 }}>
-                Below roughly 60 training rows the graph arm leads; above it the classical arm leads and stays ahead. That is the
-                same fact as "Λ is mostly negative", read from the other end of the axis.
+            <Text style={{ fontSize: 17, color: '#C3D0E2', marginTop: 16, lineHeight: 1.45 }}>
+                Below roughly 60 training rows the graph arm leads; above it the classical arm leads and stays ahead. That is
+                &quot;Λ is mostly negative&quot;, read from the other end of the axis.
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 8, lineHeight: 1.7 }}>
-                Three limits, all stated up front: only three properties, descriptive with no significance test, and the three windows
-                differ in width — so the two n* values are not comparable with each other.
-            </Text>
-            <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 10, lineHeight: 1.6 }}>
-                Where a window never changes sign, the upper bound is reported and extrapolation stops — no dashed extension is drawn.
+            <Text style={{ fontSize: 16, color: '#A8B8CE', marginTop: 10, lineHeight: 1.45 }}>
+                Three limits, stated up front: only three properties, descriptive with no significance test, and windows of
+                different width — so the two n* are not comparable with each other. Both crossings are log-n interpolations
+                between the 30- and 60-row design points: read them as a bracket.
             </Text>
         </Box>
     </Box>
 
     <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>
-            null_calibration.csv (48 rows) · openpoly_cpu.csv + openpoly_gpu_index.csv, 225 paired differences
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>
+            Floor from 48 calibration runs (16 baseline, 16 constant, 16 shuffled) · crossings from 225 paired differences
         </Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>13 / 17</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>13 / 18</Text>
     </Box>
 </Slide>

@@ -1,26 +1,29 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>06 · 方法 —— 四支臂</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
-        四支臂，每支只换一个变量 —— 背后是 962 条记录
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>06 · 方法 —— 各支臂</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        四支臂，各只改一个变量 —— 背后 962 条记录
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'row', gap: 46, marginTop: 24 }}>
-        <Box style={{ width: 470, flexDirection: 'column' }}>
-            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.4, fontWeight: 'bold' }}>每一个数都走同一条路</Text>
-            <Box style={{ flexDirection: 'column', marginTop: 12 }}>
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 22 }}>
+        <Box style={{ width: 360, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>每个数字都走同一条路</Text>
+            <Box style={{ flexDirection: 'column', marginTop: 10 }}>
                 {[
-                    ['原始数据', '3 个公开基准，许可与 md5 逐份登记'],
-                    ['冻结划分', '有官方划分就用官方，逐份哈希、带版本'],
-                    ['一次只跑一支臂', 'A1 / A2 / A3 / A4 走同一批行、同一批种子'],
-                    ['每次运行一条记录', 'R²、MAE、RMSE、墙钟、预测、哈希'],
-                    ['每格一个 Λ，每集一个 κ', '先过四向对账闸门，才允许聚合'],
+                    ['原始数据', '许可与 md5 留档'],
+                    ['冻结划分', '官方索引，带哈希'],
+                    ['一次一支臂', '同一批行、同一批种子'],
+                    ['一次运行一条记录', 'R²、MAE、哈希'],
+                    ['每格一个 Λ、每数据集一个 κ', '过对账闸门之后才聚合'],
                 ].map(([head, sub], i) => (
                     <Box key={head} style={{ flexDirection: 'column' }}>
-                        {i > 0 ? <Text style={{ fontSize: 13, color: '#33445F', lineHeight: 1.3, marginTop: 5, marginBottom: 5 }}>↓</Text> : null}
-                        <Box style={{ flexDirection: 'column', padding: '9px 14px', background: i === 2 ? '#16233A' : '#111B2E', border: '1px solid ' + (i === 2 ? '#2F4A75' : '#24334C'), borderRadius: 5 }}>
-                            <Text style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 'bold' }}>{head}</Text>
-                            <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 2 }}>{sub}</Text>
+                        {i > 0 ? <svg width='30' height='20' viewBox='0 0 30 20' style={{ marginTop: 3, marginBottom: 3 }}>
+                            <line x1='15' y1='0' x2='15' y2='11' stroke='#8FA3BC' strokeWidth='2' />
+                            <polygon points='15,19 9,10 21,10' fill='#8FA3BC' />
+                        </svg> : null}
+                        <Box style={{ flexDirection: 'column', padding: '8px 12px', background: i === 2 ? '#16233A' : '#111B2E', border: '1px solid ' + (i === 2 ? '#2F4A75' : '#24334C'), borderRadius: 5 }}>
+                            <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: 'bold' }}>{head}</Text>
+                            <Text style={{ fontSize: 14, color: '#A8B8CE', marginTop: 1 }}>{sub}</Text>
                         </Box>
                     </Box>
                 ))}
@@ -28,53 +31,36 @@
         </Box>
 
         <Box style={{ flex: 1, flexDirection: 'column' }}>
-            <Table
-                style={{ width: 644, height: 300 }}
-                defaultTextStyle={{ fontSize: 13, textAlign: 'left', color: '#C3D0E2' }}
-                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-                cells={[
-                    [
-                        { text: '臂', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: '换的是什么', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: '记录数', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12, textAlign: 'right' }, cellStyle: { background: { color: '#16233A' } } },
-                    ],
-                    [
-                        { text: 'A1 地板', textStyle: { bold: true, color: '#8FA3BC' } },
-                        '预测训练均值 —— 只作参照',
-                        { text: '48', textStyle: { color: '#8FA3BC', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A2 单元', textStyle: { bold: true, color: '#FFFFFF' } },
-                        '205 个 RDKit 描述符 + 2048 位指纹 → XGBoost，调参 30 次',
-                        { text: '328', textStyle: { color: '#FFFFFF', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A3 链', textStyle: { bold: true, color: '#4D8DFF' } },
-                        'chemprop 2.1.0 MPNN —— 官方超参，一次没调',
-                        { text: '538', textStyle: { color: '#4D8DFF', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A4 链', textStyle: { bold: true, color: '#4D8DFF' } },
-                        'polyBERT 冻结编码器 + ridge 线性头（容量封顶）',
-                        { text: '48', textStyle: { color: '#4D8DFF', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A5 链', textStyle: { bold: true, color: '#FF6B6B' } },
-                        '本该在同一架构下注入链信息',
-                        { text: '0', textStyle: { color: '#FF6B6B', textAlign: 'right', bold: true } },
-                    ],
-                ]}
-            />
-            <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 10, lineHeight: 1.6 }}>
-                A5 是 0，因为它的输入在数据里不存在 —— 见第 13 页。它被登记为「不可构造」，绝不写成「没有增益」。
+            <Box style={{ flexDirection: 'column', width: 720 }}>
+                <Box style={{ flexDirection: 'row', background: '#16233A', padding: '11px 14px' }}>
+                    <Text style={{ width: 140, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>臂</Text>
+                    <Text style={{ width: 470, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>它改了什么</Text>
+                    <Text style={{ width: 110, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>运行数</Text>
+                </Box>
+                {[
+                    ['A1 地板', '预测训练均值 —— 只作参照', '48', '#8FA3BC', '#A8B8CE'],
+                    ['A2 单元', '205 个 RDKit 描述符 + 2048 位指纹 → XGBoost，调 30 次', '328', '#FFFFFF', '#FFFFFF'],
+                    ['A3 链', 'chemprop 2.1.0 MPNN —— 官方超参，一次都没调', '538', '#4D8DFF', '#4D8DFF'],
+                    ['A4 链', 'polyBERT 冻结编码 + 岭回归头（容量封顶）', '48', '#4D8DFF', '#4D8DFF'],
+                    ['A5 链', '本应在固定架构下注入链输入', '0', '#FF6B6B', '#FF6B6B'],
+                ].map(([arm, change, runs, nameColor, runColor]) => (
+                    <Box key={arm} style={{ flexDirection: 'row', padding: '12px 14px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                        <Text style={{ width: 140, fontSize: 18, fontWeight: 'bold', color: nameColor }}>{arm}</Text>
+                        <Text style={{ width: 470, fontSize: 18, color: '#C3D0E2', lineHeight: 1.3 }}>{change}</Text>
+                        <Text style={{ width: 110, fontSize: 18, fontWeight: 'bold', color: runColor, textAlign: 'right' }}>{runs}</Text>
+                    </Box>
+                ))}
+            </Box>
+            <Text style={{ fontSize: 16, color: '#FFB020', marginTop: 16, lineHeight: 1.5 }}>
+                A5 是 0，因为它的输入在数据里不存在 —— 见第 13 页。它被记为「不可构造」，从不记为「没有增益」。
             </Text>
         </Box>
     </Box>
 
     <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>
-            任何表写出之前的闸门：4,896 项溯源核对 —— 4,832 ok / 64 exempt / 0 fail。
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>
+            写任何表之前先过 4,897 条溯源检查 —— 4,832 ok / 65 豁免 / 0 失败。
         </Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>7 / 17</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>7 / 18</Text>
     </Box>
 </Slide>

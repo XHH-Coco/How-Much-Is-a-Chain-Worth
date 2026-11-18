@@ -1,75 +1,64 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (3/6) — H1, RE-TESTED</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · RESULTS (3/6) — H1, RE-TESTED</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
         Matching the data volume does not rescue H1
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Text style={{ fontSize: 14, color: '#A8B8CE', marginTop: 18, lineHeight: 1.6 }}>
-        Tier 1 holds 8,055 and 3,796 rows; tier 2 holds 1,034 and 711. To separate tier from sample size, tier 1 was downsampled to
-        tier 2's actual training counts — <span style={{ color: '#FFFFFF' }}>497 and 723 rows, not the row totals</span> — and both arms were retrained, test rows untouched.
+    <Text style={{ fontSize: 18, color: '#C3D0E2', marginTop: 16, lineHeight: 1.5 }}>
+        Tier 1 holds 8,055 and 3,796 rows; tier 2 holds 1,034 and 711. Tier 1 was downsampled to tier 2&apos;s actual
+        <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}> training counts — 497 and 723 rows, not the totals</span> — and both arms were retrained.
     </Text>
 
-    <Table
-        style={{ width: 1160, height: 196, marginTop: 18 }}
-        defaultTextStyle={{ fontSize: 14, textAlign: 'right', color: '#C3D0E2' }}
-        defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-        cells={[
-            [
-                { text: 'Matched n', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12, textAlign: 'left' }, cellStyle: { background: { color: '#16233A' } } },
-                { text: 'Λ, tier 1', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                { text: 'Λ, tier 2', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                { text: 'Δ = tier1 − tier2', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                { text: '95% interval', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-            ],
-            [
-                { text: '497 rows', textStyle: { textAlign: 'left', color: '#FFFFFF' } },
-                '−0.041', '−0.008',
-                { text: '−0.033', textStyle: { bold: true, color: '#FF6B6B' } },
-                '[−0.042, −0.024]',
-            ],
-            [
-                { text: '723 rows', textStyle: { textAlign: 'left', color: '#FFFFFF' } },
-                '−0.104', '−0.016',
-                { text: '−0.087', textStyle: { bold: true, color: '#FF6B6B' } },
-                '[−0.153, −0.022]',
-            ],
-            [
-                { text: 'full data (reference)', textStyle: { textAlign: 'left', color: '#8FA3BC' } },
-                { text: '−0.120', textStyle: { color: '#8FA3BC' } },
-                { text: '−0.020', textStyle: { color: '#8FA3BC' } },
-                { text: '−0.100', textStyle: { color: '#8FA3BC' } },
-                { text: '—', textStyle: { color: '#8FA3BC' } },
-            ],
-        ]}
-    />
+    <Box style={{ flexDirection: 'column', width: 1128, marginTop: 18 }}>
+        <Box style={{ flexDirection: 'row', background: '#16233A', padding: '11px 14px' }}>
+            <Text style={{ width: 210, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Matched n</Text>
+            <Text style={{ width: 170, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Λ, tier 1</Text>
+            <Text style={{ width: 170, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Λ, tier 2</Text>
+            <Text style={{ width: 180, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Δ</Text>
+            <Text style={{ width: 398, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>95% interval</Text>
+        </Box>
+        {[
+            ['497 rows', '−0.041', '−0.008', '−0.033', '[−0.042, −0.024]', '#FFFFFF'],
+            ['723 rows', '−0.104', '−0.016', '−0.087', '[−0.153, −0.022]', '#FFFFFF'],
+            ['full data (reference)', '−0.098', '−0.012', '−0.086', '—', '#93A8C2'],
+        ].map(([n, a, b, d, ci, color]) => (
+            <Box key={n} style={{ flexDirection: 'row', padding: '13px 14px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                <Text style={{ width: 210, fontSize: 18, color: color, fontWeight: 'bold' }}>{n}</Text>
+                <Text style={{ width: 170, fontSize: 18, color: color, textAlign: 'right' }}>{a}</Text>
+                <Text style={{ width: 170, fontSize: 18, color: color, textAlign: 'right' }}>{b}</Text>
+                <Text style={{ width: 180, fontSize: 18, color: '#FF6B6B', fontWeight: 'bold', textAlign: 'right' }}>{d}</Text>
+                <Text style={{ width: 398, fontSize: 18, color: color, textAlign: 'right' }}>{ci}</Text>
+            </Box>
+        ))}
+    </Box>
 
-    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 24 }}>
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 22 }}>
         <Box style={{ flex: 1, flexDirection: 'column', gap: 8 }}>
-            <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: 'bold', lineHeight: 1.45 }}>
+            <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: 'bold', lineHeight: 1.35 }}>
                 Tier 1 stays below tier 2 at equal n, and both intervals exclude zero.
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', lineHeight: 1.65 }}>
-                The direction matches H1. So the tier/sample-size confound is not what flattens ρ to zero — it explains part of the
-                magnitude (full −0.100 shrinks to −0.033 at 497 rows) but not the sign or the collapse.
+            <Text style={{ fontSize: 15, color: '#A8B8CE', lineHeight: 1.45 }}>
+                The direction matches H1, so the confound is not what flattens ρ to zero: it explains part of the magnitude
+                (full −0.086 shrinks to −0.033) but not the sign or the collapse.
             </Text>
         </Box>
         <Box style={{ flex: 1, flexDirection: 'column', gap: 8 }}>
-            <Text style={{ fontSize: 15, color: '#FFB020', fontWeight: 'bold', lineHeight: 1.45 }}>
-                The break is inside tier 3: +0.068 versus −1.479.
+            <Text style={{ fontSize: 17, color: '#FFB020', fontWeight: 'bold', lineHeight: 1.35 }}>
+                The break is inside tier 3: +0.068 against −1.479.
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', lineHeight: 1.65 }}>
-                Two tasks in the same tier sit at the top and the bottom of the ranking, so the rank correlation snaps there. "One point
-                drives it" and "sample size confounds it" are now two separate statements: tier 1 vs tier 2 is stable, tier 3 is undecidable.
+            <Text style={{ fontSize: 15, color: '#A8B8CE', lineHeight: 1.45 }}>
+                Two tasks in one tier sit at the top and the bottom of the ranking, so the correlation snaps there. Tier 1 vs tier 2
+                is stable; tier 3 is undecidable.
             </Text>
         </Box>
     </Box>
 
     <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 12, color: '#5E7590', width: 900, lineHeight: 1.5 }}>
-            Limits: A4 refuses n-levels by design, so this row exists for A3 only; on tier 2 the graph arm loses rows (723 → 651, 497 → 447),
-            which biases Δ toward zero — the negative Δ observed is conservative.
+        <Text style={{ fontSize: 14, color: '#8FA3BC', width: 960, lineHeight: 1.4 }}>
+            Limits: A4 refuses n-levels by design, so this row exists for A3 only; on tier 2 the graph arm loses rows (723 → 651),
+            which biases Δ toward zero — the negative Δ is conservative. The full-data row is the mean of the same four tasks&apos; readings in lambda_ci.csv.
         </Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>10 / 17</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>10 / 18</Text>
     </Box>
 </Slide>

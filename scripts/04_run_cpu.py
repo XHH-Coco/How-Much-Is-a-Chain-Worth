@@ -1991,8 +1991,10 @@ def _arch_ood_from_disk() -> dict[str, dict[str, Any]]:
 def _arch_print_ordering(
     records: Sequence[Mapping[str, Any]], ood_by_run: Mapping[str, Mapping[str, Any]]
 ) -> None:
-    """报告实际排序：block > random > alternating > homopolymer 是否成立（照实写，不重调）。
-    Report the actual ordering; state it plainly instead of re-tuning when it does not hold.
+    """报告实际排序：预注册的难度阶梯（homopolymer 最易 → block 最难，即 RMSE 由低到高）
+    逐段是否成立（照实写，不重调超参）。
+    Report the actual ordering: whether each step of the registered difficulty ladder (easiest ->
+    hardest, i.e. RMSE low -> high) holds; state it plainly instead of re-tuning.
     """
     import numpy as np
 
@@ -2011,16 +2013,24 @@ def _arch_print_ordering(
     random_ = float(np.mean(ood_random)) if ood_random else float("nan")
     block = float(np.mean(ood_block)) if ood_block else float("nan")
     print(
-        f"实际排序（mean RMSE；OOD 为逐折、ID 为 15 run 均值，跨域只作陈述不作判决）："
-        f"block {block:.4f} / random {random_:.4f} / alternating {alt:.4f} / homopolymer {homo:.4f}"
+        f"实际排序（mean RMSE，越低越容易；OOD 是五折集成点值、ID 是 15 run 均值，"
+        f"两个域只作陈述不作判决）："
+        f"OOD random {random_:.4f} / block {block:.4f}；"
+        f"ID alternating {alt:.4f} / homopolymer {homo:.4f}"
     )
     if not np.isfinite([alt, homo, random_, block]).all():
         print("  （OOD 尚未合成，排序判决待 arch --ood 之后再说）")
         return
-    holds = bool(block > random_ > alt > homo)
-    print(
-        "  → " + ("成立" if holds else "不成立——按分工_C-c 验收⑤照实登记 DECISIONS.md，不重调超参")
-    )
+    # 预注册的是一条**难度阶梯**：homopolymer 最容易、block 最不容易，也就是 RMSE 由低到高。
+    # 两段分属不同域（ID / OOD），所以**分开陈述**，不拼成一条 `a > b > c > d` 的链：
+    # 那条链会让 OOD 的量级（≈0.5）与 ID 的量级（≈0.1）直接比大小，后半段永远"成立"，
+    # 判决因此是假的（D-58 的 ordering_note：跨域只作陈述不作判决）。
+    # The registered ordering is a difficulty ladder (RMSE low -> high from homopolymer to block).
+    # The two steps live in different domains, so they are stated separately: chaining them into one
+    # `a > b > c > d` compares OOD magnitudes with ID magnitudes, which makes the second half
+    # trivially true and the verdict meaningless.
+    print("  → OOD 段（block 应更难，即 RMSE 更高）：" + ("符合预期" if block > random_ else "与预期相反"))
+    print("  → ID 段（homopolymer 应最易，即 RMSE 最低）：" + ("符合预期" if homo < alt else "与预期相反"))
 
 
 def main(argv: Sequence[str] | None = None) -> int:

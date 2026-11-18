@@ -1,44 +1,50 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '64px 64px 44px 64px', display: 'flex', flexDirection: 'column' }}>
     <Box style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.4 }}>DSC6020 · FINAL PROJECT</Text>
+            <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.4 }}>DSC6020 · FINAL PROJECT</Text>
             <Box style={{ width: 200, height: 1, background: '#24334C' }} />
-            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 0.6 }}>Group presentation</Text>
+            <Text style={{ fontSize: 14, color: '#93A8C2', letterSpacing: 0.6 }}>Group presentation</Text>
         </Box>
         <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '7px 20px', background: '#16233A', border: '1.5px solid #4D8DFF', borderRadius: 4 }}>
-            <Text style={{ fontSize: 13, color: '#8FA3BC', fontWeight: 'bold', letterSpacing: 2.6 }}>GROUP</Text>
-            <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5, lineHeight: 1.05 }}>32</Text>
+            <Text style={{ fontSize: 14, color: '#A8B8CE', fontWeight: 'bold', letterSpacing: 2.6 }}>GROUP</Text>
+            <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 0.5, lineHeight: 1.05 }}>32</Text>
         </Box>
     </Box>
 
-    <Text style={{ fontSize: 58, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.1, marginTop: 52, letterSpacing: -0.5 }}>
+    <Text style={{ fontSize: 58, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.1, marginTop: 44, letterSpacing: -0.5 }}>
         How Much Is a Chain Worth?
     </Text>
-    <Text style={{ fontSize: 20, color: '#C3D0E2', lineHeight: 1.5, marginTop: 18, width: 900 }}>
+    <Text style={{ fontSize: 22, color: '#C3D0E2', lineHeight: 1.45, marginTop: 16, width: 940 }}>
         Chain-information recovery in polymer property prediction —
         and whether more data buys it back
     </Text>
 
-    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 46 }}>
+    <Box style={{ marginTop: 30, padding: '16px 22px', background: '#16233A', borderLeft: '3px solid #FFB020', width: 1000 }}>
+        <Text style={{ fontSize: 21, color: '#FFB020', lineHeight: 1.45, fontWeight: 'bold' }}>
+            Short version: in twelve of nineteen cells the chain arm does no better than the unit arm — and a tenfold increase in data has not fixed that.
+        </Text>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 34 }}>
         {[
             ['3', 'public benchmarks'],
             ['962', 'fitted runs, reconciled'],
             ['19', 'task × chain-arm cells'],
-            ['4 + 1', 'arms run / not constructible'],
+            ['5', 'arms · one unbuildable'],
         ].map(([num, label]) => (
-            <Box key={label} style={{ flexDirection: 'column', width: 210 }}>
-                <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.1 }}>{num}</Text>
-                <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 6, lineHeight: 1.4 }}>{label}</Text>
+            <Box key={label} style={{ flexDirection: 'column', width: 215 }}>
+                <Text style={{ fontSize: 42, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.1 }}>{num}</Text>
+                <Text style={{ fontSize: 15, color: '#93A8C2', marginTop: 6, lineHeight: 1.4 }}>{label}</Text>
             </Box>
         ))}
     </Box>
 
     <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <Box style={{ flexDirection: 'column', gap: 6 }}>
-            <Text style={{ fontSize: 15, color: '#FFFFFF', letterSpacing: 0.4 }}>
+            <Text style={{ fontSize: 17, color: '#FFFFFF', letterSpacing: 0.4 }}>
                 Yihui WAN · Xingshuai WANG · Peng SUN · Yixuan ZHOU
             </Text>
-            <Text style={{ fontSize: 12, color: '#7E93AE' }}>18 November 2026</Text>
+            <Text style={{ fontSize: 14, color: '#93A8C2' }}>18 November 2026</Text>
         </Box>
         <svg width='300' height='34' viewBox='0 0 300 34'>
             <line x1='0' y1='17' x2='300' y2='17' stroke='#24334C' strokeWidth='1' />

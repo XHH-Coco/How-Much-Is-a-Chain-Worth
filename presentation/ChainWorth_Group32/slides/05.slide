@@ -1,65 +1,73 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>04 · BENCHMARKS</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>04 · BENCHMARKS</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
         Three benchmarks, each owning one hypothesis
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Table
-        style={{ width: 1160, height: 172, marginTop: 22 }}
-        defaultTextStyle={{ fontSize: 14, textAlign: 'left', color: '#C3D0E2' }}
-        defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-        cells={[
-            [
-                { text: 'Benchmark', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
-                { text: 'Tasks used here', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
-                { text: 'Protocol', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
-                { text: 'Owns', textStyle: { bold: true, color: '#FFFFFF', fontSize: 13 }, cellStyle: { background: { color: '#16233A' } } },
-            ],
-            [
-                { text: 'PolyBench', textStyle: { bold: true, color: '#4D8DFF' } },
-                '6 main-table tasks: Tg, Tm, modulus, permeability, dielectric loss, IWLT',
-                'Fixed 70/30 split × 3 model seeds',
-                { text: 'H1', textStyle: { bold: true, color: '#FFFFFF' } },
-            ],
-            ['PolyBench26', '2 tasks (PolyMetriX Tg, homopolymer density) + official architecture transfer', 'Official 5-fold, seed 42',
-                { text: 'H2, H1-arch', textStyle: { bold: true, color: '#FFFFFF' } }],
-            ['OpenPoly', '3 properties: Tg, Tm, dielectric constant', 'Own 5-fold × 3 seeds × 5 n-levels (30 / 60 / 120 / 240 / all)',
-                { text: 'H3, H4', textStyle: { bold: true, color: '#FFFFFF' } }],
-        ]}
-    />
+    <Box style={{ flexDirection: 'column', width: 1128, marginTop: 22 }}>
+        <Box style={{ flexDirection: 'row', background: '#16233A', padding: '12px 16px' }}>
+            <Text style={{ width: 160, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Benchmark</Text>
+            <Text style={{ width: 470, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Tasks used here</Text>
+            <Text style={{ width: 350, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Protocol</Text>
+            <Text style={{ width: 148, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Owns</Text>
+        </Box>
+        {[
+            ['PolyBench', '6 main-table tasks: Tg, Tm, modulus, permeability, dielectric loss, IWLT', 'Fixed 70/30 split × 3 seeds', 'H1'],
+            ['PB26', '2 tasks (PolyMetriX Tg, homopolymer density) + official architecture transfer', 'Official 5-fold, seed 42', 'H2, H1-arch'],
+            ['OpenPoly', '3 properties: Tg, Tm, dielectric constant', '5-fold × 3 seeds × 5 n-levels', 'H3, H4'],
+        ].map(([name, tasks, protocol, owns]) => (
+            <Box key={name} style={{ flexDirection: 'row', padding: '13px 16px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                <Text style={{ width: 160, fontSize: 19, fontWeight: 'bold', color: '#4D8DFF' }}>{name}</Text>
+                <Text style={{ width: 470, fontSize: 18, color: '#C3D0E2', lineHeight: 1.35 }}>{tasks}</Text>
+                <Text style={{ width: 350, fontSize: 18, color: '#C3D0E2', lineHeight: 1.35 }}>{protocol}</Text>
+                <Text style={{ width: 148, fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' }}>{owns}</Text>
+            </Box>
+        ))}
+    </Box>
 
-    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 24 }}>
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 8 }}>
         <Box style={{ width: 470, flexDirection: 'column' }}>
-            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.4, fontWeight: 'bold' }}>POLYBENCH'S OWN THREE TIERS</Text>
-            <Table
-                style={{ width: 470, height: 132, marginTop: 10 }}
-                defaultTextStyle={{ fontSize: 13, textAlign: 'left', color: '#C3D0E2' }}
-                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-                cells={[
-                    ['tier', 'tasks', 'labelled rows'],
+            <Text style={{ fontSize: 14, color: '#93A8C2', letterSpacing: 1.4, fontWeight: 'bold' }}>POLYBENCH&apos;S OWN THREE TIERS</Text>
+            <Box style={{ flexDirection: 'column', width: 470, marginTop: 10 }}>
+                <Box style={{ flexDirection: 'row', background: '#16233A', padding: '9px 14px' }}>
+                    <Text style={{ width: 60, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>tier</Text>
+                    <Text style={{ width: 210, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>tasks</Text>
+                    <Text style={{ width: 172, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>labelled rows</Text>
+                </Box>
+                {[
                     ['1', 'Tg, Tm', '8,055 / 3,796'],
                     ['2', 'modulus, permeability', '1,034 / 711'],
                     ['3', 'dielectric loss, IWLT', '279 / 228'],
-                ]}
-            />
+                ].map(([t, tasks, rows]) => (
+                    <Box key={t} style={{ flexDirection: 'row', padding: '10px 14px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                        <Text style={{ width: 60, fontSize: 18, color: '#C3D0E2' }}>{t}</Text>
+                        <Text style={{ width: 210, fontSize: 18, color: '#C3D0E2' }}>{tasks}</Text>
+                        <Text style={{ width: 172, fontSize: 18, color: '#C3D0E2' }}>{rows}</Text>
+                    </Box>
+                ))}
+            </Box>
         </Box>
-        <Box style={{ flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 14 }}>
-            <Text style={{ fontSize: 15, color: '#FFB020', lineHeight: 1.6 }}>
-                Tier and sample size run in opposite directions: ρ(tier, log10 n) = −0.956.
+        <Box style={{ flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 16 }}>
+            <Text style={{ fontSize: 20, color: '#FFB020', lineHeight: 1.5, fontWeight: 'bold' }}>
+                Tier and sample size are nearly the same variable here: ρ = −0.956.
             </Text>
-            <Text style={{ fontSize: 14, color: '#A8B8CE', lineHeight: 1.65 }}>
-                So a tier label proxies two things at once — "needs chain information" and "has 30× less data". That conflation is
-                announced here, on the slide where the tiers are introduced, not discovered later in the discussion.
-            </Text>
-            <Text style={{ fontSize: 13, color: '#7E93AE', lineHeight: 1.6 }}>
-                Rule R1: one hypothesis is adjudicated inside one benchmark only. Numbers from different rows are never compared.
+            <Text style={{ fontSize: 18, color: '#C3D0E2', lineHeight: 1.55 }}>
+                A tier label therefore carries two things at once — &quot;needs chain information&quot; and &quot;has 30× less data&quot;.
+                We say so here, where the tiers appear, not in the discussion afterwards.
             </Text>
         </Box>
     </Box>
 
     <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>Group 32 · How Much Is a Chain Worth?</Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>5 / 17</Text>
+        <Box style={{ flexDirection: 'column', width: 980, gap: 2 }}>
+            <Text style={{ fontSize: 13, color: '#8FA3BC', lineHeight: 1.35 }}>
+                H1-arch, same row (RMSE, lower = easier). OOD: random 0.478 &lt; block 0.526 — block is the harder split, which is what we predicted.
+            </Text>
+            <Text style={{ fontSize: 13, color: '#8FA3BC', lineHeight: 1.35 }}>
+                ID: alternating 0.110 &lt; homopolymer 0.395 — homopolymer is harder, against it. Two domains; stated, not scored.
+            </Text>
+        </Box>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>5 / 18</Text>
     </Box>
 </Slide>

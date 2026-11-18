@@ -1,0 +1,57 @@
+<Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>备用 3 · 把 12/19 拆开</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        11 里 7 个，8 里 5 个
+    </Text>
+    <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
+
+    <Box style={{ flexDirection: 'column', width: 1128, marginTop: 20 }}>
+        <Box style={{ flexDirection: 'row', background: '#16233A', padding: '11px 16px' }}>
+            <Text style={{ width: 260, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>臂</Text>
+            <Text style={{ width: 160, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>格子数</Text>
+            <Text style={{ width: 180, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Λ &lt; 0</Text>
+            <Text style={{ width: 180, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Λ 均值</Text>
+            <Text style={{ width: 348, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>可用读数</Text>
+        </Box>
+        {[
+            ['A3 · MPNN', '11', '7', '−0.158', '264'],
+            ['A4 · polyBERT + 岭回归', '8', '5', '−0.319', '39'],
+            ['两臂合计', '19', '12', '−0.226', '303'],
+        ].map(([arm, cells, neg, mean, rows], i) => (
+            <Box key={arm} style={{ flexDirection: 'row', padding: '14px 16px', background: i === 2 ? '#16233A' : '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                <Text style={{ width: 260, fontSize: 19, fontWeight: 'bold', color: i === 2 ? '#FFB020' : '#FFFFFF' }}>{arm}</Text>
+                <Text style={{ width: 160, fontSize: 19, color: '#C3D0E2', textAlign: 'right' }}>{cells}</Text>
+                <Text style={{ width: 180, fontSize: 19, color: '#FF6B6B', textAlign: 'right', fontWeight: 'bold' }}>{neg}</Text>
+                <Text style={{ width: 180, fontSize: 19, color: '#C3D0E2', textAlign: 'right' }}>{mean}</Text>
+                <Text style={{ width: 348, fontSize: 19, color: '#C3D0E2', textAlign: 'right' }}>{rows}</Text>
+            </Box>
+        ))}
+    </Box>
+
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 26 }}>
+        <Box style={{ width: 540, flexDirection: 'column', gap: 10 }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>一个格子怎么来</Text>
+            <Text style={{ fontSize: 16, color: '#C3D0E2', lineHeight: 1.45 }}>
+                一个任务 × 一支臂。值是<span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>该格可用运行的平均</span>，不是中位，也不是某折的最好值。
+            </Text>
+            <Text style={{ fontSize: 16, color: '#C3D0E2', lineHeight: 1.45 }}>
+                当 1 − R²_unit ≥ 0.05 时该运行才算可用；18 条读数不达标，留空而不是记 0。
+            </Text>
+        </Box>
+        <Box style={{ flex: 1, flexDirection: 'column', gap: 10 }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>从不做的事</Text>
+            <Text style={{ fontSize: 16, color: '#C3D0E2', lineHeight: 1.45 }}>
+                两臂不平均成一个数：它们回答不同的问题、容量也不同。12 / 19 是<span style={{ color: '#FFFFFF' }}>对格子的计数</span>，
+                也是唯一一处把两臂相加的地方。
+            </Text>
+            <Text style={{ fontSize: 15, color: '#93A8C2', lineHeight: 1.4 }}>
+                A4 只覆盖 8 个格子而不是 11 个，因为它按设计拒绝 n 档。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>备用页 · 不讲</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>B3</Text>
+    </Box>
+</Slide>

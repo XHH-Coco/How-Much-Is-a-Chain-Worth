@@ -57,6 +57,7 @@ aggregate_table_registered,,exempt,DERIVED_TABLE：arch_floor_compare.csv ——
 aggregate_table_registered,,ok,arch_transfer.csv：已登记，列 run_id
 aggregate_table_registered,,ok,audit_backlog.csv：已登记，列 run_id
 aggregate_table_registered,,exempt,DERIVED_TABLE：cost_summary.csv —— 按 scope 汇总的工时视图，逐 run 明细在 gpu_hours.csv（那张已登记）
+aggregate_table_registered,,exempt,DERIVED_TABLE：defense_cells.csv —— D-80：答辩补算的逐格视图（可报行 / 稳定行 / 最小分母），派生自 lambda_ci.csv，不含新的 run
 aggregate_table_registered,,ok,gpu_hours.csv：已登记，列 run_id
 aggregate_table_registered,,exempt,DERIVED_TABLE：h1_heterogeneity.csv —— D-74：来源异质性、tier-样本量混淆与单任务杠杆，同样派生自 lambda_ci.csv
 aggregate_table_registered,,exempt,DERIVED_TABLE：h1_ordering.csv —— D-74：H1 的分层排序（逐点 + 每臂两行汇总），派生自 lambda_ci.csv 与任务配置，不含新的 run

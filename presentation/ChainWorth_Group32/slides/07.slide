@@ -1,26 +1,29 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Arial', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>06 · METHOD — ARMS</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>06 · METHOD — ARMS</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
         Four arms, one variable each — 962 records behind them
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'row', gap: 46, marginTop: 24 }}>
-        <Box style={{ width: 470, flexDirection: 'column' }}>
-            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.4, fontWeight: 'bold' }}>EVERY NUMBER TRAVELS THE SAME PATH</Text>
-            <Box style={{ flexDirection: 'column', marginTop: 12 }}>
+    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 22 }}>
+        <Box style={{ width: 360, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 13, color: '#93A8C2', letterSpacing: 1.2, fontWeight: 'bold' }}>EVERY NUMBER TRAVELS THE SAME PATH</Text>
+            <Box style={{ flexDirection: 'column', marginTop: 10 }}>
                 {[
-                    ['Raw data', '3 public benchmarks, licence and md5 recorded'],
-                    ['Frozen splits', 'official indices where published, hashed and versioned'],
-                    ['One arm at a time', 'A1 / A2 / A3 / A4 ride the same rows and seeds'],
-                    ['One record per run', 'R², MAE, RMSE, wall clock, predictions, hashes'],
-                    ['Λ per cell, κ per dataset', 'aggregated only after a four-way reconciliation gate'],
+                    ['Raw data', 'licence and md5 recorded'],
+                    ['Frozen splits', 'official indices, hashed'],
+                    ['One arm at a time', 'same rows, same seeds'],
+                    ['One record per run', 'R², MAE, hashes'],
+                    ['Λ per cell, κ per dataset', 'after a reconciliation gate'],
                 ].map(([head, sub], i) => (
                     <Box key={head} style={{ flexDirection: 'column' }}>
-                        {i > 0 ? <Text style={{ fontSize: 13, color: '#33445F', lineHeight: 1.3, marginTop: 5, marginBottom: 5 }}>↓</Text> : null}
-                        <Box style={{ flexDirection: 'column', padding: '9px 14px', background: i === 2 ? '#16233A' : '#111B2E', border: '1px solid ' + (i === 2 ? '#2F4A75' : '#24334C'), borderRadius: 5 }}>
-                            <Text style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 'bold' }}>{head}</Text>
-                            <Text style={{ fontSize: 12, color: '#8FA3BC', marginTop: 2 }}>{sub}</Text>
+                        {i > 0 ? <svg width='30' height='20' viewBox='0 0 30 20' style={{ marginTop: 3, marginBottom: 3 }}>
+                            <line x1='15' y1='0' x2='15' y2='11' stroke='#8FA3BC' strokeWidth='2' />
+                            <polygon points='15,19 9,10 21,10' fill='#8FA3BC' />
+                        </svg> : null}
+                        <Box style={{ flexDirection: 'column', padding: '8px 12px', background: i === 2 ? '#16233A' : '#111B2E', border: '1px solid ' + (i === 2 ? '#2F4A75' : '#24334C'), borderRadius: 5 }}>
+                            <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: 'bold' }}>{head}</Text>
+                            <Text style={{ fontSize: 14, color: '#A8B8CE', marginTop: 1 }}>{sub}</Text>
                         </Box>
                     </Box>
                 ))}
@@ -28,53 +31,36 @@
         </Box>
 
         <Box style={{ flex: 1, flexDirection: 'column' }}>
-            <Table
-                style={{ width: 644, height: 300 }}
-                defaultTextStyle={{ fontSize: 13, textAlign: 'left', color: '#C3D0E2' }}
-                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-                cells={[
-                    [
-                        { text: 'Arm', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: 'What it changes', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12 }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: 'Runs', textStyle: { bold: true, color: '#FFFFFF', fontSize: 12, textAlign: 'right' }, cellStyle: { background: { color: '#16233A' } } },
-                    ],
-                    [
-                        { text: 'A1 floor', textStyle: { bold: true, color: '#8FA3BC' } },
-                        'Predicts the training mean — reference only',
-                        { text: '48', textStyle: { color: '#8FA3BC', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A2 unit', textStyle: { bold: true, color: '#FFFFFF' } },
-                        '205 RDKit descriptors + 2048-bit fingerprint → XGBoost, 30 tuning trials',
-                        { text: '328', textStyle: { color: '#FFFFFF', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A3 chain', textStyle: { bold: true, color: '#4D8DFF' } },
-                        'chemprop 2.1.0 MPNN — official hyper-parameters, tuned zero times',
-                        { text: '538', textStyle: { color: '#4D8DFF', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A4 chain', textStyle: { bold: true, color: '#4D8DFF' } },
-                        'polyBERT frozen encoder + ridge head (capacity capped)',
-                        { text: '48', textStyle: { color: '#4D8DFF', textAlign: 'right' } },
-                    ],
-                    [
-                        { text: 'A5 chain', textStyle: { bold: true, color: '#FF6B6B' } },
-                        'Would inject chain input at a fixed architecture',
-                        { text: '0', textStyle: { color: '#FF6B6B', textAlign: 'right', bold: true } },
-                    ],
-                ]}
-            />
-            <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 10, lineHeight: 1.5 }}>
-                A5 is zero because its inputs do not exist in the data — see slide 13. It is logged as not constructible, never as "no gain".
+            <Box style={{ flexDirection: 'column', width: 720 }}>
+                <Box style={{ flexDirection: 'row', background: '#16233A', padding: '11px 14px' }}>
+                    <Text style={{ width: 140, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>Arm</Text>
+                    <Text style={{ width: 470, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' }}>What it changes</Text>
+                    <Text style={{ width: 110, fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'right' }}>Runs</Text>
+                </Box>
+                {[
+                    ['A1 floor', 'Predicts the training mean — reference only', '48', '#8FA3BC', '#A8B8CE'],
+                    ['A2 unit', '205 RDKit descriptors + 2048-bit fingerprint → XGBoost, 30 tuning trials', '328', '#FFFFFF', '#FFFFFF'],
+                    ['A3 chain', 'chemprop 2.1.0 MPNN — official hyper-parameters, tuned zero times', '538', '#4D8DFF', '#4D8DFF'],
+                    ['A4 chain', 'polyBERT frozen encoder + ridge head (capacity capped)', '48', '#4D8DFF', '#4D8DFF'],
+                    ['A5 chain', 'Would inject chain input at a fixed architecture', '0', '#FF6B6B', '#FF6B6B'],
+                ].map(([arm, change, runs, nameColor, runColor]) => (
+                    <Box key={arm} style={{ flexDirection: 'row', padding: '12px 14px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                        <Text style={{ width: 140, fontSize: 18, fontWeight: 'bold', color: nameColor }}>{arm}</Text>
+                        <Text style={{ width: 470, fontSize: 18, color: '#C3D0E2', lineHeight: 1.3 }}>{change}</Text>
+                        <Text style={{ width: 110, fontSize: 18, fontWeight: 'bold', color: runColor, textAlign: 'right' }}>{runs}</Text>
+                    </Box>
+                ))}
+            </Box>
+            <Text style={{ fontSize: 16, color: '#FFB020', marginTop: 16, lineHeight: 1.5 }}>
+                A5 is zero because its inputs do not exist in the data — see slide 13. It is logged as not constructible, never as &quot;no gain&quot;.
             </Text>
         </Box>
     </Box>
 
     <Box style={{ marginTop: 'auto', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>
-            Gate before any table is written: 4,896 provenance checks — 4,832 ok / 64 exempt / 0 fail.
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>
+            4,897 provenance checks before any table is written — 4,832 ok / 65 exempt / 0 fail.
         </Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>7 / 17</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>7 / 18</Text>
     </Box>
 </Slide>

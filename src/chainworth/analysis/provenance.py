@@ -125,6 +125,8 @@ DERIVED_TABLES: Mapping[str, str] = {
     "pb26_controlled_control.csv": "D-45：受控对照，按设计不写 raw_runs",
     "polybench_official_compare.csv": "同 official_baseline_compare：官方数字 vs 按任务汇总",
     "spearman.csv": "D-48 ⑦：由 predictions 逐份重算、按 (task, arm) 汇总，run_id 集合即主表 run_ids",
+    "defense_cells.csv": "D-80：答辩补算的逐格视图（可报行 / 稳定行 / 最小分母），派生自 lambda_ci.csv，不含新的 run",
+    "defense_checks.json": "D-80：置换 p、按任务重采样、十倍段斜率、两臂翻号、n* 插值、地板口径；只读 aggregate 表，不含新的 run",
 }
 
 # 按 D-57 物化但不入库的划分前缀。缺件 → exempt（并给重建命令）；**存在但对不上 → fail**。

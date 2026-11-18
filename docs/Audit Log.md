@@ -48,7 +48,14 @@
 ### 测试基线说明
 
 - 任务书基线：**280 passed / 7 skipped**（数据齐全的机器，`pytest tests`）。
-- **2026-11-18 03:00 最新基线：488 passed / 7 skipped**（core 环境，193.12s，退出码 0）。
+- **2026-11-18 07:35 最新基线：498 passed / 7 skipped**（core 环境，209.73s，退出码 0）。
+  相对 03:00 的 488，+10 条是答辩补算的守门（`tests/test_defense_checks.py`：ρ 与已发布列逐位一致、
+  精确置换 p 的两端、段斜率按 dex、窗内不过零返回 `None`、log 空间插值、翻号里近零格的区分、
+  地板取两条件较大者、不稳定行不进稳定格、汇总带 `sources`）。
+  同轮 `provenance_check.csv` 由 4,896 行刷新到 **4,897 行 / 4,832 ok / 65 exempt / 0 fail**
+  （新增两张 `defense_*` 派生表已登记在 `DERIVED_TABLES`，否则 `aggregate_table_registered` 会红——
+  D-67 ③「未登记即红」在本地抓到的正是这一类）。
+- **2026-11-18 03:00 基线：488 passed / 7 skipped**（core 环境，193.12s，退出码 0）。
   相对 02:25 的 487，+1 条是报告勘误的守门
   （`test_only_properties_that_change_sign_get_an_n_star`：3 个性质里只有 2 个有 n\*、Tm 必须返回 `None`）。
   7 skipped 仍是那几条要 GPU / 大模型 / `CHAINWORTH_SLOW=1` 的。

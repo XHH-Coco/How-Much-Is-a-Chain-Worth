@@ -1,66 +1,66 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>01 · 选题动机</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
-        高分子比晶体多出一个层级
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>01 · 动机</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        高分子多出一层描述，晶体没有
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'row', gap: 48, marginTop: 30 }}>
+    <Box style={{ flexDirection: 'row', gap: 44, marginTop: 26 }}>
         <Box style={{ width: 470, flexDirection: 'column' }}>
-            <Text style={{ fontSize: 12, color: '#7E93AE', letterSpacing: 1.4, fontWeight: 'bold' }}>无机晶体</Text>
-            <Box style={{ flexDirection: 'column', alignItems: 'center', marginTop: 14 }}>
+            <Text style={{ fontSize: 14, color: '#93A8C2', letterSpacing: 1.4, fontWeight: 'bold' }}>无机晶体</Text>
+            <Box style={{ flexDirection: 'column', alignItems: 'center', marginTop: 12 }}>
                 {['组成', '晶胞', '性质'].map((label, i) => (
                     <Box key={label} style={{ flexDirection: 'column', alignItems: 'center' }}>
-                        {i > 0 ? <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text> : null}
-                        <Box style={{ width: 300, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-                            <Text style={{ fontSize: 15, color: '#C3D0E2' }}>{label}</Text>
+                        {i > 0 ? <Text style={{ fontSize: 18, color: '#5A7192', lineHeight: 1.2, marginTop: 4, marginBottom: 4, width: 30, textAlign: 'center' }}>↓</Text> : null}
+                        <Box style={{ width: 320, padding: '12px 18px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                            <Text style={{ fontSize: 19, color: '#C3D0E2' }}>{label}</Text>
                         </Box>
                     </Box>
                 ))}
             </Box>
-            <Text style={{ fontSize: 13, color: '#7E93AE', marginTop: 14, lineHeight: 1.55 }}>
-                两个层级就够了：组成加晶胞几何就确定了结构。
+            <Text style={{ fontSize: 18, color: '#C3D0E2', marginTop: 16, lineHeight: 1.5 }}>
+                两层就够了：组成加晶胞几何就把结构定死。<span style={{ color: '#FFB020' }}>菜谱就是菜本身。</span>
             </Text>
         </Box>
 
         <Box style={{ width: 1, background: '#24334C' }} />
 
-        <Box style={{ width: 590, flexDirection: 'column' }}>
-            <Text style={{ fontSize: 12, color: '#FFB020', letterSpacing: 1.4, fontWeight: 'bold' }}>高分子</Text>
-            <Box style={{ flexDirection: 'column', alignItems: 'center', marginTop: 14 }}>
-                <Box style={{ width: 340, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-                    <Text style={{ fontSize: 15, color: '#C3D0E2' }}>组成</Text>
+        <Box style={{ width: 600, flexDirection: 'column' }}>
+            <Text style={{ fontSize: 14, color: '#FFB020', letterSpacing: 1.4, fontWeight: 'bold' }}>高分子</Text>
+            <Box style={{ flexDirection: 'column', alignItems: 'center', marginTop: 12 }}>
+                <Box style={{ width: 340, padding: '12px 18px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#C3D0E2' }}>组成</Text>
                 </Box>
-                <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text>
-                <Box style={{ width: 340, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-                    <Text style={{ fontSize: 15, color: '#C3D0E2' }}>重复单元 —— 一个 PSMILES 字符串</Text>
+                <Text style={{ fontSize: 18, color: '#5A7192', lineHeight: 1.2, marginTop: 4, marginBottom: 4, width: 30, textAlign: 'center' }}>↓</Text>
+                <Box style={{ width: 340, padding: '12px 18px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#C3D0E2' }}>重复单元 —— 一条 PSMILES 串</Text>
                 </Box>
-                <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text>
-                <Box style={{ width: 470, padding: '12px 16px', background: '#16233A', border: '1px solid #FFB020', borderRadius: 6 }}>
-                    <Text style={{ fontSize: 15, color: '#FFB020', fontWeight: 'bold' }}>链 —— 被这次压缩丢掉了</Text>
-                    <Text style={{ fontSize: 13, color: '#C3D0E2', marginTop: 6, lineHeight: 1.6 }}>
-                        分子量分布 · 序列（无规 / 嵌段 / 交替）· 立构规整度 · 形态 · 加工历史
+                <Text style={{ fontSize: 18, color: '#5A7192', lineHeight: 1.2, marginTop: 4, marginBottom: 4, width: 30, textAlign: 'center' }}>↓</Text>
+                <Box style={{ width: 520, padding: '12px 18px', background: '#16233A', border: '1px solid #FFB020', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#FFB020', fontWeight: 'bold' }}>链 —— 在压缩时被丢掉了</Text>
+                    <Text style={{ fontSize: 16, color: '#C3D0E2', marginTop: 5, lineHeight: 1.45 }}>
+                        分子量分布 · 序列 · 立构规整性 · 形貌 · 加工历史
                     </Text>
                 </Box>
-                <Text style={{ fontSize: 15, color: '#3B4C68', lineHeight: 1.5, marginTop: 4, marginBottom: 4 }}>↓</Text>
-                <Box style={{ width: 340, padding: '11px 16px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-                    <Text style={{ fontSize: 15, color: '#C3D0E2' }}>实测性质</Text>
+                <Text style={{ fontSize: 18, color: '#5A7192', lineHeight: 1.2, marginTop: 4, marginBottom: 4, width: 30, textAlign: 'center' }}>↓</Text>
+                <Box style={{ width: 340, padding: '12px 18px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#C3D0E2' }}>实测性质</Text>
                 </Box>
             </Box>
         </Box>
     </Box>
 
     <Box style={{ marginTop: 'auto', padding: '14px 20px', background: '#111B2E', borderLeft: '2px solid #4D8DFF' }}>
-        <Text style={{ fontSize: 14, color: '#C3D0E2', lineHeight: 1.7 }}>
-            这是基准作者自己写下的局限：当前版本没有显式编码分子量分布、立构规整度、形态、加工历史、器件架构或测量协议。
+        <Text style={{ fontSize: 17, color: '#C3D0E2', lineHeight: 1.5 }}>
+            基准自己写下的局限：当前版本没有显式编码分子量分布、立构规整性、形貌、加工历史、器件结构或测量协议。
         </Text>
-        <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 4 }}>
-            转述自 PolyBench（Polym. Sci. Technol. 2026）—— 这个缺口是上游承认的，不是我们发明的。
+        <Text style={{ fontSize: 14, color: '#93A8C2', marginTop: 4 }}>
+            转述自 PolyBench，Polym. Sci. Technol. 2026 —— 这个缺口上游自己承认，不是我们编的。
         </Text>
     </Box>
 
-    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>第 32 组 · 链值多少？</Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>2 / 17</Text>
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>第 32 组 · 链值多少？</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>2 / 18</Text>
     </Box>
 </Slide>

@@ -1,77 +1,80 @@
 <Slide style={{ width: 1280, height: 720, background: '#0A1020', fontFamily: 'Microsoft YaHei', padding: '52px 60px 30px 60px', display: 'flex', flexDirection: 'column' }}>
-    <Text style={{ fontSize: 12, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · 结果（6/6）—— H3 与 H4</Text>
-    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
-        一个答不了的问题，一个只能描述的问题
+    <Text style={{ fontSize: 14, color: '#4D8DFF', fontWeight: 'bold', letterSpacing: 2.2 }}>07 · 结果（6/6）—— H3 与 H4</Text>
+    <Text style={{ fontSize: 36, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.2, marginTop: 8 }}>
+        一个问题答不了，一个只能描述
     </Text>
     <Box style={{ width: 1160, height: 1, background: '#24334C', marginTop: 14 }} />
 
-    <Box style={{ flexDirection: 'row', gap: 40, marginTop: 22 }}>
-        <Box style={{ flex: 1, flexDirection: 'column', padding: '18px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, color: '#FF6B6B', letterSpacing: 1.4, fontWeight: 'bold' }}>H3 · 信息 vs 架构</Text>
-            <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, lineHeight: 1.4 }}>
-                A5 是不可构造的 —— 它从来不只是「没跑」
+    <Box style={{ flexDirection: 'row', gap: 32, marginTop: 20 }}>
+        <Box style={{ width: 566, flexDirection: 'column', padding: '16px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+            <Text style={{ fontSize: 13, color: '#FF6B6B', letterSpacing: 1.4, fontWeight: 'bold' }}>H3 · 信息 vs 架构</Text>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginTop: 6, lineHeight: 1.25 }}>
+                没有带标签的链级目标 —— A5 从来不是「没跑」
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 10, lineHeight: 1.8 }}>
-                它的三条预注册输入在数据里都不存在：18,152 个结构里没有重复单元数列；18,036 行 wPSMILES 的重复字段全是
-                <span style={{ color: '#FFFFFF' }}> |1|</span>、权重段逐字相同；一行一个重复单元，所以没有多单元序列。
+
+            <Box style={{ flexDirection: 'column', width: 524, marginTop: 14 }}>
+                <Box style={{ flexDirection: 'row', background: '#16233A', padding: '8px 12px' }}>
+                    <Text style={{ width: 190, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>预注册输入</Text>
+                    <Text style={{ width: 200, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>数据里有吗</Text>
+                    <Text style={{ width: 134, fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>结论</Text>
+                </Box>
+                {[
+                    ['重复单元数', '18,152 行里没这一列', '无从注入'],
+                    ['连接权重段', '18,036 行逐字相同', '零方差'],
+                    ['多单元序列', '一行一个重复单元', '没有序列'],
+                ].map(([a, b, c]) => (
+                    <Box key={a} style={{ flexDirection: 'row', padding: '9px 12px', background: '#0E1728', borderBottom: '1px solid #1D2A40' }}>
+                        <Text style={{ width: 190, fontSize: 16, color: '#C3D0E2' }}>{a}</Text>
+                        <Text style={{ width: 200, fontSize: 16, color: '#C3D0E2' }}>{b}</Text>
+                        <Text style={{ width: 134, fontSize: 16, fontWeight: 'bold', color: '#FFB020' }}>{c}</Text>
+                    </Box>
+                ))}
+            </Box>
+
+            <Text style={{ fontSize: 17, color: '#C3D0E2', marginTop: 12, lineHeight: 1.45 }}>
+                硬喂 A5 等于加三列常数。它的记录数是 0，状态是
+                <span style={{ color: '#FFB020' }}> not_constructible_data_unavailable</span> —— 写「零增益」是明令禁止的。
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 8, lineHeight: 1.8 }}>
-                强行喂 A5 只会追加三个常数列。它的记录数是 0，状态是
-                <span style={{ color: '#FFB020' }}> not_constructible_data_unavailable</span> —— 写成「零增益」是被明令禁止的。
+
+            <Text style={{ fontSize: 15, color: '#93A8C2', marginTop: 10, lineHeight: 1.4 }}>
+                <span style={{ color: '#FFFFFF', fontWeight: 'bold' }}>替代品：</span>逐任务噪声地板。
+                8 个任务的中位 |ΔR²| 是 0.0046，A3 在 8 个里有 5 个过线。
             </Text>
-            <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 12, letterSpacing: 1.2, fontWeight: 'bold' }}>我们有的是：逐任务的噪声地板</Text>
-            <Table
-                style={{ width: 528, height: 108, marginTop: 8 }}
-                defaultTextStyle={{ fontSize: 12, textAlign: 'right', color: '#C3D0E2' }}
-                defaultCellStyle={{ border: { bottom: { width: 1, color: '#1D2A40' } }, background: { color: '#0E1728' } }}
-                cells={[
-                    [
-                        { text: '任务', textStyle: { bold: true, color: '#FFFFFF', fontSize: 11, textAlign: 'left' }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: '地板 |ΔR²|', textStyle: { bold: true, color: '#FFFFFF', fontSize: 11 }, cellStyle: { background: { color: '#16233A' } } },
-                        { text: 'A3 增益', textStyle: { bold: true, color: '#FFFFFF', fontSize: 11 }, cellStyle: { background: { color: '#16233A' } } },
-                    ],
-                    [{ text: 'pb_t1_tg', textStyle: { textAlign: 'left' } }, '0.0020', { text: '0.0004 低于', textStyle: { color: '#FFB020' } }],
-                    [{ text: 'pb26_polymetrix_tg', textStyle: { textAlign: 'left' } }, '0.0024', { text: '0.0006 低于', textStyle: { color: '#FFB020' } }],
-                    [{ text: '8 个任务中位', textStyle: { textAlign: 'left', color: '#8FA3BC' } }, { text: '0.0022', textStyle: { color: '#8FA3BC' } }, { text: '6/8 过门槛', textStyle: { color: '#8FA3BC' } }],
-                ]}
-            />
         </Box>
 
-        <Box style={{ flex: 1, flexDirection: 'column', padding: '18px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, color: '#4D8DFF', letterSpacing: 1.4, fontWeight: 'bold' }}>H4 · 交叉点</Text>
-            <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF', marginTop: 8, lineHeight: 1.4 }}>
-                两个性质过零；第三个从不过零
+        <Box style={{ flex: 1, flexDirection: 'column', padding: '16px 20px', background: '#111B2E', border: '1px solid #24334C', borderRadius: 6 }}>
+            <Text style={{ fontSize: 13, color: '#4D8DFF', letterSpacing: 1.4, fontWeight: 'bold' }}>H4 · 交叉</Text>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF', marginTop: 6, lineHeight: 1.25 }}>
+                两个性质会交叉，第三个从不
             </Text>
-            <Box style={{ flexDirection: 'row', gap: 26, marginTop: 14 }}>
+            <Box style={{ flexDirection: 'row', gap: 26, marginTop: 16 }}>
                 <Box style={{ flexDirection: 'column' }}>
-                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 56</Text>
-                    <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 4 }}>Tg · 窗 355 行</Text>
+                    <Text style={{ fontSize: 38, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 56</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 4 }}>Tg · 标注 30–355</Text>
                 </Box>
                 <Box style={{ flexDirection: 'column' }}>
-                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 59</Text>
-                    <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 4 }}>介电常数 · 235 行</Text>
+                    <Text style={{ fontSize: 38, fontWeight: 'bold', color: '#4D8DFF', lineHeight: 1.05 }}>≈ 59</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 4 }}>介电常数 · 30–235</Text>
                 </Box>
                 <Box style={{ flexDirection: 'column' }}>
-                    <Text style={{ fontSize: 34, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>无</Text>
-                    <Text style={{ fontSize: 11, color: '#8FA3BC', marginTop: 4 }}>Tm · 30–134 全为负</Text>
+                    <Text style={{ fontSize: 38, fontWeight: 'bold', color: '#FFB020', lineHeight: 1.05 }}>无</Text>
+                    <Text style={{ fontSize: 15, color: '#A8B8CE', marginTop: 4 }}>Tm · 30–134 全程为负</Text>
                 </Box>
             </Box>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 14, lineHeight: 1.8 }}>
-                训练行数低于约 60 时图臂领先；超过之后经典臂领先并保持领先。这与「Λ 多为负」是同一件事，只是从横轴的另一端读。
+            <Text style={{ fontSize: 17, color: '#C3D0E2', marginTop: 16, lineHeight: 1.45 }}>
+                训练行不到 60 时图臂领先；过了 60 经典臂领先并一路领先。这跟「Λ 大多是负的」是同一件事，只是从轴的另一头读。
             </Text>
-            <Text style={{ fontSize: 13, color: '#A8B8CE', marginTop: 8, lineHeight: 1.8 }}>
-                三条限制都在前面说清：只有三个性质、纯描述性不做显著性检验、三个观测窗宽度不同 —— 所以两个 n* 之间不可互相比较。
-            </Text>
-            <Text style={{ fontSize: 12, color: '#7E93AE', marginTop: 10, lineHeight: 1.7 }}>
-                窗口内不变号时只报窗上界并停止外推 —— 不画虚线延长线。
+            <Text style={{ fontSize: 16, color: '#A8B8CE', marginTop: 10, lineHeight: 1.45 }}>
+                三条限制摆在前面：只有三个性质、描述性没有显著性检验、三个窗口宽度不同 —— 所以两个 n* 不能互相比较。
+                两个交叉都是 30 与 60 两个设计点在 log n 上的插值，请当成一个区间来读。
             </Text>
         </Box>
     </Box>
 
     <Box style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 'auto' }}>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>
-            null_calibration.csv（48 行）· openpoly_cpu.csv + openpoly_gpu_index.csv，225 个配对差
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>
+            地板来自 48 次标定（16 基线 / 16 常数列 / 16 置换列）· 交叉来自 225 个配对差
         </Text>
-        <Text style={{ fontSize: 12, color: '#5E7590' }}>13 / 17</Text>
+        <Text style={{ fontSize: 14, color: '#8FA3BC' }}>13 / 18</Text>
     </Box>
 </Slide>

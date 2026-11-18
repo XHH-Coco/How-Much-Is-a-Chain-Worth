@@ -1,0 +1,269 @@
+{
+  "generated_by": "scripts/06k_defense_checks.py",
+  "claims": {
+    "lambda_cells_all": {
+      "n_cells": 19,
+      "n_negative": 12,
+      "median": -0.009759474558213268,
+      "min": -1.4787582842697466,
+      "max": 0.6382721892525806
+    },
+    "lambda_cells_stable": {
+      "n_cells": 19,
+      "n_negative": 12,
+      "median": -0.009759474558213268,
+      "min": -1.4787582842697466,
+      "max": 0.6382721892525806
+    },
+    "n_cells_without_stable_rows": 0
+  },
+  "h1": {
+    "rho_a3": 0.0,
+    "rho_a4": 0.23904572186687872,
+    "permutation_a3": {
+      "p_two_sided": 1.0,
+      "n_permutations": 720,
+      "method": "exhaustive"
+    },
+    "permutation_a4": {
+      "p_two_sided": 0.7777777777777778,
+      "n_permutations": 720,
+      "method": "exhaustive"
+    },
+    "bootstrap_a3": {
+      "lo": -1.0,
+      "hi": 1.0,
+      "n_valid": 1991
+    },
+    "bootstrap_a4": {
+      "lo": -0.8944271909999159,
+      "hi": 1.0,
+      "n_valid": 1991
+    }
+  },
+  "scale": {
+    "curve": [
+      {
+        "n_train": 300.0,
+        "n_folds": 5,
+        "lambda": 0.29459406552,
+        "delta_r2": 0.03954276156,
+        "denominator": 0.13544716689999997
+      },
+      {
+        "n_train": 1000.0,
+        "n_folds": 5,
+        "lambda": 0.50289488492,
+        "delta_r2": 0.03747802048,
+        "denominator": 0.07425489804
+      },
+      {
+        "n_train": 3000.0,
+        "n_folds": 5,
+        "lambda": 0.36750386662,
+        "delta_r2": 0.017922973059999996,
+        "denominator": 0.04872006442
+      },
+      {
+        "n_train": 10000.0,
+        "n_folds": 5,
+        "lambda": 0.27850273113999996,
+        "delta_r2": 0.010895508439999998,
+        "denominator": 0.03900612068
+      },
+      {
+        "n_train": 22242.0,
+        "n_folds": 5,
+        "lambda": 0.19148794708,
+        "delta_r2": 0.0066068844000000005,
+        "denominator": 0.03434591818
+      }
+    ],
+    "tenfold": {
+      "n_from": 300,
+      "n_to": 3000,
+      "lambda_slope": 0.0729098011,
+      "delta_r2_slope": -0.021619788500000004,
+      "lambda_ratio": 1.2474924298671934
+    },
+    "tail": {
+      "n_from": 3000,
+      "n_to": 22242,
+      "lambda_slope": -0.20230492184436435,
+      "delta_r2_slope": -0.013006212380834952
+    },
+    "full_range": {
+      "n_from": 300,
+      "n_to": 22242,
+      "lambda_slope": -0.055135411404649226,
+      "delta_r2_slope": -0.017612273303124357
+    }
+  },
+  "arm_agreement": {
+    "n_shared_tasks": 8,
+    "n_sign_flips": 4,
+    "flips": [
+      {
+        "task": "pb26_homopolymer_density",
+        "a3": 0.6382721892525806,
+        "a4": -0.531654250038691,
+        "max_abs": 0.6382721892525806
+      },
+      {
+        "task": "pb26_polymetrix_tg",
+        "a3": 0.00479923492142798,
+        "a4": -0.473096905517106,
+        "max_abs": 0.473096905517106
+      },
+      {
+        "task": "pb_t2_modulus",
+        "a3": -0.016321083105875975,
+        "a4": 0.028108107566784057,
+        "max_abs": 0.028108107566784057
+      },
+      {
+        "task": "pb_t2_permeability",
+        "a3": -0.00786439635002087,
+        "a4": 0.0034140672173227494,
+        "max_abs": 0.00786439635002087
+      }
+    ],
+    "n_flips_near_zero": 2,
+    "near_zero": 0.05
+  },
+  "crossing": {
+    "tg": {
+      "n_star": 56.09412349450976,
+      "method": "log_linear_interpolation",
+      "bracket": [
+        30,
+        60
+      ]
+    },
+    "dielectric": {
+      "n_star": 59.3449552940999,
+      "method": "log_linear_interpolation",
+      "bracket": [
+        30,
+        60
+      ]
+    }
+  },
+  "floor": {
+    "table": {
+      "rule": "max_abs",
+      "rows": [
+        {
+          "task": "pb26_homopolymer_density",
+          "floor": 0.0014852279599999907,
+          "n_pairs": 5
+        },
+        {
+          "task": "pb26_polymetrix_tg",
+          "floor": 0.002436535559999986,
+          "n_pairs": 5
+        },
+        {
+          "task": "pb_t1_tg",
+          "floor": 0.0020069804000000246,
+          "n_pairs": 1
+        },
+        {
+          "task": "pb_t1_tm",
+          "floor": 0.009787963099999963,
+          "n_pairs": 1
+        },
+        {
+          "task": "pb_t2_modulus",
+          "floor": 0.0195109106,
+          "n_pairs": 1
+        },
+        {
+          "task": "pb_t2_permeability",
+          "floor": 0.0,
+          "n_pairs": 1
+        },
+        {
+          "task": "pb_t3_dielectric_loss",
+          "floor": 0.0067904815999999535,
+          "n_pairs": 1
+        },
+        {
+          "task": "pb_t3_iwlt",
+          "floor": 0.019183888600000004,
+          "n_pairs": 1
+        }
+      ],
+      "median": 0.00461350857999997
+    },
+    "clearance": {
+      "rows": [
+        {
+          "task": "pb26_homopolymer_density",
+          "floor": 0.0014852279599999907,
+          "chain": 0.030889721051216266,
+          "ratio": 20.79796629415491,
+          "clears": true
+        },
+        {
+          "task": "pb26_polymetrix_tg",
+          "floor": 0.002436535559999986,
+          "chain": 0.000641672746432409,
+          "ratio": 0.26335455840111466,
+          "clears": false
+        },
+        {
+          "task": "pb_t1_tg",
+          "floor": 0.0020069804000000246,
+          "chain": 0.0004039477067571129,
+          "ratio": 0.2012713760219621,
+          "clears": false
+        },
+        {
+          "task": "pb_t1_tm",
+          "floor": 0.009787963099999963,
+          "chain": 0.053696151143249916,
+          "ratio": 5.4859372266381055,
+          "clears": true
+        },
+        {
+          "task": "pb_t2_modulus",
+          "floor": 0.0195109106,
+          "chain": 0.01574315228141295,
+          "ratio": 0.8068896733816693,
+          "clears": false
+        },
+        {
+          "task": "pb_t2_permeability",
+          "floor": 0.0,
+          "chain": 0.007878659321347051,
+          "ratio": null,
+          "clears": true
+        },
+        {
+          "task": "pb_t3_dielectric_loss",
+          "floor": 0.0067904815999999535,
+          "chain": 0.6017456586588995,
+          "ratio": 88.61605024581814,
+          "clears": true
+        },
+        {
+          "task": "pb_t3_iwlt",
+          "floor": 0.019183888600000004,
+          "chain": 0.071714294663711,
+          "ratio": 3.73825641709111,
+          "clears": true
+        }
+      ],
+      "n_clears": 5,
+      "n_tasks": 8
+    },
+    "ratio_at_last_level": 1.4320987780627565
+  },
+  "sources": {
+    "lambda": "results/aggregate/lambda_ci.csv",
+    "ordering": "results/aggregate/h1_ordering.csv",
+    "kappa_cells": "results/aggregate/kappa_cells.csv",
+    "floor": "results/aggregate/null_calibration_summary.json"
+  }
+}
