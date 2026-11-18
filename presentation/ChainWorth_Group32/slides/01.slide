@@ -28,7 +28,7 @@
     <Box style={{ flexDirection: 'row', gap: 40, marginTop: 34 }}>
         {[
             ['3', 'public benchmarks'],
-            ['962', 'fitted runs, reconciled'],
+            ['914', 'fits · 962 records'],
             ['19', 'task × chain-arm cells'],
             ['5', 'arms · one unbuildable'],
         ].map(([num, label]) => (

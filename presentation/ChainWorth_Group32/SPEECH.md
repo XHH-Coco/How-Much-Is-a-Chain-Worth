@@ -1,6 +1,6 @@
 # Speech script — How Much Is a Chain Worth? (Group 32, English)
 
-**Deck:** `ChainWorth_Group32.pptx` · 18 presented pages + 3 backup pages · **Length:** 1,340 spoken words ≈ **9 min 56 s** at 135 wpm (≈ 8 min 56 s at 150). **The eight-minute version is this same script minus the eleven passages listed at the end — 2 min 04 s of cuts, landing just under 8 min.** Nothing needs rewriting on the day; only whole sentences are dropped, and they are marked there.
+**Deck:** `ChainWorth_Group32.pptx` · 18 presented pages + 3 backup pages · **Length:** 1,351 spoken words ≈ **10 min 00 s** at 135 wpm (≈ 9 min 00 s at 150). **The eight-minute version is this same script minus the eleven passages listed at the end — 2 min 04 s of cuts, landing just under 8 min.** Nothing needs rewriting on the day; only whole sentences are dropped, and they are marked there.
 **How to read this:** bold = stress and slow down · « » = stage direction, not spoken · each block names the slide **and the part of the slide** it talks about.
 
 Every block has three parts:
@@ -12,21 +12,21 @@ Every block has three parts:
 
 | Block | Slides | Plan |
 |:--|:--|--:|
-| Frame | 1–3 | 1 min 19 s |
+| Frame | 1–3 | 1 min 21 s |
 | Question and design | 4–7 | 1 min 58 s |
-| Results | 8–13 | 3 min 57 s |
+| Results | 8–13 | 3 min 59 s |
 | Close | 14–18 | 2 min 42 s |
-| **Total** | **1–18** | **9 min 56 s** |
+| **Total** | **1–18** | **10 min 00 s** |
 
 ---
 
 ## Slide 1 · Title — badge, title, the amber line, four statistics
 
 **On slide:** top-right `GROUP 32` → title → the amber "short version" band → the four numbers → member line.
-**≈ 19 s** — spoken part only
+**≈ 21 s** — spoken part only
 
 **① Script — read this aloud**
-> Good morning. Group 32 — Yihui, Xingshuai, Peng, Yixuan. Our question is the title: **how much is a chain worth?** Here is the answer up front. **In twelve of nineteen cells the chain adds nothing, and tenfold data has not fixed that.**
+> Good morning. Group 32 — Yihui, Xingshuai, Peng, Yixuan. Our question is the title: **how much is a chain worth?** Here is the answer up front. **In twelve of nineteen cells the chain does no better than the unit arm, and tenfold data has not fixed that.**
 
 **② Plain version**
 The cover. It names us, the question, and — new this version — **the answer**, before the evidence. Putting the conclusion first is deliberate: an audience that knows where you are going can spend the talk checking your reasoning instead of guessing it.
@@ -175,16 +175,18 @@ Two students with different study hours: we equalised the hours, and one is stil
 ## Slide 11 · H2 — Λ-versus-rows chart, two KPIs, sensitivity strip
 
 **On slide:** line chart on the left; then κ and the 0.650 ratio; four grey boxes = sensitivity checks.
-**≈ 43 s** — spoken part only
+**≈ 45 s** — spoken part only
 
 **① Script — read this aloud**
-> H2 needs two things at once. **κ is −0.086, interval entirely below zero** — the slope is real. But Λ at the largest n is still **0.650 of** the smallest; halving means 0.5. So H2 is **not refuted**, and not refuted is not support. Look at the curve: it's a **hump**. Up from 0.295 to 0.503, then down to 0.192. The climb to the peak runs at **+0.398 a decade**; the fall to 3,000 at **−0.284**; the long tail at **−0.202**. The negative sign lives in the tail. Start at the peak and you refute yourself.
+> H2 needs two things at once. **κ is −0.086, interval entirely below zero** — least squares through five points, so the slope is real. But Λ at the largest n is still **0.650 of** the smallest; halving means 0.5. So H2 is **not refuted**, and not refuted is not support. Look at the curve: it's a **hump**. Up from 0.295 to 0.503, then down to 0.192. The climb to the peak runs at **+0.398 a decade**; the fall to 3,000 at **−0.284**; the long tail at **−0.202**. The negative sign lives in the tail. Start at the peak and you refute yourself.
 
 **② Plain version**
 The four boxes are the sensitivity checks: drop the smallest level and the sign holds; keep only the two stable levels, 300 and 1,000 rows, and it flips. We report all four, including the one that would have helped us.
 
+κ itself is one straight line fitted by least squares to Λ against log10 of the training rows — one line per fold over the same five levels, then averaged. Not a piecewise average of the segments, and not a chord between the ends: the four segment numbers on the chart are read off the curve, they are not what κ is.
+
 **③ Likely question → one-line answer**
-- *"Isn't κ just an artefact of a bad denominator?"* → Partly — that is why the sign-flip under the denominator filter is on the page, not in a footnote.
+- *"Isn't κ just an artefact of a bad denominator?"* → Partly — which is why the sign-flip after the small levels are dropped is on the page, not in a footnote.
 
 ---
 
@@ -242,7 +244,7 @@ Note the verb: *has not* bought it back, not *does not*. We never upgrade "could
 > One more page, because a project that lives on pre-registration should show its tripwires. **Build A5 and have it pay, and claim one dies. Match tier one until it's no longer lower, and claim two dies.** On the right, what would *not* move us: a bigger sample of the same kind, or quietly deleting the deepest cell. A third architecture we simply cannot exclude — both arms are negative overall, yet they disagree in sign in half the shared cells, which is exactly why we never average them.
 
 **② Plain version**
-This page exists so the criteria can be attacked here rather than in the questions. Every row on the left is a measurement someone else could run.
+These criteria went into the proposal before the numbers existed — that is the point. Every row on the left is a measurement someone else could run.
 
 **③ Likely question → one-line answer**
 - *"What result would make you abandon the whole framing?"* → A5 built and positive at matched tuning — that would make the gap architectural, not informational.
@@ -324,7 +326,7 @@ CPU-only arms (A1, A2) are not counted above; their ledger entry is 0.26 h on `d
 
 ### If you run long
 
-For an eight-minute slot: 9 min 56 s minus **2 min 04 s** of cuts. Drop these eleven passages, in this order, and nothing else. Times are measured on the words, not guessed.
+For an eight-minute slot: 10 min 00 s minus **2 min 04 s** of cuts. Drop these eleven passages, in this order, and nothing else. Times are measured on the words, not guessed.
 
 | # | Cut | Where | ≈ |
 |:--|:--|:--|--:|

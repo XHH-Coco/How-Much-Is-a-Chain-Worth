@@ -43,7 +43,7 @@
                 ))}
             </Box>
             <Text style={{ fontSize: 16, color: '#FFB020', marginTop: 12, lineHeight: 1.45 }}>
-                在答辩之前就把这一页摆出来，判据该在这里被打，而不是在提问环节。
+                判据写进提案时，数还没跑完。
             </Text>
         </Box>
     </Box>

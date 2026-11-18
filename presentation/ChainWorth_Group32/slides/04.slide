@@ -14,7 +14,7 @@
 
     <Box style={{ flexDirection: 'row', gap: 40, marginTop: 34 }}>
         {[
-            ['01', 'It reframes a decade of data', 'If Λ is positive and κ is near zero, the field has been buying interpolation accuracy inside its measured distribution — not chain physics.'],
+            ['01', 'It reframes what the data bought', 'If Λ is positive and κ is near zero, the field has been buying interpolation accuracy inside its measured distribution — not chain physics.'],
             ['02', 'It is not a sampling story', 'A gap that survives a tenfold increase in data behaves like a missing coordinate. More data is then the wrong remedy.'],
             ['03', 'It is decidable with what exists', 'One Λ per (task, arm) cell, one slope per dataset. No new measurement, no new synthesis.'],
         ].map(([idx, head, body]) => (

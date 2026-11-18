@@ -32,6 +32,9 @@
             <Text style={{ fontSize: 15, color: '#C3D0E2', marginTop: 8 }}>
                 Λ by training rows: 0.295 → 0.503 → 0.368 → 0.279 → 0.192
             </Text>
+            <Text style={{ fontSize: 14, color: '#8FA3BC', marginTop: 8, lineHeight: 1.4 }}>
+                Slope = univariate OLS of Λ on log10(rows), fitted per fold and then averaged.
+            </Text>
         </Box>
 
         <Box style={{ flex: 1, flexDirection: 'column', gap: 12 }}>

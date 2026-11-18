@@ -32,6 +32,9 @@
             <Text style={{ fontSize: 15, color: '#C3D0E2', marginTop: 8 }}>
                 Λ 随训练行数：0.295 → 0.503 → 0.368 → 0.279 → 0.192
             </Text>
+            <Text style={{ fontSize: 14, color: '#8FA3BC', marginTop: 8, lineHeight: 1.4 }}>
+                斜率 = Λ 对 log10(训练行数) 的一元最小二乘（OLS）直线回归：每折在这 5 个档位上各拟一条，再对 5 折取平均。
+            </Text>
         </Box>
 
         <Box style={{ flex: 1, flexDirection: 'column', gap: 12 }}>

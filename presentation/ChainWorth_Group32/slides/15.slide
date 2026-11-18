@@ -43,7 +43,7 @@
                 ))}
             </Box>
             <Text style={{ fontSize: 16, color: '#FFB020', marginTop: 12, lineHeight: 1.45 }}>
-                Stated before the defence, so the criteria can be attacked here rather than in the questions.
+                Written down before the numbers were final, not after.
             </Text>
         </Box>
     </Box>
