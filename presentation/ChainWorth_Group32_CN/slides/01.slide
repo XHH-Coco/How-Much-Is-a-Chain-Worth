@@ -20,7 +20,7 @@
 
     <Box style={{ marginTop: 30, padding: '16px 22px', background: '#16233A', borderLeft: '3px solid #FFB020', width: 1000 }}>
         <Text style={{ fontSize: 21, color: '#FFB020', lineHeight: 1.45, fontWeight: 'bold' }}>
-            一句话结论：19 个格子里有 12 个，链臂并不比单体臂更好 —— 而数据翻十倍也没改变这一点。
+            一句话结论：19 个格子里有 12 个，链臂<span style={{ fontSize: 15, color: '#C9A227', fontWeight: 'normal' }}>（指对同一重复单元的更丰富编码，不含链长）</span>并不比单体臂更好 —— 而数据翻十倍也没改变这一点。
         </Text>
     </Box>
 
